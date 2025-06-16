@@ -34,19 +34,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Cursor */
-.cursor {
-  position: fixed;
-  width: 8px;
-  height: 8px;
-  background: var(--white);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9999;
-  mix-blend-mode: difference;
-  transition: transform 0.1s ease;
-}
-
 /* Canvas Background */
 #canvas-bg {
   position: fixed;
@@ -383,8 +370,8 @@ body {
 
 .skills-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1.5rem;
   margin-top: 3rem;
 }
 
@@ -396,6 +383,11 @@ body {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 100px;
 }
 
 .skill-item::before {
@@ -416,6 +408,24 @@ body {
 .skill-item:hover {
   border-color: var(--white);
   transform: translateY(-5px);
+}
+
+.skill-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: brightness(0.8);
+  transition: filter 0.3s ease;
+}
+
+.skill-item:hover .skill-logo {
+  filter: brightness(1.2);
+}
+
+.skill-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--white);
 }
 
 /* Projects Section */
@@ -793,6 +803,10 @@ body {
 
   .contact-form {
     padding: 2rem;
+  }
+
+  .skills-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   }
 }
 

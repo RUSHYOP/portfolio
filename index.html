@@ -19,9 +19,6 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body ng-app="portfolioApp" ng-controller="MainController">
-    <!-- Custom Cursor -->
-    <div class="cursor" id="cursor"></div>
-
     <!-- Canvas Background -->
     <canvas id="canvas-bg"></canvas>
 
@@ -71,14 +68,19 @@
       <h2 class="section-title" data-title="ABOUT">ABOUT</h2>
       <div class="about-grid">
         <div class="about-visual">
-          <img src="purav.jpg" alt="Purav S" />
+          <img src="images/purav.jpg" alt="Purav S" />
         </div>
         <div class="about-text">
           <h3>{{about.title}}</h3>
           <p ng-repeat="paragraph in about.paragraphs">{{paragraph}}</p>
           <div class="skills-grid">
             <div class="skill-item" ng-repeat="skill in skills">
-              <strong>{{skill}}</strong>
+              <img
+                ng-src="{{skill.logo}}"
+                alt="{{skill.name}}"
+                class="skill-logo"
+              />
+              <span class="skill-name">{{skill.name}}</span>
             </div>
           </div>
         </div>
@@ -122,7 +124,7 @@
 
     <!-- Contact Section -->
     <section class="section" id="contact">
-      <h2 class="section-title" data-title="CONTACT">CONTACT</h2>
+      <h2 class="section-title" data-title="CONTACT">CONTACT ME</h2>
       <div class="contact-grid">
         <div class="contact-info">
           <h3>Let's create something amazing together</h3>

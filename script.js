@@ -29,31 +29,55 @@ angular.module("portfolioApp", []).controller("MainController", [
     // Hero data
     $scope.heroTitle = "PURAV S";
     $scope.heroSubtitle = "Backend Developer & System Architect";
-    $scope.ctaText = "EXPLORE WORK";
+    $scope.ctaText = "HIT IT";
 
     // About data
     $scope.about = {
       title: "Building Backend Systems",
       paragraphs: [
-        "I'm a backend developer with experience in building server-side applications and working with databases. Currently pursuing B.E. in Computer Science with a CGPA of 8.44.",
-        "My skills include API development, database management, and basic machine learning integration. I enjoy writing clean code and solving backend challenges.",
-        "When I'm not coding, you can find me gaming, travelling, or just building something cool.",
+        "I'm an Aspiring Backend Developer. Currently speed running through my final year in B.E Computer Science and Engineering.",
+        "My skills include literally anything backend and basic machine learning integration. I enjoy writing code and building stuff that brings out the best in me",
+        "When I'm not coding, you can find me gaming, travelling, or just doing something dumb.",
       ],
     };
 
     $scope.skills = [
-      "Python",
-      "JavaScript",
-      "C Language",
-      "MySQL",
-      "Git",
-      "Flask",
-      "Machine Learning",
-      "AI/ML",
-      "Cloud Computing",
-      "DevOps",
-      "Data Structures",
-      "DBMS",
+      {
+        name: "Python",
+        logo: "images/python.png", // Replace with your Python logo URL
+      },
+      {
+        name: "JavaScript",
+        logo: "images/js.png", // Replace with your JS logo URL
+      },
+      {
+        name: "C Language",
+        logo: "images/c.png", // Replace with your C logo URL
+      },
+      {
+        name: "MySQL",
+        logo: "images/mysql.png", // Replace with your MySQL logo URL
+      },
+      {
+        name: "Git",
+        logo: "images/gitbash.png", // Replace with your Git logo URL
+      },
+      {
+        name: "Flask",
+        logo: "images/flask.png", // Replace with your Flask logo URL
+      },
+      {
+        name: "Machine Learning",
+        logo: "images/machinelearning.png", // Replace with your ML logo URL
+      },
+      {
+        name: "Google Cloud Computing",
+        logo: "images/googlecloud.png", // Replace with your GCP logo URL
+      },
+      {
+        name: "Jenkins",
+        logo: "images/jenkins.png", // Replace with your Jenkins logo URL
+      },
     ];
 
     // Projects data based on resume
@@ -187,7 +211,6 @@ angular.module("portfolioApp", []).controller("MainController", [
         $scope.showNav = true;
         initializeEffects();
         setupScrollAnimations();
-        setupCursor();
         setupThreeJS();
       }, 1000);
 
@@ -268,22 +291,6 @@ angular.module("portfolioApp", []).controller("MainController", [
         if (hero) {
           hero.style.transform = `translateY(${rate}px)`;
         }
-      });
-    }
-
-    // Custom cursor
-    function setupCursor() {
-      const cursor = document.getElementById("cursor");
-
-      let mouseX = 0,
-        mouseY = 0;
-
-      document.addEventListener("mousemove", (e) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-
-        cursor.style.left = mouseX - 4 + "px";
-        cursor.style.top = mouseY - 4 + "px";
       });
 
       // Cursor interactions

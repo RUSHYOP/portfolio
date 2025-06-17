@@ -8,7 +8,32 @@ angular.module("portfolioApp", []).controller("MainController", [
     $scope.loading = true;
     $scope.showNav = false;
     $scope.glitchEffect = false;
+    // Audio state management
+    let audioPlaying = false;
+    let audioInitialized = false;
+    // Initialize audio with immediate interaction detection
+    $timeout(() => {
+      initializeAudio();
 
+      // Add a prominent message during loading to encourage interaction
+      const loadingScreen = document.querySelector(".loading-screen");
+      if (loadingScreen) {
+        const audioPrompt = document.createElement("div");
+        audioPrompt.style.cssText = `
+      position: absolute;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: 14px;
+      text-align: center;
+      opacity: 0.8;
+      animation: pulse 2s infinite;
+    `;
+        audioPrompt.innerHTML = "🔊 Click anywhere to enable audio";
+        loadingScreen.appendChild(audioPrompt);
+      }
+    }, 100);
     const loadingTexts = [
       "Initializing Systems...",
       "Loading Backend Services...",
@@ -44,39 +69,39 @@ angular.module("portfolioApp", []).controller("MainController", [
     $scope.skills = [
       {
         name: "Python",
-        logo: "images/python.png", // Replace with your Python logo URL
+        logo: "images/python.png",
       },
       {
         name: "JavaScript",
-        logo: "images/js.png", // Replace with your JS logo URL
+        logo: "images/js.png",
       },
       {
         name: "C Language",
-        logo: "images/c.png", // Replace with your C logo URL
+        logo: "images/c.png",
       },
       {
         name: "MySQL",
-        logo: "images/mysql.png", // Replace with your MySQL logo URL
+        logo: "images/mysql.png",
       },
       {
         name: "Git",
-        logo: "images/gitbash.png", // Replace with your Git logo URL
+        logo: "images/gitbash.png",
       },
       {
         name: "Flask",
-        logo: "images/flask.png", // Replace with your Flask logo URL
+        logo: "images/flask.png",
       },
       {
         name: "Machine Learning",
-        logo: "images/machinelearning.png", // Replace with your ML logo URL
+        logo: "images/machinelearning.png",
       },
       {
         name: "Google Cloud Computing",
-        logo: "images/googlecloud.png", // Replace with your GCP logo URL
+        logo: "images/googlecloud.png",
       },
       {
         name: "Jenkins",
-        logo: "images/jenkins.png", // Replace with your Jenkins logo URL
+        logo: "images/jenkins.png",
       },
     ];
 
@@ -96,7 +121,7 @@ angular.module("portfolioApp", []).controller("MainController", [
         icon: "🔒",
         technologies: ["Python", "Machine Learning", "Cybersecurity"],
         liveLink: "https://ieeexplore.ieee.org/document/10988235",
-        codeLink: "https://github.com/RUSHYOP/Procsage", // Add your GitHub link here
+        codeLink: "https://github.com/RUSHYOP/Procsage",
       },
       {
         title: "FinAI - NLP Financial Chatbot",
@@ -104,7 +129,7 @@ angular.module("portfolioApp", []).controller("MainController", [
           "Built a finance-focused chatbot for Google Dev Solution Challenge using Python and Flask Framework. Provides market-based recommendations with legal insights.",
         icon: "💰",
         technologies: ["Python", "Flask", "NLP", "Google Cloud"],
-        codeLink: "https://github.com/RUSHYOP/FinAI", // Add your GitHub link here
+        codeLink: "https://github.com/RUSHYOP/FinAI",
       },
       {
         title: "PigGame Backend System",
@@ -112,8 +137,8 @@ angular.module("portfolioApp", []).controller("MainController", [
           "Developed the backend for a two-player dice-based game using JavaScript. Implemented Fisher-Yates shuffle algorithm for fair and human-like dice rolls.",
         icon: "🎲",
         technologies: ["JavaScript", "Game Logic", "Algorithms", "Backend"],
-        liveLink: "https://pig-game-lovat-eight.vercel.app/", // Add your live site link here
-        codeLink: "https://github.com/RUSHYOP/pig-game", // Add your GitHub link here
+        liveLink: "https://pig-game-lovat-eight.vercel.app/",
+        codeLink: "https://github.com/RUSHYOP/pig-game",
       },
       {
         title: "Disease Prediction AI System",
@@ -121,8 +146,8 @@ angular.module("portfolioApp", []).controller("MainController", [
           "Built an AI chatbot using Python and Gradio to assess risks of Parkinson's disease using symptom inputs. Focused on early diagnosis support.",
         icon: "🏥",
         technologies: ["Python", "Gradio", "AI/ML"],
-        liveLink: "https://huggingface.co/spaces/Rushyy/parkinsons", // Add your live site link here
-        codeLink: "https://github.com/RUSHYOP/Parkinson-s-predictor", // Add your GitHub link here
+        liveLink: "https://huggingface.co/spaces/Rushyy/parkinsons",
+        codeLink: "https://github.com/RUSHYOP/Parkinson-s-predictor",
       },
     ];
 
@@ -133,6 +158,110 @@ angular.module("portfolioApp", []).controller("MainController", [
       subject: "",
       message: "",
     };
+
+    // Background audio handling
+    function initializeAudio() {
+      const audio = document.getElementById("background-audio");
+      const audioControl = document.getElementById("audio-control");
+
+      if (!audio) {
+        console.log("Audio element not found");
+        return;
+      }
+
+      // Set volume first
+      audio.volume = 0.05; // 20% volume, adjust as needed
+
+      // Update control button
+      function updateAudioControl(status) {
+        if (audioControl) {
+          audioControl.textContent = `🔊 Audio: ${status}`;
+          audioControl.onclick = toggleAudio;
+        }
+      }
+
+      // Toggle audio function
+      function toggleAudio() {
+        if (audioPlaying) {
+          audio.pause();
+          audioPlaying = false;
+          updateAudioControl("Paused (Click to Play)");
+        } else {
+          startAudio();
+        }
+      }
+
+      // Start audio function
+      function startAudio() {
+        const playPromise = audio.play();
+
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              audioPlaying = true;
+              audioInitialized = true;
+              updateAudioControl("Playing (Click to Pause)");
+              console.log("Background audio started successfully");
+
+              // Remove event listeners after audio starts
+              document.removeEventListener("click", startAudioOnInteraction);
+              document.removeEventListener("keydown", startAudioOnInteraction);
+              document.removeEventListener(
+                "touchstart",
+                startAudioOnInteraction
+              );
+              document.removeEventListener(
+                "mousemove",
+                startAudioOnInteraction
+              );
+            })
+            .catch((error) => {
+              console.log("Audio play failed:", error);
+              audioPlaying = false;
+              updateAudioControl("Failed (Click to Retry)");
+            });
+        }
+      }
+
+      // Event listener for user interaction
+      function startAudioOnInteraction(event) {
+        if (!audioInitialized) {
+          console.log("Starting audio after user interaction:", event.type);
+          startAudio();
+        }
+      }
+
+      // Audio event listeners
+      audio.addEventListener("loadstart", () =>
+        updateAudioControl("Loading...")
+      );
+      audio.addEventListener("canplay", () =>
+        updateAudioControl("Ready (Click to Play)")
+      );
+      audio.addEventListener("error", (e) => {
+        console.log("Audio error:", e);
+        updateAudioControl("Error Loading");
+      });
+      audio.addEventListener("ended", () => {
+        audioPlaying = false;
+        updateAudioControl("Ended");
+      });
+
+      // Try to play immediately
+      startAudio();
+
+      // Add multiple event listeners for user interaction
+      document.addEventListener("click", startAudioOnInteraction);
+      document.addEventListener("keydown", startAudioOnInteraction);
+      document.addEventListener("touchstart", startAudioOnInteraction);
+
+      // Specifically target loading screen for immediate audio start
+      const loadingScreen = document.querySelector(".loading-screen");
+      if (loadingScreen) {
+        loadingScreen.addEventListener("click", startAudioOnInteraction);
+        loadingScreen.addEventListener("touchstart", startAudioOnInteraction);
+      }
+    }
 
     // Methods
     $scope.exploreWork = function () {
@@ -202,7 +331,6 @@ angular.module("portfolioApp", []).controller("MainController", [
       }
     };
 
-    // Initialize app after loading
     $timeout(() => {
       clearInterval(loadingInterval);
       $scope.loading = false;
@@ -212,6 +340,7 @@ angular.module("portfolioApp", []).controller("MainController", [
         initializeEffects();
         setupScrollAnimations();
         setupThreeJS();
+        // Initialize audio after loading
       }, 1000);
 
       // Periodic glitch effect
@@ -294,17 +423,20 @@ angular.module("portfolioApp", []).controller("MainController", [
       });
 
       // Cursor interactions
-      document
-        .querySelectorAll("button, a, .project-card, .skill-item")
-        .forEach((el) => {
-          el.addEventListener("mouseenter", () => {
-            cursor.style.transform = "scale(2)";
-          });
+      const cursor = document.querySelector(".cursor");
+      if (cursor) {
+        document
+          .querySelectorAll("button, a, .project-card, .skill-item")
+          .forEach((el) => {
+            el.addEventListener("mouseenter", () => {
+              cursor.style.transform = "scale(2)";
+            });
 
-          el.addEventListener("mouseleave", () => {
-            cursor.style.transform = "scale(1)";
+            el.addEventListener("mouseleave", () => {
+              cursor.style.transform = "scale(1)";
+            });
           });
-        });
+      }
     }
 
     // Three.js background - particles only

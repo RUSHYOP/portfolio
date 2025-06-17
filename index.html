@@ -19,6 +19,14 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body ng-app="portfolioApp" ng-controller="MainController">
+    <!-- Background Audio -->
+    <audio id="background-audio" loop preload="auto" style="display: none">
+      <source src="audio/space.mp3" type="audio/mpeg" />
+      <source src="audio/space.ogg" type="audio/ogg" />
+      <source src="audio/space.wav" type="audio/wav" />
+      Your browser does not support the audio element.
+    </audio>
+
     <!-- Canvas Background -->
     <canvas id="canvas-bg"></canvas>
 
@@ -190,7 +198,6 @@
         </form>
       </div>
     </section>
-
     <script src="script.js"></script>
   </body>
 </html>

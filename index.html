@@ -55,9 +55,14 @@
     <!-- Hero Section -->
     <section class="hero" id="hero">
       <div class="hero-content">
-        <h1 class="hero-title" ng-class="{'glitch': glitchEffect}">
+        <!-- Chrome badge -->
+        <h1
+          class="hero-title liquid-mirror"
+          ng-class="{'glitch': glitchEffect}"
+        >
           {{heroTitle}}
         </h1>
+
         <p class="hero-subtitle floating">{{heroSubtitle}}</p>
         <button class="hero-cta" ng-click="exploreWork()">{{ctaText}}</button>
       </div>

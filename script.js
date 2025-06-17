@@ -8,8 +8,6 @@ angular.module("portfolioApp", []).controller("MainController", [
     $scope.loading = true;
     $scope.showNav = false;
     $scope.glitchEffect = false;
-    $scope.isMuted = false;
-    $scope.audioElement = null;
 
     const loadingTexts = [
       "Initializing Systems...",
@@ -46,39 +44,39 @@ angular.module("portfolioApp", []).controller("MainController", [
     $scope.skills = [
       {
         name: "Python",
-        logo: "images/python.png",
+        logo: "images/python.png", // Replace with your Python logo URL
       },
       {
         name: "JavaScript",
-        logo: "images/js.png",
+        logo: "images/js.png", // Replace with your JS logo URL
       },
       {
         name: "C Language",
-        logo: "images/c.png",
+        logo: "images/c.png", // Replace with your C logo URL
       },
       {
         name: "MySQL",
-        logo: "images/mysql.png",
+        logo: "images/mysql.png", // Replace with your MySQL logo URL
       },
       {
         name: "Git",
-        logo: "images/gitbash.png",
+        logo: "images/gitbash.png", // Replace with your Git logo URL
       },
       {
         name: "Flask",
-        logo: "images/flask.png",
+        logo: "images/flask.png", // Replace with your Flask logo URL
       },
       {
         name: "Machine Learning",
-        logo: "images/machinelearning.png",
+        logo: "images/machinelearning.png", // Replace with your ML logo URL
       },
       {
         name: "Google Cloud Computing",
-        logo: "images/googlecloud.png",
+        logo: "images/googlecloud.png", // Replace with your GCP logo URL
       },
       {
         name: "Jenkins",
-        logo: "images/jenkins.png",
+        logo: "images/jenkins.png", // Replace with your Jenkins logo URL
       },
     ];
 
@@ -98,7 +96,7 @@ angular.module("portfolioApp", []).controller("MainController", [
         icon: "🔒",
         technologies: ["Python", "Machine Learning", "Cybersecurity"],
         liveLink: "https://ieeexplore.ieee.org/document/10988235",
-        codeLink: "https://github.com/RUSHYOP/Procsage",
+        codeLink: "https://github.com/RUSHYOP/Procsage", // Add your GitHub link here
       },
       {
         title: "FinAI - NLP Financial Chatbot",
@@ -106,7 +104,7 @@ angular.module("portfolioApp", []).controller("MainController", [
           "Built a finance-focused chatbot for Google Dev Solution Challenge using Python and Flask Framework. Provides market-based recommendations with legal insights.",
         icon: "💰",
         technologies: ["Python", "Flask", "NLP", "Google Cloud"],
-        codeLink: "https://github.com/RUSHYOP/FinAI",
+        codeLink: "https://github.com/RUSHYOP/FinAI", // Add your GitHub link here
       },
       {
         title: "PigGame Backend System",
@@ -114,8 +112,8 @@ angular.module("portfolioApp", []).controller("MainController", [
           "Developed the backend for a two-player dice-based game using JavaScript. Implemented Fisher-Yates shuffle algorithm for fair and human-like dice rolls.",
         icon: "🎲",
         technologies: ["JavaScript", "Game Logic", "Algorithms", "Backend"],
-        liveLink: "https://pig-game-lovat-eight.vercel.app/",
-        codeLink: "https://github.com/RUSHYOP/pig-game",
+        liveLink: "https://pig-game-lovat-eight.vercel.app/", // Add your live site link here
+        codeLink: "https://github.com/RUSHYOP/pig-game", // Add your GitHub link here
       },
       {
         title: "Disease Prediction AI System",
@@ -123,8 +121,8 @@ angular.module("portfolioApp", []).controller("MainController", [
           "Built an AI chatbot using Python and Gradio to assess risks of Parkinson's disease using symptom inputs. Focused on early diagnosis support.",
         icon: "🏥",
         technologies: ["Python", "Gradio", "AI/ML"],
-        liveLink: "https://huggingface.co/spaces/Rushyy/parkinsons",
-        codeLink: "https://github.com/RUSHYOP/Parkinson-s-predictor",
+        liveLink: "https://huggingface.co/spaces/Rushyy/parkinsons", // Add your live site link here
+        codeLink: "https://github.com/RUSHYOP/Parkinson-s-predictor", // Add your GitHub link here
       },
     ];
 
@@ -134,58 +132,6 @@ angular.module("portfolioApp", []).controller("MainController", [
       email: "",
       subject: "",
       message: "",
-    };
-
-    // Audio initialization function
-    $scope.initAudio = function () {
-      $scope.audioElement = document.getElementById("backgroundAudio");
-
-      if ($scope.audioElement) {
-        // Try to play audio immediately
-        const playPromise = $scope.audioElement.play();
-
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log("Audio is playing");
-            })
-            .catch((error) => {
-              console.log("Autoplay prevented:", error);
-              // Play on first user interaction
-              const playOnInteraction = function () {
-                if (!$scope.isMuted && $scope.audioElement) {
-                  $scope.audioElement.play();
-                }
-                document.removeEventListener("click", playOnInteraction);
-                document.removeEventListener("keydown", playOnInteraction);
-              };
-
-              document.addEventListener("click", playOnInteraction);
-              document.addEventListener("keydown", playOnInteraction);
-            });
-        }
-      }
-    };
-
-    // Mute toggle function
-    $scope.toggleMute = function () {
-      if (!$scope.audioElement) {
-        $scope.audioElement = document.getElementById("backgroundAudio");
-      }
-
-      $scope.isMuted = !$scope.isMuted;
-
-      if ($scope.isMuted) {
-        if ($scope.audioElement) {
-          $scope.audioElement.pause();
-        }
-      } else {
-        if ($scope.audioElement) {
-          $scope.audioElement.play().catch((error) => {
-            console.log("Audio play failed:", error);
-          });
-        }
-      }
     };
 
     // Methods
@@ -207,10 +153,7 @@ angular.module("portfolioApp", []).controller("MainController", [
       document.querySelectorAll(".nav-link").forEach((link) => {
         link.classList.remove("active");
       });
-      const targetLink = document.querySelector(`[href="#${elementId}"]`);
-      if (targetLink) {
-        targetLink.classList.add("active");
-      }
+      document.querySelector(`[href="#${elementId}"]`).classList.add("active");
     };
 
     $scope.submitForm = function () {
@@ -269,8 +212,6 @@ angular.module("portfolioApp", []).controller("MainController", [
         initializeEffects();
         setupScrollAnimations();
         setupThreeJS();
-        // Initialize audio after everything is loaded
-        $scope.initAudio();
       }, 1000);
 
       // Periodic glitch effect
@@ -351,6 +292,19 @@ angular.module("portfolioApp", []).controller("MainController", [
           hero.style.transform = `translateY(${rate}px)`;
         }
       });
+
+      // Cursor interactions
+      document
+        .querySelectorAll("button, a, .project-card, .skill-item")
+        .forEach((el) => {
+          el.addEventListener("mouseenter", () => {
+            cursor.style.transform = "scale(2)";
+          });
+
+          el.addEventListener("mouseleave", () => {
+            cursor.style.transform = "scale(1)";
+          });
+        });
     }
 
     // Three.js background - particles only

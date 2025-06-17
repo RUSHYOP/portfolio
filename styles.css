@@ -19,11 +19,198 @@
   --glow: rgba(255, 255, 255, 0.1);
 }
 
+/* ===== AUDIO CONTROLS ===== */
+.audio-controls {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.mute-button {
+  width: 50px;
+  height: 50px;
+  background: transparent;
+  border: 1px solid var(--white);
+  color: var(--white);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  opacity: 0.8;
+}
+
+.mute-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: var(--white);
+  transition: left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: -1;
+}
+
+.mute-button:hover::before {
+  left: 0;
+}
+
+.mute-button:hover {
+  color: var(--primary);
+  opacity: 1;
+  transform: scale(1.1);
+  box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
+}
+
+.mute-button.muted {
+  border-color: var(--gray-mid);
+  color: var(--gray-mid);
+}
+
+.mute-button.muted:hover {
+  border-color: var(--white);
+  color: var(--primary);
+}
+
+.volume-toggle {
+  width: 35px;
+  height: 35px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--gray-light);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+.volume-toggle:hover {
+  border-color: var(--white);
+  color: var(--white);
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.volume-control {
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  min-width: 200px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  backdrop-filter: blur(20px);
+}
+
+.volume-control.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.volume-slider-container {
+  margin-bottom: 1rem;
+}
+
+.volume-slider {
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  outline: none;
+  border-radius: 2px;
+  -webkit-appearance: none;
+  margin-bottom: 0.5rem;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--white);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  background: var(--gray-light);
+  transform: scale(1.2);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--white);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.volume-label {
+  text-align: center;
+  color: var(--gray-light);
+  font-size: 0.8rem;
+  font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.1em;
+}
+
+.volume-presets {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.preset-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--gray-light);
+  padding: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.preset-btn:hover {
+  border-color: var(--white);
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.preset-btn.active {
+  background: var(--white);
+  color: var(--primary);
+  border-color: var(--white);
+}
+
+/* ===== BASE STYLES ===== */
 html {
   scroll-behavior: smooth;
   font-size: 16px;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 body {
@@ -37,10 +224,9 @@ body {
 }
 
 body::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+  display: none;
 }
 
-/* Canvas Background */
 #canvas-bg {
   position: fixed;
   top: 0;
@@ -51,7 +237,7 @@ body::-webkit-scrollbar {
   opacity: 0.8;
 }
 
-/* Loading Screen */
+/* ===== LOADING SCREEN ===== */
 .loading-screen {
   position: fixed;
   top: 0;
@@ -91,7 +277,7 @@ body::-webkit-scrollbar {
   animation: pulse 2s ease-in-out infinite;
 }
 
-/* Hero Section */
+/* ===== HERO SECTION ===== */
 .hero {
   height: 100vh;
   display: flex;
@@ -109,14 +295,11 @@ body::-webkit-scrollbar {
   animation: heroFadeIn 2s ease-out 0.5s forwards;
 }
 
-/* Enhanced Black-White Gradient for Hero Title */
 .hero-title {
   font-size: clamp(4rem, 12vw, 10rem);
   font-weight: 300;
   letter-spacing: -0.02em;
   margin-bottom: 2rem;
-
-  /* Black to White Gradient */
   background: linear-gradient(
     135deg,
     #000000 0%,
@@ -132,323 +315,18 @@ body::-webkit-scrollbar {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-
-  /* Enhanced animation for smoother gradient flow */
   animation: blackWhiteGradientShift 6s ease-in-out infinite;
   position: relative;
-
-  /* Add text shadow for better definition */
   filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1));
 }
 
-/* Alternative sharper black-white gradient */
-.hero-title.sharp-gradient {
-  background: linear-gradient(
-    90deg,
-    #000000 0%,
-    #000000 25%,
-    #ffffff 50%,
-    #ffffff 75%,
-    #000000 100%
-  );
-  background-size: 400% 100%;
-  animation: sharpGradientShift 4s ease-in-out infinite;
-}
-
-/* Shiny Badge Effect for Hero Title */
-.hero-title.diagonal-gradient {
-  font-size: clamp(4rem, 12vw, 10rem);
-  font-weight: 300;
-  letter-spacing: -0.02em;
-  margin-bottom: 2rem;
-
-  /* Metallic Badge Gradient */
-  background: linear-gradient(
-    135deg,
-    #2c2c2c 0%,
-    #ffffff 15%,
-    #e8e8e8 25%,
-    #1a1a1a 35%,
-    #ffffff 50%,
-    #f5f5f5 65%,
-    #333333 75%,
-    #ffffff 85%,
-    #2c2c2c 100%
-  );
-  background-size: 300% 300%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-
-  /* Badge animation with shine sweep */
-  animation: badgeShine 3s ease-in-out infinite;
-
-  /* Add metallic depth */
-  position: relative;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
-}
-
-/* Add a secondary shine layer for extra shimmer */
-.hero-title.diagonal-gradient::before {
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    transparent 40%,
-    rgba(255, 255, 255, 0.8) 50%,
-    transparent 60%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: badgeShimmer 2s ease-in-out infinite;
-  z-index: 1;
-}
-
-/* Enhanced hover effect for badge */
-.hero-title.diagonal-gradient:hover {
-  filter: drop-shadow(0 6px 16px rgba(255, 255, 255, 0.3));
-  transform: scale(1.05);
+.hero-title:hover {
+  filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.3));
+  transform: scale(1.02);
   transition: all 0.3s ease;
 }
 
-/* Original Chrome Badge */
-.hero-title.chrome-badge {
-  background: linear-gradient(
-    145deg,
-    #0f0f0f 0%,
-    #ffffff 20%,
-    #a4a3a3 30%,
-    #0f0f0f 40%,
-    #ffffff 60%,
-    #d4d4d4 70%,
-    #0f0f0f 80%,
-    #ffffff 100%
-  );
-  background-size: 400% 400%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: chromeShine 8s ease-in-out infinite;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
-/* Variation 1: Steel Chrome - Darker & Edgier */
-.hero-title.steel-chrome {
-  background: linear-gradient(
-    135deg,
-    #000000 0%,
-    #ffffff 15%,
-    #666666 25%,
-    #000000 35%,
-    #ffffff 50%,
-    #888888 65%,
-    #000000 75%,
-    #ffffff 90%,
-    #000000 100%
-  );
-  background-size: 500% 500%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: steelShine 6s ease-in-out infinite;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
-}
-
-/* Variation 2: Silver Chrome - Classic Polished Look */
-.hero-title.silver-chrome {
-  background: linear-gradient(
-    90deg,
-    #2c2c2c 0%,
-    #ffffff 12%,
-    #e0e0e0 25%,
-    #1a1a1a 37%,
-    #ffffff 50%,
-    #f5f5f5 62%,
-    #333333 75%,
-    #ffffff 87%,
-    #2c2c2c 100%
-  );
-  background-size: 300% 300%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: silverShine 7s ease-in-out infinite;
-  filter: drop-shadow(0 3px 6px rgba(255, 255, 255, 0.1));
-}
-
-/* Variation 3: Mirror Chrome - Ultra Reflective */
-.hero-title.mirror-chrome {
-  background: linear-gradient(
-    180deg,
-    #1a1a1a 0%,
-    #ffffff 10%,
-    #b8b8b8 20%,
-    #000000 30%,
-    #ffffff 40%,
-    #e8e8e8 50%,
-    #ffffff 60%,
-    #000000 70%,
-    #cccccc 80%,
-    #ffffff 90%,
-    #1a1a1a 100%
-  );
-  background-size: 600% 600%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: mirrorShine 10s ease-in-out infinite;
-  filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.3));
-}
-
-/* Variation 4: Titanium Chrome - Premium Feel */
-.hero-title.titanium-chrome {
-  background: linear-gradient(
-    45deg,
-    #0a0a0a 0%,
-    #ffffff 18%,
-    #9e9e9e 28%,
-    #0a0a0a 38%,
-    #ffffff 48%,
-    #c4c4c4 58%,
-    #0a0a0a 68%,
-    #ffffff 78%,
-    #b0b0b0 88%,
-    #0a0a0a 100%
-  );
-  background-size: 450% 450%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: titaniumShine 9s ease-in-out infinite;
-  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.4));
-}
-
-/* Variation 5: Liquid Chrome - Flowing Effect */
-.hero-title.liquid-chrome {
-  background: linear-gradient(
-    120deg,
-    #000000 0%,
-    #ffffff 8%,
-    #777777 16%,
-    #000000 24%,
-    #ffffff 32%,
-    #aaaaaa 40%,
-    #ffffff 48%,
-    #000000 56%,
-    #dddddd 64%,
-    #ffffff 72%,
-    #555555 80%,
-    #ffffff 88%,
-    #000000 100%
-  );
-  background-size: 700% 700%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: liquidShine 4s ease-in-out infinite;
-  filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.3));
-}
-
-/* Variation 6: Platinum Chrome - Luxury Edition */
-.hero-title.platinum-chrome {
-  background: linear-gradient(
-    60deg,
-    #1e1e1e 0%,
-    #ffffff 15%,
-    #d0d0d0 22%,
-    #1e1e1e 30%,
-    #ffffff 45%,
-    #f8f8f8 52%,
-    #1e1e1e 60%,
-    #ffffff 75%,
-    #e5e5e5 82%,
-    #1e1e1e 100%
-  );
-  background-size: 350% 350%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: platinumShine 10s ease-in-out infinite;
-  filter: drop-shadow(0 1px 8px rgba(255, 255, 255, 0.2));
-}
-
-/* Ultra Mirror Chrome - Maximum Reflectivity */
-.hero-title.ultra-mirror {
-  background: linear-gradient(
-    180deg,
-    #000000 0%,
-    #ffffff 5%,
-    #f0f0f0 8%,
-    #333333 12%,
-    #ffffff 18%,
-    #e5e5e5 22%,
-    #000000 28%,
-    #ffffff 35%,
-    #f8f8f8 40%,
-    #ffffff 45%,
-    #dddddd 50%,
-    #ffffff 55%,
-    #f8f8f8 60%,
-    #ffffff 65%,
-    #000000 72%,
-    #e5e5e5 78%,
-    #ffffff 82%,
-    #333333 88%,
-    #f0f0f0 92%,
-    #ffffff 95%,
-    #000000 100%
-  );
-  background-size: 800% 800%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: ultraMirrorShine 8s ease-in-out infinite;
-  filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.5));
-}
-
-/* Hyper Mirror - Intense Reflection */
-.hero-title.hyper-mirror {
-  background: linear-gradient(
-    170deg,
-    #0a0a0a 0%,
-    #ffffff 3%,
-    #ffffff 7%,
-    #1a1a1a 10%,
-    #ffffff 15%,
-    #ffffff 20%,
-    #000000 25%,
-    #ffffff 30%,
-    #ffffff 35%,
-    #2a2a2a 40%,
-    #ffffff 45%,
-    #ffffff 50%,
-    #ffffff 55%,
-    #2a2a2a 60%,
-    #ffffff 65%,
-    #ffffff 70%,
-    #000000 75%,
-    #ffffff 80%,
-    #ffffff 85%,
-    #1a1a1a 90%,
-    #ffffff 93%,
-    #ffffff 97%,
-    #0a0a0a 100%
-  );
-  background-size: 1000% 1000%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: hyperMirrorShine 6s ease-in-out infinite;
-  filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.6));
-}
-
-/* Liquid Mirror - Flowing Reflections */
+/* Chrome Style Variations */
 .hero-title.liquid-mirror {
   background: linear-gradient(
     145deg,
@@ -479,148 +357,16 @@ body::-webkit-scrollbar {
     #000000 100%
   );
   background-size: 700% 700%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
   animation: liquidMirrorShine 7s ease-in-out infinite;
   filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.4));
 }
 
-/* Diamond Mirror - Prismatic Effect */
-.hero-title.diamond-mirror {
-  background: linear-gradient(
-    90deg,
-    #111111 0%,
-    #ffffff 2%,
-    #ffffff 4%,
-    #ffffff 6%,
-    #000000 8%,
-    #ffffff 12%,
-    #ffffff 16%,
-    #222222 20%,
-    #ffffff 24%,
-    #ffffff 28%,
-    #ffffff 32%,
-    #000000 36%,
-    #ffffff 40%,
-    #ffffff 44%,
-    #ffffff 48%,
-    #ffffff 52%,
-    #ffffff 56%,
-    #000000 60%,
-    #ffffff 64%,
-    #ffffff 68%,
-    #ffffff 72%,
-    #222222 76%,
-    #ffffff 80%,
-    #ffffff 84%,
-    #000000 88%,
-    #ffffff 92%,
-    #ffffff 94%,
-    #ffffff 96%,
-    #ffffff 98%,
-    #111111 100%
-  );
-  background-size: 600% 600%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: diamondMirrorShine 5s ease-in-out infinite;
-  filter: drop-shadow(0 0 35px rgba(255, 255, 255, 0.7));
+.hero-title.liquid-mirror:hover {
+  filter: drop-shadow(0 0 35px rgba(255, 255, 255, 0.6));
+  transform: scale(1.06);
+  transition: all 0.4s ease;
 }
 
-/* Holographic Mirror - Rainbow Reflections */
-.hero-title.holographic-mirror {
-  background: linear-gradient(
-    120deg,
-    #000000 0%,
-    #ffffff 5%,
-    #f8f8ff 10%,
-    #1a1a1a 15%,
-    #ffffff 20%,
-    #f0f8ff 25%,
-    #000000 30%,
-    #ffffff 35%,
-    #fffafa 40%,
-    #ffffff 45%,
-    #ffffff 50%,
-    #ffffff 55%,
-    #fffafa 60%,
-    #ffffff 65%,
-    #000000 70%,
-    #f0f8ff 75%,
-    #ffffff 80%,
-    #1a1a1a 85%,
-    #f8f8ff 90%,
-    #ffffff 95%,
-    #000000 100%
-  );
-  background-size: 900% 900%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: holographicMirrorShine 9s ease-in-out infinite;
-  filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.8));
-}
-
-/* Perfect Mirror - Ultra Smooth */
-.hero-title.perfect-mirror {
-  background: linear-gradient(
-    160deg,
-    #050505 0%,
-    #ffffff 3%,
-    #ffffff 5%,
-    #0f0f0f 8%,
-    #ffffff 12%,
-    #ffffff 17%,
-    #000000 20%,
-    #ffffff 25%,
-    #ffffff 30%,
-    #ffffff 35%,
-    #ffffff 40%,
-    #ffffff 45%,
-    #ffffff 50%,
-    #ffffff 55%,
-    #ffffff 60%,
-    #ffffff 65%,
-    #ffffff 70%,
-    #ffffff 75%,
-    #000000 80%,
-    #ffffff 83%,
-    #ffffff 88%,
-    #0f0f0f 92%,
-    #ffffff 95%,
-    #ffffff 97%,
-    #050505 100%
-  );
-  background-size: 500% 500%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: perfectMirrorShine 12s ease-in-out infinite;
-  filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.3));
-}
-
-/* Size Variants for Titles */
-.hero-title.small-mirror {
-  font-size: clamp(1.5rem, 4vw, 3rem);
-  margin-bottom: 2rem;
-  margin-top: -0.5rem;
-  font-weight: 400;
-  letter-spacing: 0.2em;
-  opacity: 0.9;
-}
-
-.hero-title.tiny-mirror {
-  font-size: clamp(1.2rem, 3vw, 2.5rem);
-  margin-bottom: 2rem;
-  margin-top: -0.5rem;
-  font-weight: 300;
-  letter-spacing: 0.3em;
-  opacity: 0.85;
-}
-
-/* Make second h1 element smaller (for "Backend Developer") */
 .hero-title:nth-child(2) {
   font-size: clamp(2rem, 6vw, 4rem);
   margin-bottom: 2rem;
@@ -689,7 +435,7 @@ body::-webkit-scrollbar {
   box-shadow: 0 20px 40px rgba(255, 255, 255, 0.1);
 }
 
-/* Navigation */
+/* ===== NAVIGATION ===== */
 .navbar {
   position: fixed;
   top: 0;
@@ -768,7 +514,7 @@ body::-webkit-scrollbar {
   width: 100%;
 }
 
-/* Sections */
+/* ===== SECTIONS ===== */
 .section {
   padding: 8rem 0;
   max-width: 1400px;
@@ -805,7 +551,7 @@ body::-webkit-scrollbar {
   transform: translate(5px, 5px);
 }
 
-/* About Section */
+/* ===== ABOUT SECTION ===== */
 .about-grid {
   display: grid;
   grid-template-columns: 1fr 2fr;
@@ -934,7 +680,7 @@ body::-webkit-scrollbar {
   color: var(--white);
 }
 
-/* Projects Section */
+/* ===== PROJECTS SECTION ===== */
 .projects-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -1082,7 +828,7 @@ body::-webkit-scrollbar {
   transform: translate(3px, -3px);
 }
 
-/* Contact Section */
+/* ===== CONTACT SECTION ===== */
 .contact-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1200,85 +946,17 @@ body::-webkit-scrollbar {
   color: var(--primary);
 }
 
-/* Hover Effects for All Chrome Variations */
-.hero-title:hover {
-  filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.3));
-  transform: scale(1.02);
-  transition: all 0.3s ease;
+/* ===== EFFECTS ===== */
+.glitch {
+  position: relative;
+  animation: glitch 2s infinite;
 }
 
-.hero-title.steel-chrome:hover,
-.hero-title.silver-chrome:hover,
-.hero-title.mirror-chrome:hover,
-.hero-title.titanium-chrome:hover,
-.hero-title.liquid-chrome:hover,
-.hero-title.platinum-chrome:hover {
-  transform: scale(1.05);
-  transition: all 0.3s ease;
+.floating {
+  animation: float 6s ease-in-out infinite;
 }
 
-.hero-title.steel-chrome:hover {
-  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.7));
-}
-
-.hero-title.silver-chrome:hover {
-  filter: drop-shadow(0 5px 15px rgba(255, 255, 255, 0.2));
-}
-
-.hero-title.mirror-chrome:hover {
-  filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.5));
-}
-
-.hero-title.titanium-chrome:hover {
-  filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.6));
-}
-
-.hero-title.liquid-chrome:hover {
-  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.4));
-}
-
-.hero-title.platinum-chrome:hover {
-  filter: drop-shadow(0 2px 15px rgba(255, 255, 255, 0.3));
-}
-
-/* Enhanced Hover Effects for New Mirror Variants */
-.hero-title.ultra-mirror:hover {
-  filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.8));
-  transform: scale(1.08);
-  transition: all 0.4s ease;
-}
-
-.hero-title.hyper-mirror:hover {
-  filter: drop-shadow(0 0 50px rgba(255, 255, 255, 0.9));
-  transform: scale(1.1);
-  transition: all 0.4s ease;
-}
-
-.hero-title.liquid-mirror:hover {
-  filter: drop-shadow(0 0 35px rgba(255, 255, 255, 0.6));
-  transform: scale(1.06);
-  transition: all 0.4s ease;
-}
-
-.hero-title.diamond-mirror:hover {
-  filter: drop-shadow(0 0 60px rgba(255, 255, 255, 1));
-  transform: scale(1.12);
-  transition: all 0.4s ease;
-}
-
-.hero-title.holographic-mirror:hover {
-  filter: drop-shadow(0 0 70px rgba(255, 255, 255, 1));
-  transform: scale(1.15);
-  transition: all 0.4s ease;
-}
-
-.hero-title.perfect-mirror:hover {
-  filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.5));
-  transform: scale(1.05);
-  transition: all 0.4s ease;
-}
-
-/* Animations */
+/* ===== ANIMATIONS ===== */
 @keyframes spin {
   0% {
     transform: rotate(0deg);
@@ -1325,177 +1003,6 @@ body::-webkit-scrollbar {
   }
 }
 
-@keyframes sharpGradientShift {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-@keyframes badgeShine {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  25% {
-    background-position: 100% 0%;
-  }
-  50% {
-    background-position: 100% 100%;
-  }
-  75% {
-    background-position: 0% 100%;
-  }
-}
-
-@keyframes badgeShimmer {
-  0%,
-  100% {
-    background-position: -200% 0;
-  }
-  50% {
-    background-position: 200% 0;
-  }
-}
-
-@keyframes chromeShine {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-@keyframes steelShine {
-  0%,
-  100% {
-    background-position: 0% 0%;
-  }
-  25% {
-    background-position: 100% 25%;
-  }
-  50% {
-    background-position: 0% 100%;
-  }
-  75% {
-    background-position: 100% 75%;
-  }
-}
-
-@keyframes silverShine {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  33% {
-    background-position: 100% 0%;
-  }
-  66% {
-    background-position: 0% 100%;
-  }
-}
-
-@keyframes mirrorShine {
-  0%,
-  100% {
-    background-position: 50% 0%;
-  }
-  25% {
-    background-position: 100% 50%;
-  }
-  50% {
-    background-position: 50% 100%;
-  }
-  75% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes titaniumShine {
-  0%,
-  100% {
-    background-position: 0% 0%;
-  }
-  20% {
-    background-position: 100% 20%;
-  }
-  40% {
-    background-position: 20% 100%;
-  }
-  60% {
-    background-position: 80% 0%;
-  }
-  80% {
-    background-position: 0% 80%;
-  }
-}
-
-@keyframes liquidShine {
-  0%,
-  100% {
-    background-position: 0% 0%;
-  }
-  50% {
-    background-position: 100% 100%;
-  }
-}
-
-@keyframes platinumShine {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  25% {
-    background-position: 50% 0%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  75% {
-    background-position: 50% 100%;
-  }
-}
-
-@keyframes ultraMirrorShine {
-  0%,
-  100% {
-    background-position: 0% 0%;
-  }
-  20% {
-    background-position: 100% 20%;
-  }
-  40% {
-    background-position: 0% 100%;
-  }
-  60% {
-    background-position: 80% 0%;
-  }
-  80% {
-    background-position: 20% 80%;
-  }
-}
-
-@keyframes hyperMirrorShine {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  25% {
-    background-position: 100% 0%;
-  }
-  50% {
-    background-position: 50% 100%;
-  }
-  75% {
-    background-position: 0% 25%;
-  }
-}
-
 @keyframes liquidMirrorShine {
   0%,
   100% {
@@ -1506,54 +1013,6 @@ body::-webkit-scrollbar {
   }
   66% {
     background-position: 0% 100%;
-  }
-}
-
-@keyframes diamondMirrorShine {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-@keyframes holographicMirrorShine {
-  0%,
-  100% {
-    background-position: 0% 0%;
-  }
-  25% {
-    background-position: 50% 100%;
-  }
-  50% {
-    background-position: 100% 0%;
-  }
-  75% {
-    background-position: 50% 50%;
-  }
-}
-
-@keyframes perfectMirrorShine {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  16.67% {
-    background-position: 20% 0%;
-  }
-  33.33% {
-    background-position: 50% 100%;
-  }
-  50% {
-    background-position: 80% 50%;
-  }
-  66.67% {
-    background-position: 100% 0%;
-  }
-  83.33% {
-    background-position: 60% 100%;
   }
 }
 
@@ -1598,12 +1057,6 @@ body::-webkit-scrollbar {
   }
 }
 
-/* Glitch effect */
-.glitch {
-  position: relative;
-  animation: glitch 2s infinite;
-}
-
 @keyframes glitch {
   0%,
   100% {
@@ -1623,11 +1076,6 @@ body::-webkit-scrollbar {
   }
 }
 
-/* Floating elements */
-.floating {
-  animation: float 6s ease-in-out infinite;
-}
-
 @keyframes float {
   0%,
   100% {
@@ -1638,8 +1086,30 @@ body::-webkit-scrollbar {
   }
 }
 
-/* Responsive */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
+  .audio-controls {
+    top: 1.5rem;
+    right: 1.5rem;
+  }
+
+  .mute-button {
+    width: 45px;
+    height: 45px;
+    font-size: 1.1rem;
+  }
+
+  .volume-toggle {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+
+  .volume-control {
+    min-width: 180px;
+    padding: 1rem;
+  }
+
   .nav-menu {
     display: none;
   }

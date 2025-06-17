@@ -22,6 +22,50 @@
     <!-- Canvas Background -->
     <canvas id="canvas-bg"></canvas>
 
+    <!-- Audio Controls - CORRECTED STRUCTURE -->
+    <div class="audio-controls">
+      <button
+        class="mute-button"
+        ng-click="toggleMute()"
+        ng-class="{'muted': isMuted}"
+      >
+        <span ng-show="!isMuted">🔊</span>
+        <span ng-show="isMuted">🔇</span>
+      </button>
+
+      <!-- Volume Control Panel - Now properly nested inside audio-controls -->
+      <div class="volume-control" ng-class="{'visible': showVolumeControl}">
+        <div class="volume-slider-container">
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            ng-model="audioVolume"
+            ng-change="setVolume(audioVolume)"
+            class="volume-slider"
+          />
+          <div class="volume-label">{{Math.round(audioVolume * 100)}}%</div>
+        </div>
+
+        <!-- Preset Volume Buttons -->
+        <div class="volume-presets">
+          <button class="preset-btn" ng-click="setVolume(0.1)">10%</button>
+          <button class="preset-btn" ng-click="setVolume(0.3)">30%</button>
+          <button class="preset-btn" ng-click="setVolume(0.5)">50%</button>
+          <button class="preset-btn" ng-click="setVolume(0.8)">80%</button>
+        </div>
+      </div>
+
+      <!-- Volume Toggle Button -->
+      <button class="volume-toggle" ng-click="toggleVolumeControl()">⚙️</button>
+    </div>
+
+    <!-- Audio Element -->
+    <audio id="backgroundAudio" preload="auto" loop style="display: none">
+      <source src="space.mp3" type="audio/mpeg" />
+    </audio>
+
     <!-- Loading Screen -->
     <div class="loading-screen" ng-class="{'hidden': !loading}">
       <div class="loader"></div>

@@ -153,7 +153,7 @@ angular.module("portfolioApp", []).controller("MainController", [
         title: "SecureVault: Local Password Manager",
         description:
           "on a personal quest, built a local storage based password system. It manipulates JSONs. Stores passwords in groups.",
-        icon: "🏥",
+        icon: "🔓",
         technologies: ["HTML", "CSS", "JavaScript"],
         liveLink: "https://incandescent-bunny-fe8013.netlify.app/",
         codeLink: "https://github.com/RUSHYOP/password-manager",

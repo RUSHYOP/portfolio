@@ -68,37 +68,52 @@ angular.module("portfolioApp", []).controller("MainController", [
 
     $scope.skills = [
       {
-        name: "Python",
-        logo: "images/python.png",
-      },
-      {
         name: "JavaScript",
         logo: "images/js.png",
       },
+
+      {
+        name: "Python",
+        logo: "images/python.png",
+      },
+
       {
         name: "C Language",
         logo: "images/c.png",
       },
       {
+        name: "HTML",
+        logo: "images/html.png",
+      },
+      {
+        name: "CSS",
+        logo: "images/css.png",
+      },
+      {
         name: "MySQL",
         logo: "images/mysql.png",
       },
+
       {
         name: "Git",
         logo: "images/gitbash.png",
       },
+
       {
         name: "Flask",
         logo: "images/flask.png",
       },
+
       {
         name: "Machine Learning",
         logo: "images/machinelearning.png",
       },
+
       {
         name: "Google Cloud Computing",
         logo: "images/googlecloud.png",
       },
+
       {
         name: "Jenkins",
         logo: "images/jenkins.png",

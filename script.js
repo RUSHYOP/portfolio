@@ -136,7 +136,7 @@ angular.module("portfolioApp", []).controller("MainController", [
         description:
           "Developed the backend for a two-player dice-based game using JavaScript. Implemented Fisher-Yates shuffle algorithm for fair and human-like dice rolls.",
         icon: "🎲",
-        technologies: ["JavaScript", "Game Logic", "Algorithms", "Backend"],
+        technologies: ["HTML", "CSS", "JavaScript", "Game Logic", "Algorithms"],
         liveLink: "https://pig-game-lovat-eight.vercel.app/",
         codeLink: "https://github.com/RUSHYOP/pig-game",
       },
@@ -148,6 +148,15 @@ angular.module("portfolioApp", []).controller("MainController", [
         technologies: ["Python", "Gradio", "AI/ML"],
         liveLink: "https://huggingface.co/spaces/Rushyy/parkinsons",
         codeLink: "https://github.com/RUSHYOP/Parkinson-s-predictor",
+      },
+      {
+        title: "SecureVault: Local Password Manager",
+        description:
+          "on a personal quest, built a local storage based password system. It manipulates JSONs. Stores passwords in groups.",
+        icon: "🏥",
+        technologies: ["HTML", "CSS", "JavaScript"],
+        liveLink: "https://incandescent-bunny-fe8013.netlify.app/",
+        codeLink: "https://github.com/RUSHYOP/password-manager",
       },
     ];
 

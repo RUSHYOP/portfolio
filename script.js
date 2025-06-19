@@ -173,6 +173,22 @@ angular.module("portfolioApp", []).controller("MainController", [
         liveLink: "https://incandescent-bunny-fe8013.netlify.app/",
         codeLink: "https://github.com/RUSHYOP/password-manager",
       },
+      {
+        title: "MazeSolver: Maze Gen and Maze Path",
+        description:
+          "Built a maze generator and maze solver with path visualization using DFS and BFS searching algorithms",
+        icon: "🧩",
+        technologies: ["Python", "Algorithms", "Data Structures"],
+        codeLink: "https://github.com/RUSHYOP/mazesolver",
+      },
+      {
+        title: "To Do List App",
+        description:
+          "Developed a ToDo List application as part of my academia showing data structure skills.",
+        icon: "📝",
+        technologies: ["Python", "Data Structures"],
+        codeLink: "https://github.com/RUSHYOP/todolist",
+      },
     ];
 
     // Form data

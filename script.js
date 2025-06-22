@@ -179,6 +179,7 @@ angular.module("portfolioApp", []).controller("MainController", [
           "Built a maze generator and maze solver with path visualization using DFS and BFS searching algorithms",
         icon: "🧩",
         technologies: ["Python", "Algorithms", "Data Structures"],
+        liveLink: "https://huggingface.co/spaces/Rushyy/mazesolver",
         codeLink: "https://github.com/RUSHYOP/mazesolver",
       },
       {

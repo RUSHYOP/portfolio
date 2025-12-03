@@ -4,7 +4,7 @@ Personal portfolio website showcasing my work as a Backend Developer.
 
 ## About
 
-This is my portfolio website built with HTML, CSS, JavaScript, and AngularJS. It features an interactive space-themed design with Three.js animations and includes sections for about me, projects, and contact information.
+This is my portfolio website built with Next.js and React. It features an interactive space-themed design with Three.js animations and includes sections for about me, projects, and contact information.
 
 ## Features
 
@@ -16,10 +16,9 @@ This is my portfolio website built with HTML, CSS, JavaScript, and AngularJS. It
 
 ## Tech Stack
 
-- HTML5
-- CSS3
-- JavaScript
-- AngularJS
+- Next.js
+- React
+- TypeScript
 - Three.js
 - EmailJS
 

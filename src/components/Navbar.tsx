@@ -7,16 +7,21 @@ interface NavbarProps {
 
 export default function Navbar({ visible, scrollTo }: NavbarProps) {
   return (
-    <nav className={`navbar ${visible ? "visible" : ""}`}>
+    <nav 
+      className={`navbar ${visible ? "visible" : ""}`}
+      aria-hidden={!visible}
+      inert={!visible ? true : undefined}
+    >
       <div className="nav-container">
-        <a href="#" className="logo">
+        <a href="#main-content" className="logo" tabIndex={visible ? 0 : -1}>
           PURAV S
         </a>
-        <ul className="nav-menu">
+        <ul className="nav-menu" role="list">
           <li>
             <a
               href="#about"
               className="nav-link"
+              tabIndex={visible ? 0 : -1}
               onClick={(e) => {
                 e.preventDefault();
                 scrollTo("about");
@@ -29,6 +34,7 @@ export default function Navbar({ visible, scrollTo }: NavbarProps) {
             <a
               href="#projects"
               className="nav-link"
+              tabIndex={visible ? 0 : -1}
               onClick={(e) => {
                 e.preventDefault();
                 scrollTo("projects");
@@ -41,6 +47,7 @@ export default function Navbar({ visible, scrollTo }: NavbarProps) {
             <a
               href="#contact"
               className="nav-link"
+              tabIndex={visible ? 0 : -1}
               onClick={(e) => {
                 e.preventDefault();
                 scrollTo("contact");

@@ -1,13 +1,14 @@
 export default function Footer() {
   return (
-    <footer className="footer">
+    <footer className="footer" role="contentinfo">
       <div className="footer-content">
-        <div className="footer-links">
+        <nav className="footer-links" aria-label="Social links">
           <a
             href="https://github.com/RUSHYOP"
             className="footer-link"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="GitHub profile"
           >
             GitHub
           </a>
@@ -16,6 +17,7 @@ export default function Footer() {
             className="footer-link"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="LinkedIn profile"
           >
             LinkedIn
           </a>
@@ -24,6 +26,7 @@ export default function Footer() {
             className="footer-link"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="X profile"
           >
             X
           </a>
@@ -32,6 +35,7 @@ export default function Footer() {
             className="footer-link"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="Instagram profile"
           >
             Instagram
           </a>
@@ -39,10 +43,11 @@ export default function Footer() {
             href="https://github.com/RUSHYOP/certifications/blob/master/resume/purav-s-resume.pdf"
             className="footer-link"
             download="Purav_S_Resume.pdf"
+            aria-label="Download resume"
           >
             Resume
           </a>
-        </div>
+        </nav>
         <p>&copy; 2025 Purav S</p>
       </div>
     </footer>

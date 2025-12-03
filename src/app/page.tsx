@@ -105,10 +105,12 @@ export default function Home() {
       <ThreeBackground />
       <LoadingScreen loading={loading} />
       <Navbar visible={showNav} scrollTo={scrollTo} />
-      <Hero glitchEffect={glitchEffect} onExplore={() => scrollTo("about")} />
-      <About />
-      <Projects />
-      <Contact />
+      <main id="main-content">
+        <Hero glitchEffect={glitchEffect} onExplore={() => scrollTo("about")} />
+        <About />
+        <Projects />
+        <Contact />
+      </main>
       <Footer />
     </>
   );

@@ -152,7 +152,7 @@ angular.module("portfolioApp", []).controller("MainController", [
           "Developed the backend for a two-player dice-based game using JavaScript. Implemented Fisher-Yates shuffle algorithm for fair and human-like dice rolls.",
         icon: "🎲",
         technologies: ["HTML", "CSS", "JavaScript", "Game Logic", "Algorithms"],
-        liveLink: "https://pig-game-lovat-eight.vercel.app/",
+        liveLink: "https://piggame.rushy.dev/",
         codeLink: "https://github.com/RUSHYOP/pig-game",
       },
       {

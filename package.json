@@ -9,10 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
+    "@vercel/analytics": "^1.6.1",
     "next": "16.0.7",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "@emailjs/browser": "^4.4.1",
     "three": "^0.169.0"
   },
   "devDependencies": {
@@ -20,8 +21,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.169.0",
-    "typescript": "^5",
     "eslint": "^9",
-    "eslint-config-next": "16.0.7"
+    "eslint-config-next": "16.0.7",
+    "typescript": "^5"
   }
 }

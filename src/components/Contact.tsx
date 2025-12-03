@@ -87,8 +87,9 @@ export default function Contact() {
         </div>
         <form className="contact-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Name</label>
+            <label htmlFor="name" className="form-label">Name</label>
             <input
+              id="name"
               type="text"
               className="form-input"
               value={form.name}
@@ -98,8 +99,9 @@ export default function Contact() {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Email</label>
+            <label htmlFor="email" className="form-label">Email</label>
             <input
+              id="email"
               type="email"
               className="form-input"
               value={form.email}
@@ -109,8 +111,9 @@ export default function Contact() {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Subject</label>
+            <label htmlFor="subject" className="form-label">Subject</label>
             <input
+              id="subject"
               type="text"
               className="form-input"
               value={form.subject}
@@ -120,8 +123,9 @@ export default function Contact() {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Message</label>
+            <label htmlFor="message" className="form-label">Message</label>
             <textarea
+              id="message"
               className="form-textarea"
               value={form.message}
               onChange={(e) => setForm({ ...form, message: e.target.value })}

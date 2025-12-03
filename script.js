@@ -170,7 +170,7 @@ angular.module("portfolioApp", []).controller("MainController", [
           "On a personal quest, built a local storage based password system. It manipulates JSONs. Stores passwords in groups.",
         icon: "🔓",
         technologies: ["HTML", "CSS", "JavaScript"],
-        liveLink: "https://incandescent-bunny-fe8013.netlify.app/",
+        liveLink: "https://passwordmanager.rushy.dev/",
         codeLink: "https://github.com/RUSHYOP/password-manager",
       },
       {

@@ -25,7 +25,7 @@ const projects = [
     title: "HarvestLink - A Marketplace for Farmers",
     description:
       "Developed a full-stack web application connecting farmers with buyers using Python Flask for backend.",
-    icon: "💰",
+    icon: "🧑‍🌾",
     technologies: ["Python", "Flask", "MongoDB"],
     liveLink: "https://harvestlink.rushy.dev/",
     codeLink: "https://github.com/RUSHYOP/Harvestlink",

@@ -24,9 +24,9 @@ const projects = [
   {
     title: "HarvestLink - A Marketplace for Farmers",
     description:
-      "Developed a full-stack web application connecting farmers with buyers using Python Flask for backend and Google Cloud for deployment. Features secure transactions and real-time inventory management.",
+      "Developed a full-stack web application connecting farmers with buyers using Python Flask for backend.",
     icon: "💰",
-    technologies: ["Python", "Flask", "NLP", "Google Cloud"],
+    technologies: ["Python", "Flask", "MongoDB"],
     liveLink: "https://harvestlink.rushy.dev/",
     codeLink: "https://github.com/RUSHYOP/Harvestlink",
   },

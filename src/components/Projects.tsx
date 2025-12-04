@@ -98,41 +98,37 @@ export default function Projects() {
   }, []);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const cards = document.querySelectorAll(".project-card");
-      cards.forEach((card) => {
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
+    const cards = document.querySelectorAll(".project-card");
 
-        if (
-          x >= 0 &&
-          x <= rect.width &&
-          y >= 0 &&
-          y <= rect.height
-        ) {
-          const rotateX = (y - centerY) / 10;
-          const rotateY = (centerX - x) / 10;
-          (card as HTMLElement).style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
-        }
-      });
+    const handleMouseMove = (e: Event) => {
+      const mouseEvent = e as MouseEvent;
+      const card = mouseEvent.currentTarget as HTMLElement;
+      const rect = card.getBoundingClientRect();
+      const x = mouseEvent.clientX - rect.left;
+      const y = mouseEvent.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+
+      const rotateX = (y - centerY) / 10;
+      const rotateY = (centerX - x) / 10;
+      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
     };
 
-    const handleMouseLeave = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target?.classList?.contains("project-card")) {
-        target.style.transform = "";
-      }
+    const handleMouseLeave = (e: Event) => {
+      const card = (e as MouseEvent).currentTarget as HTMLElement;
+      card.style.transform = "";
     };
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseleave", handleMouseLeave, true);
+    cards.forEach((card) => {
+      card.addEventListener("mousemove", handleMouseMove);
+      card.addEventListener("mouseleave", handleMouseLeave);
+    });
 
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseleave", handleMouseLeave, true);
+      cards.forEach((card) => {
+        card.removeEventListener("mousemove", handleMouseMove);
+        card.removeEventListener("mouseleave", handleMouseLeave);
+      });
     };
   }, []);
 

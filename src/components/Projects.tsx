@@ -22,6 +22,15 @@ const projects = [
     codeLink: "https://github.com/RUSHYOP/Procsage",
   },
   {
+    title: "HarvestLink - A Marketplace for Farmers",
+    description:
+      "Developed a full-stack web application connecting farmers with buyers using Python Flask for backend and Google Cloud for deployment. Features secure transactions and real-time inventory management.",
+    icon: "💰",
+    technologies: ["Python", "Flask", "NLP", "Google Cloud"],
+    liveLink: "https://harvestlink.rushy.dev/"
+    codeLink: "https://github.com/RUSHYOP/Harvestlink",
+  },
+  {
     title: "FinAI - NLP Financial Chatbot",
     description:
       "Built a finance-focused chatbot for Google Dev Solution Challenge using Python and Flask Framework. Provides market-based recommendations with legal insights.",

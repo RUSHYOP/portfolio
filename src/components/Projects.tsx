@@ -8,6 +8,7 @@ const projects = [
     description:
       "Developing a machine learning-powered smartwatch prototype for heart health monitoring with GSM alerts, real-time cloud sync, and anomaly detection algorithms.",
     icon: "💓",
+    codeLink: "https://github.com/RUSHYOP/pulseai",
     technologies: ["Python", "Machine Learning", "IoT", "Cloud Sync"],
   },
   {

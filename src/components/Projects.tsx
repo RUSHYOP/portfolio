@@ -17,6 +17,7 @@ const projects = [
     icon: "🔒",
     technologies: ["Python", "Machine Learning", "Cybersecurity"],
     liveLink: "https://ieeexplore.ieee.org/document/10988235",
+    liveLinkLabel: "Paper Publication",
     codeLink: "https://github.com/RUSHYOP/Procsage",
   },
   {
@@ -161,7 +162,7 @@ export default function Projects() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Live Demo
+                    {project.liveLinkLabel || "Live Demo"}
                   </a>
                 )}
                 {project.codeLink && (

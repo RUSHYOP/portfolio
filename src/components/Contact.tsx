@@ -48,7 +48,7 @@ export default function Contact() {
           from_email: form.email,
           subject: form.subject,
           message: form.message,
-          to_email: "alwayspurav@gmail.com",
+          to_email: "puravshrinavalan@gmail.com",
         });
 
         alert(

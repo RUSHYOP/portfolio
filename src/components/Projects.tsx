@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 
 const projects = [
   {
     title: "PulseAI: Heart Health Monitor",
     description:
       "Developing a machine learning-powered smartwatch prototype for heart health monitoring with GSM alerts, real-time cloud sync, and anomaly detection algorithms.",
-    icon: "💓",
+    icon: "/icons/projects/pulseai.png",
     codeLink: "https://github.com/RUSHYOP/pulseai",
     technologies: ["Python", "Machine Learning", "IoT", "Cloud Sync"],
   },
@@ -15,7 +16,7 @@ const projects = [
     title: "ProcSAGE - Host Threat Detection",
     description:
       "Python-based ML model to detect anomalies in system calls for enhanced endpoint security. Published at IEEE ESCI 2025 conference.",
-    icon: "🔒",
+    icon: "/icons/projects/procsage.png",
     technologies: ["Python", "Machine Learning", "Cybersecurity"],
     liveLink: "https://ieeexplore.ieee.org/document/10988235",
     liveLinkLabel: "Paper Publication",
@@ -25,7 +26,7 @@ const projects = [
     title: "HarvestLink - A Marketplace for Farmers",
     description:
       "Developed a full-stack web application connecting farmers with buyers using Python Flask for backend.",
-    icon: "🧑‍🌾",
+    icon: "/icons/projects/harvestlink.png",
     technologies: ["Python", "Flask", "MongoDB"],
     liveLink: "https://harvestlink.rushy.dev/",
     codeLink: "https://github.com/RUSHYOP/Harvestlink",
@@ -34,7 +35,7 @@ const projects = [
     title: "FinAI - NLP Financial Chatbot",
     description:
       "Built a finance-focused chatbot for Google Dev Solution Challenge using Python and Flask Framework. Provides market-based recommendations with legal insights.",
-    icon: "💰",
+    icon: "/icons/projects/finai.png",
     technologies: ["Python", "Flask", "NLP", "Google Cloud"],
     codeLink: "https://github.com/RUSHYOP/FinAI",
   },
@@ -42,16 +43,16 @@ const projects = [
     title: "PigGame Backend System",
     description:
       "Developed the backend for a two-player dice-based game using JavaScript. Implemented Fisher-Yates shuffle algorithm for fair and human-like dice rolls.",
-    icon: "🎲",
+    icon: "/icons/projects/piggame.png",
     technologies: ["HTML", "CSS", "JavaScript", "Game Logic", "Algorithms"],
     liveLink: "https://piggame.rushy.dev/",
     codeLink: "https://github.com/RUSHYOP/pig-game",
   },
   {
-    title: "Disease Prediction AI System",
+    title: "Parkinson's Predictor AI Chatbot",
     description:
       "Built an AI chatbot using Python and Gradio to assess risks of Parkinson's disease using symptom inputs. Focused on early diagnosis support.",
-    icon: "🏥",
+    icon: "/icons/projects/parkinson.png",
     technologies: ["Python", "Gradio", "AI/ML"],
     liveLink: "https://huggingface.co/spaces/Rushyy/parkinsons",
     codeLink: "https://github.com/RUSHYOP/Parkinson-s-predictor",
@@ -60,7 +61,7 @@ const projects = [
     title: "SecureVault: Local Password Manager",
     description:
       "On a personal quest, built a local storage based password system. It manipulates JSONs. Stores passwords in groups.",
-    icon: "🔓",
+    icon: "/icons/projects/securevault.png",
     technologies: ["HTML", "CSS", "JavaScript"],
     liveLink: "https://passwordmanager.rushy.dev/",
     codeLink: "https://github.com/RUSHYOP/password-manager",
@@ -69,7 +70,7 @@ const projects = [
     title: "MazeSolver: Maze Gen and Maze Path",
     description:
       "Built a maze generator and maze solver with path visualization using DFS and BFS searching algorithms",
-    icon: "🧩",
+    icon: "/icons/projects/mazesolver.png",
     technologies: ["Python", "Algorithms", "Data Structures"],
     liveLink: "https://huggingface.co/spaces/Rushyy/mazesolver",
     codeLink: "https://github.com/RUSHYOP/mazesolver",
@@ -78,7 +79,7 @@ const projects = [
     title: "To Do List App",
     description:
       "Developed a ToDo List application as part of my academia showing data structure skills.",
-    icon: "📝",
+    icon: "/icons/projects/todolist.png",
     technologies: ["Python", "Data Structures"],
     codeLink: "https://github.com/RUSHYOP/todolist",
   },
@@ -149,7 +150,14 @@ export default function Projects() {
       <div className="projects-grid">
         {projects.map((project) => (
           <div className="project-card" key={project.title}>
-            <div className="project-visual">{project.icon}</div>
+            <div className="project-visual">
+              <Image
+                src={project.icon}
+                alt={project.title}
+                width={64}
+                height={64}
+              />
+            </div>
             <div className="project-info">
               <h3 className="project-title">{project.title}</h3>
               <p className="project-desc">{project.description}</p>

@@ -23,6 +23,15 @@ const projects = [
     codeLink: "https://github.com/RUSHYOP/Procsage",
   },
   {
+    title: "Network Scanner Pro",
+    description:
+      "An academic project showing network and cybersecurity related functionalities.",
+    icon: "/icons/projects/networkscannerpropng",
+    technologies: ["TypeScript", "Next.js", "Node.js", "Tailwind CSS"],
+    liveLink: "https://networkscannerpro.rushy.dev/",
+    codeLink: "https://github.com/RUSHYOP/network-scanner-pro",
+  },
+  {
     title: "HarvestLink - A Marketplace for Farmers",
     description:
       "Developed a full-stack web application connecting farmers with buyers using Python Flask for backend.",

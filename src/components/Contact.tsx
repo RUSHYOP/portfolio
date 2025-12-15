@@ -44,11 +44,10 @@ export default function Contact() {
 
       try {
         await emailjs.send("service_6tjprnp", "template_xer91le", {
-          from_name: form.name,
-          from_email: form.email,
+          name: form.name,
+          email: form.email,
           subject: form.subject,
           message: form.message,
-          to_email: "puravshrinavalan@gmail.com",
         });
 
         alert(
@@ -59,7 +58,7 @@ export default function Contact() {
       } catch (error) {
         console.error("Failed to send email:", error);
         alert(
-          "Sorry, there was an error sending your message. Please try again or email me directly at alwayspurav@gmail.com"
+          "Sorry, there was an error sending your message. Please try again or email me directly at puravshrinavalan@gmail.com"
         );
       } finally {
         setIsSubmitting(false);
@@ -81,7 +80,7 @@ export default function Contact() {
             to get back to you!
           </p>
           <div className="contact-details">
-            <div className="contact-item">alwayspurav@gmail.com</div>
+            <div className="contact-item">puravshrinavalan@gmail.com</div>
             <div className="contact-item">Bangalore, India</div>
           </div>
         </div>

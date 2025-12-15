@@ -19,7 +19,7 @@ const skills = [
 
 const aboutParagraphs = [
   "I'm a Software Developer. Currently speed running through my final year in B.E Computer Science and Engineering.",
-  "My skills include literally anything backend and basic machine learning integration. I enjoy writing code and building stuff that brings out the best in me.",
+  "My skills include literally anything full stack and machine learning integration, but that is not all. I enjoy writing code and building stuff that brings out the best in me.",
   "When I'm not coding, you can find me gaming, travelling, or just doing something dumb.",
 ];
 
@@ -101,7 +101,7 @@ export default function About() {
           />
         </div>
         <div className="about-text">
-          <h3>Building Backend Systems</h3>
+          <h3>Building Efficient Systems</h3>
           {aboutParagraphs.map((paragraph, index) => (
             <p key={index}>{paragraph}</p>
           ))}

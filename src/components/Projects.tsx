@@ -26,7 +26,7 @@ const projects = [
     title: "Network Scanner Pro",
     description:
       "An academic project showing network and cybersecurity related functionalities.",
-    icon: "/icons/projects/networkscannerpropng",
+    icon: "/icons/projects/networkscannerpro.png",
     technologies: ["TypeScript", "Next.js", "Node.js", "Tailwind CSS"],
     liveLink: "https://networkscannerpro.rushy.dev/",
     codeLink: "https://github.com/RUSHYOP/network-scanner-pro",

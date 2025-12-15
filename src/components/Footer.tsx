@@ -40,9 +40,9 @@ export default function Footer() {
             Instagram
           </a>
           <a
-            href="https://github.com/RUSHYOP/certifications/blob/master/resume"
+            href="https://github.com/RUSHYOP/certifications/blob/f2c6cb24e2517e922a0dd771114ce9000fff5086/purav-s-resume.pdf"
             className="footer-link"
-            download="Purav_S_Resume.pdf"
+            download="purav-s-resume.pdf"
             aria-label="Download resume"
           >
             Resume

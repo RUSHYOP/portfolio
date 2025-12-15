@@ -17,8 +17,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Purav S - Backend Developer",
-  description: "Backend Developer & System Architect Portfolio",
+  title: "Purav S - Software Developer",
+  description: "Software Developer Portfolio",
 };
 
 export default function RootLayout({

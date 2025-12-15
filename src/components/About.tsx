@@ -18,7 +18,7 @@ const skills = [
 ];
 
 const aboutParagraphs = [
-  "I'm an Aspiring Backend Developer. Currently speed running through my final year in B.E Computer Science and Engineering.",
+  "I'm a Software Developer. Currently speed running through my final year in B.E Computer Science and Engineering.",
   "My skills include literally anything backend and basic machine learning integration. I enjoy writing code and building stuff that brings out the best in me.",
   "When I'm not coding, you can find me gaming, travelling, or just doing something dumb.",
 ];

@@ -55,6 +55,11 @@ export interface ISettings extends Document {
   key: string;
   profileImage: string;
   audioFile: string;
+  githubUrl: string;
+  linkedinUrl: string;
+  xUrl: string;
+  instagramUrl: string;
+  resumeUrl: string;
 }
 
 const SettingsSchema = new Schema<ISettings>(
@@ -62,6 +67,11 @@ const SettingsSchema = new Schema<ISettings>(
     key: { type: String, required: true, unique: true, default: "main" },
     profileImage: { type: String, default: "/images/purav.jpg" },
     audioFile: { type: String, default: "/audio/space.mp3" },
+    githubUrl: { type: String, default: "https://github.com/RUSHYOP" },
+    linkedinUrl: { type: String, default: "https://linkedin.com/in/purav-s" },
+    xUrl: { type: String, default: "https://x.com/rushyyyyyyyyyyy" },
+    instagramUrl: { type: String, default: "https://instagram.com/_rushyyy" },
+    resumeUrl: { type: String, default: "https://github.com/RUSHYOP/certifications/blob/f2c6cb24e2517e922a0dd771114ce9000fff5086/purav-s-resume.pdf" },
   },
   { timestamps: true }
 );

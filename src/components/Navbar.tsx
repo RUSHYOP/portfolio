@@ -3,9 +3,10 @@
 interface NavbarProps {
   visible: boolean;
   scrollTo: (id: string) => void;
+  resumeUrl: string;
 }
 
-export default function Navbar({ visible, scrollTo }: NavbarProps) {
+export default function Navbar({ visible, scrollTo, resumeUrl }: NavbarProps) {
   return (
     <nav 
       className={`navbar ${visible ? "visible" : ""}`}
@@ -54,6 +55,17 @@ export default function Navbar({ visible, scrollTo }: NavbarProps) {
               }}
             >
               Contact
+            </a>
+          </li>
+          <li>
+            <a
+              href={resumeUrl}
+              className="nav-link"
+              tabIndex={visible ? 0 : -1}
+              download="purav-s-resume.pdf"
+              aria-label="Download resume"
+            >
+              Resume
             </a>
           </li>
         </ul>

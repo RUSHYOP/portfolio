@@ -14,6 +14,11 @@ export default async function Home() {
       skills={skills}
       profileImage={settings.profileImage}
       audioFile={settings.audioFile}
+      githubUrl={settings.githubUrl}
+      linkedinUrl={settings.linkedinUrl}
+      xUrl={settings.xUrl}
+      instagramUrl={settings.instagramUrl}
+      resumeUrl={settings.resumeUrl}
     />
   );
 }

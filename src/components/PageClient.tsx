@@ -40,9 +40,14 @@ interface PageClientProps {
   skills: SkillData[];
   profileImage: string;
   audioFile: string;
+  githubUrl: string;
+  linkedinUrl: string;
+  xUrl: string;
+  instagramUrl: string;
+  resumeUrl: string;
 }
 
-export default function PageClient({ projects, skills, profileImage, audioFile }: PageClientProps) {
+export default function PageClient({ projects, skills, profileImage, audioFile, githubUrl, linkedinUrl, xUrl, instagramUrl, resumeUrl }: PageClientProps) {
   const [loading, setLoading] = useState(true);
   const [showNav, setShowNav] = useState(false);
   const [glitchEffect, setGlitchEffect] = useState(false);
@@ -130,14 +135,20 @@ export default function PageClient({ projects, skills, profileImage, audioFile }
 
       <ThreeBackground />
       <LoadingScreen loading={loading} />
-      <Navbar visible={showNav} scrollTo={scrollTo} />
+      <Navbar visible={showNav} scrollTo={scrollTo} resumeUrl={resumeUrl} />
       <main id="main-content">
         <Hero glitchEffect={glitchEffect} onExplore={() => scrollTo("about")} />
         <About skills={skills} profileImage={profileImage} />
         <Projects projects={projects} />
         <Contact />
       </main>
-      <Footer />
+      <Footer 
+        githubUrl={githubUrl}
+        linkedinUrl={linkedinUrl}
+        xUrl={xUrl}
+        instagramUrl={instagramUrl}
+        resumeUrl={resumeUrl}
+      />
     </>
   );
 }

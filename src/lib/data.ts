@@ -29,6 +29,11 @@ export interface Skill {
 export interface Settings {
   profileImage: string;
   audioFile: string;
+  githubUrl: string;
+  linkedinUrl: string;
+  xUrl: string;
+  instagramUrl: string;
+  resumeUrl: string;
 }
 
 // ── Projects ──
@@ -186,11 +191,21 @@ export async function getSettings(): Promise<Settings> {
       key: "main",
       profileImage: "/images/purav.jpg",
       audioFile: "/audio/space.mp3",
+      githubUrl: "https://github.com/RUSHYOP",
+      linkedinUrl: "https://linkedin.com/in/purav-s",
+      xUrl: "https://x.com/rushyyyyyyyyyyy",
+      instagramUrl: "https://instagram.com/_rushyyy",
+      resumeUrl: "https://github.com/RUSHYOP/certifications/blob/f2c6cb24e2517e922a0dd771114ce9000fff5086/purav-s-resume.pdf",
     });
   }
   return {
     profileImage: doc.profileImage,
     audioFile: doc.audioFile,
+    githubUrl: doc.githubUrl,
+    linkedinUrl: doc.linkedinUrl,
+    xUrl: doc.xUrl,
+    instagramUrl: doc.instagramUrl,
+    resumeUrl: doc.resumeUrl,
   };
 }
 
@@ -204,5 +219,10 @@ export async function updateSettings(updates: Partial<Settings>): Promise<Settin
   return {
     profileImage: doc!.profileImage,
     audioFile: doc!.audioFile,
+    githubUrl: doc!.githubUrl,
+    linkedinUrl: doc!.linkedinUrl,
+    xUrl: doc!.xUrl,
+    instagramUrl: doc!.instagramUrl,
+    resumeUrl: doc!.resumeUrl,
   };
 }

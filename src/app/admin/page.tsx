@@ -3,6 +3,16 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 
+interface MediaFile {
+  id: string;
+  filename: string;
+  size: number;
+  uploadedAt: string;
+  contentType: string;
+  uploadType: string;
+  url: string;
+}
+
 interface Project {
   id: string;
   title: string;
@@ -27,6 +37,11 @@ interface Skill {
 interface Settings {
   profileImage: string;
   audioFile: string;
+  githubUrl: string;
+  linkedinUrl: string;
+  xUrl: string;
+  instagramUrl: string;
+  resumeUrl: string;
 }
 
 type Tab = "projects" | "skills" | "media";
@@ -54,7 +69,15 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("projects");
   const [projects, setProjects] = useState<Project[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
-  const [settings, setSettings] = useState<Settings>({ profileImage: "", audioFile: "" });
+  const [settings, setSettings] = useState<Settings>({ 
+    profileImage: "", 
+    audioFile: "",
+    githubUrl: "",
+    linkedinUrl: "",
+    xUrl: "",
+    instagramUrl: "",
+    resumeUrl: ""
+  });
 
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [addingProject, setAddingProject] = useState(false);
@@ -67,6 +90,11 @@ export default function AdminPage() {
 
   const [uploading, setUploading] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [mediaPickerType, setMediaPickerType] = useState<string>("");
+  const [mediaPickerCallback, setMediaPickerCallback] = useState<((url: string) => void) | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -99,6 +127,32 @@ export default function AdminPage() {
   const flash = (msg: string) => {
     setSaveMsg(msg);
     setTimeout(() => setSaveMsg(""), 3000);
+  };
+
+  // Open media picker
+  const openMediaPicker = async (type: string, callback: (url: string) => void) => {
+    setMediaPickerType(type);
+    setMediaPickerCallback(() => callback);
+    setShowMediaPicker(true);
+    
+    // Load media files
+    try {
+      const res = await fetch(`/api/media?type=${type}`);
+      if (res.ok) {
+        const files = await res.json();
+        setMediaFiles(files);
+      }
+    } catch {
+      flash("Failed to load media library");
+    }
+  };
+
+  const selectMedia = (url: string) => {
+    if (mediaPickerCallback) {
+      mediaPickerCallback(url);
+    }
+    setShowMediaPicker(false);
+    setMediaFiles([]);
   };
 
   // --- Auth ---
@@ -635,16 +689,25 @@ export default function AdminPage() {
                     />
                   </div>
                 )}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const path = await uploadFile(file, "profile");
-                    if (path) await updateSettingsField("profileImage", path);
-                  }}
-                />
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.5rem" }}>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const path = await uploadFile(file, "profile");
+                      if (path) await updateSettingsField("profileImage", path);
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    className="admin-btn admin-btn-sm"
+                    onClick={() => openMediaPicker("profile", (url) => updateSettingsField("profileImage", url))}
+                  >
+                    Choose from Library
+                  </button>
+                </div>
                 {uploading && <span className="admin-uploading">Uploading...</span>}
               </div>
 
@@ -656,17 +719,77 @@ export default function AdminPage() {
                     <audio controls src={settings.audioFile} style={{ width: "100%" }} />
                   </div>
                 )}
-                <input
-                  type="file"
-                  accept="audio/mpeg,audio/ogg,audio/wav"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const path = await uploadFile(file, "audio");
-                    if (path) await updateSettingsField("audioFile", path);
-                  }}
-                />
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.5rem" }}>
+                  <input
+                    type="file"
+                    accept="audio/mpeg,audio/ogg,audio/wav"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const path = await uploadFile(file, "audio");
+                      if (path) await updateSettingsField("audioFile", path);
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    className="admin-btn admin-btn-sm"
+                    onClick={() => openMediaPicker("audio", (url) => updateSettingsField("audioFile", url))}
+                  >
+                    Choose from Library
+                  </button>
+                </div>
                 {uploading && <span className="admin-uploading">Uploading...</span>}
+              </div>
+            </div>
+
+            <div className="admin-card" style={{ marginTop: "1.5rem" }}>
+              <h3>Footer Links</h3>
+              <div className="admin-project-form">
+                <div className="admin-field">
+                  <label>GitHub URL</label>
+                  <input
+                    type="url"
+                    value={settings.githubUrl || ""}
+                    onChange={(e) => updateSettingsField("githubUrl", e.target.value)}
+                    placeholder="https://github.com/username"
+                  />
+                </div>
+                <div className="admin-field">
+                  <label>LinkedIn URL</label>
+                  <input
+                    type="url"
+                    value={settings.linkedinUrl || ""}
+                    onChange={(e) => updateSettingsField("linkedinUrl", e.target.value)}
+                    placeholder="https://linkedin.com/in/username"
+                  />
+                </div>
+                <div className="admin-field">
+                  <label>X (Twitter) URL</label>
+                  <input
+                    type="url"
+                    value={settings.xUrl || ""}
+                    onChange={(e) => updateSettingsField("xUrl", e.target.value)}
+                    placeholder="https://x.com/username"
+                  />
+                </div>
+                <div className="admin-field">
+                  <label>Instagram URL</label>
+                  <input
+                    type="url"
+                    value={settings.instagramUrl || ""}
+                    onChange={(e) => updateSettingsField("instagramUrl", e.target.value)}
+                    placeholder="https://instagram.com/username"
+                  />
+                </div>
+                <div className="admin-field">
+                  <label>Resume URL</label>
+                  <input
+                    type="url"
+                    value={settings.resumeUrl || ""}
+                    onChange={(e) => updateSettingsField("resumeUrl", e.target.value)}
+                    placeholder="https://github.com/username/resume.pdf"
+                  />
+                </div>
               </div>
             </div>
 
@@ -712,6 +835,58 @@ export default function AdminPage() {
           </section>
         )}
       </main>
+
+      {/* Media Picker Modal */}
+      {showMediaPicker && (
+        <div className="admin-modal-overlay" onClick={() => setShowMediaPicker(false)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h3>Choose from Media Library</h3>
+              <button className="admin-modal-close" onClick={() => setShowMediaPicker(false)}>×</button>
+            </div>
+            <div className="admin-modal-body">
+              {mediaFiles.length === 0 ? (
+                <p style={{ textAlign: "center", color: "#666" }}>No media files found. Upload a new file first.</p>
+              ) : (
+                <div className="admin-media-library-grid">
+                  {mediaFiles.map((file) => (
+                    <div 
+                      key={file.id} 
+                      className="admin-media-library-item"
+                      onClick={() => selectMedia(file.url)}
+                    >
+                      {file.contentType.startsWith("image/") ? (
+                        <Image
+                          src={file.url}
+                          alt={file.filename}
+                          width={120}
+                          height={120}
+                          style={{ objectFit: "cover" }}
+                          unoptimized
+                        />
+                      ) : file.contentType.startsWith("audio/") ? (
+                        <div className="admin-media-audio-preview">
+                          <span>🎵</span>
+                          <small>{file.filename}</small>
+                        </div>
+                      ) : (
+                        <div className="admin-media-file-preview">
+                          <span>📄</span>
+                          <small>{file.filename}</small>
+                        </div>
+                      )}
+                      <div className="admin-media-library-info">
+                        <small>{file.filename.substring(0, 20)}{file.filename.length > 20 ? '...' : ''}</small>
+                        <small>{(file.size / 1024).toFixed(1)} KB</small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

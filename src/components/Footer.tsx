@@ -1,10 +1,18 @@
-export default function Footer() {
+interface FooterProps {
+  githubUrl: string;
+  linkedinUrl: string;
+  xUrl: string;
+  instagramUrl: string;
+  resumeUrl: string;
+}
+
+export default function Footer({ githubUrl, linkedinUrl, xUrl, instagramUrl, resumeUrl }: FooterProps) {
   return (
     <footer className="footer" role="contentinfo">
       <div className="footer-content">
         <nav className="footer-links" aria-label="Social links">
           <a
-            href="https://github.com/RUSHYOP"
+            href={githubUrl}
             className="footer-link"
             target="_blank"
             rel="noopener noreferrer"
@@ -13,7 +21,7 @@ export default function Footer() {
             GitHub
           </a>
           <a
-            href="https://linkedin.com/in/purav-s"
+            href={linkedinUrl}
             className="footer-link"
             target="_blank"
             rel="noopener noreferrer"
@@ -22,7 +30,7 @@ export default function Footer() {
             LinkedIn
           </a>
           <a
-            href="https://x.com/rushyyyyyyyyyyy"
+            href={xUrl}
             className="footer-link"
             target="_blank"
             rel="noopener noreferrer"
@@ -31,7 +39,7 @@ export default function Footer() {
             X
           </a>
           <a
-            href="https://instagram.com/_rushyyy"
+            href={instagramUrl}
             className="footer-link"
             target="_blank"
             rel="noopener noreferrer"
@@ -40,7 +48,7 @@ export default function Footer() {
             Instagram
           </a>
           <a
-            href="https://github.com/RUSHYOP/certifications/blob/f2c6cb24e2517e922a0dd771114ce9000fff5086/purav-s-resume.pdf"
+            href={resumeUrl}
             className="footer-link"
             download="purav-s-resume.pdf"
             aria-label="Download resume"

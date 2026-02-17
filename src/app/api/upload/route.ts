@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyRequest } from "@/lib/auth";
-import fs from "fs";
-import path from "path";
+import { uploadToGridFS } from "@/lib/gridfs";
 
 const UPLOAD_LIMITS: Record<string, { maxBytes: number; maxWidth: number; maxHeight: number; extensions: string[] }> = {
   profile: { maxBytes: 2 * 1024 * 1024, maxWidth: 800, maxHeight: 800, extensions: ["jpg", "jpeg", "png", "webp"] },
@@ -46,50 +45,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine save path
+    // Prepare filename and content type
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const filename = `${timestamp}_${safeName}`;
+    const contentType = file.type || "application/octet-stream";
 
-    let saveDir: string;
-    let publicPath: string;
-
-    switch (type) {
-      case "profile":
-        saveDir = path.join(process.cwd(), "public", "images");
-        publicPath = `/images/${filename}`;
-        break;
-      case "project_icon":
-        saveDir = path.join(process.cwd(), "public", "icons", "projects");
-        publicPath = `/icons/projects/${filename}`;
-        break;
-      case "skill_icon":
-        saveDir = path.join(process.cwd(), "public", "images");
-        publicPath = `/images/${filename}`;
-        break;
-      case "audio":
-        saveDir = path.join(process.cwd(), "public", "audio");
-        publicPath = `/audio/${filename}`;
-        break;
-      default:
-        return NextResponse.json({ error: "Invalid type" }, { status: 400 });
-    }
-
-    // Ensure directory exists
-    fs.mkdirSync(saveDir, { recursive: true });
-
-    // Write file
+    // Upload to GridFS
     const buffer = Buffer.from(await file.arrayBuffer());
-    const filePath = path.join(saveDir, filename);
-    fs.writeFileSync(filePath, buffer);
+    const fileId = await uploadToGridFS(buffer, filename, contentType, {
+      uploadType: type,
+      originalName: file.name,
+      size: file.size,
+      uploadedAt: new Date().toISOString(),
+    });
+
+    // Return path in format /api/media/{fileId}
+    const path = `/api/media/${fileId}`;
 
     return NextResponse.json({
-      path: publicPath,
+      path,
+      fileId,
       filename,
       size: file.size,
       limits: { maxWidth: limits.maxWidth, maxHeight: limits.maxHeight },
     });
-  } catch {
+  } catch (error) {
+    console.error("Upload error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

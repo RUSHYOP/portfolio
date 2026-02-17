@@ -267,7 +267,8 @@ export default function AdminPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              autoComplete="email"
+              autoComplete="username"
+              name="portfolio-admin-email"
               autoFocus
             />
           </div>
@@ -280,6 +281,7 @@ export default function AdminPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
+              name="portfolio-admin-password"
             />
           </div>
           <button type="submit" className="admin-btn admin-btn-primary" disabled={loginLoading}>

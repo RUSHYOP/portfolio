@@ -47,23 +47,12 @@ interface PageClientProps {
   resumeUrl: string;
 }
 
-export default function PageClient({ projects: initialProjects, skills: initialSkills, profileImage: initialProfileImage, audioFile: initialAudioFile, githubUrl: initialGithubUrl, linkedinUrl: initialLinkedinUrl, xUrl: initialXUrl, instagramUrl: initialInstagramUrl, resumeUrl: initialResumeUrl }: PageClientProps) {
+export default function PageClient({ projects, skills, profileImage, audioFile, githubUrl, linkedinUrl, xUrl, instagramUrl, resumeUrl }: PageClientProps) {
   const [loading, setLoading] = useState(true);
   const [showNav, setShowNav] = useState(false);
   const [glitchEffect, setGlitchEffect] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioInitialized, setAudioInitialized] = useState(false);
-
-  // Client-side data state for live updates
-  const [projects, setProjects] = useState(initialProjects);
-  const [skills, setSkills] = useState(initialSkills);
-  const [profileImage, setProfileImage] = useState(initialProfileImage);
-  const [audioFile, setAudioFile] = useState(initialAudioFile);
-  const [githubUrl, setGithubUrl] = useState(initialGithubUrl);
-  const [linkedinUrl, setLinkedinUrl] = useState(initialLinkedinUrl);
-  const [xUrl, setXUrl] = useState(initialXUrl);
-  const [instagramUrl, setInstagramUrl] = useState(initialInstagramUrl);
-  const [resumeUrl, setResumeUrl] = useState(initialResumeUrl);
 
   const initializeAudio = useCallback(() => {
     if (audioRef.current && !audioInitialized) {
@@ -74,47 +63,6 @@ export default function PageClient({ projects: initialProjects, skills: initialS
       setAudioInitialized(true);
     }
   }, [audioInitialized]);
-
-  // Fetch data updates periodically
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [projectsRes, skillsRes, settingsRes] = await Promise.all([
-          fetch("/api/projects"),
-          fetch("/api/skills"),
-          fetch("/api/settings"),
-        ]);
-
-        if (projectsRes.ok) {
-          const projectsData = await projectsRes.json();
-          setProjects(projectsData);
-        }
-
-        if (skillsRes.ok) {
-          const skillsData = await skillsRes.json();
-          setSkills(skillsData);
-        }
-
-        if (settingsRes.ok) {
-          const settingsData = await settingsRes.json();
-          setProfileImage(settingsData.profileImage);
-          setAudioFile(settingsData.audioFile);
-          setGithubUrl(settingsData.githubUrl);
-          setLinkedinUrl(settingsData.linkedinUrl);
-          setXUrl(settingsData.xUrl);
-          setInstagramUrl(settingsData.instagramUrl);
-          setResumeUrl(settingsData.resumeUrl);
-        }
-      } catch (error) {
-        console.error("Failed to fetch updates:", error);
-      }
-    };
-
-    // Poll every 5 seconds
-    const interval = setInterval(fetchData, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     const handleInteraction = () => {
@@ -179,23 +127,10 @@ export default function PageClient({ projects: initialProjects, skills: initialS
     }
   };
 
-  // Update audio source only when it changes
-  useEffect(() => {
-    if (audioRef.current && audioRef.current.src !== audioFile) {
-      const wasPlaying = !audioRef.current.paused;
-      const currentTime = audioRef.current.currentTime;
-      audioRef.current.src = audioFile;
-      if (wasPlaying && audioInitialized) {
-        audioRef.current.currentTime = currentTime;
-        audioRef.current.play().catch(() => {});
-      }
-    }
-  }, [audioFile, audioInitialized]);
-
   return (
     <>
       <audio ref={audioRef} loop preload="auto" style={{ display: "none" }}>
-        <source src={initialAudioFile} type="audio/mpeg" />
+        <source src={audioFile} type="audio/mpeg" />
       </audio>
 
       <ThreeBackground />

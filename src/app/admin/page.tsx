@@ -402,18 +402,22 @@ export default function AdminPage() {
                 ) : (
                   <div key={project.id} className="admin-card">
                     <div className="admin-card-header">
-                      {project.icon && (
+                      {project.icon ? (
                         <Image
                           src={project.icon}
                           alt={project.title}
                           width={48}
                           height={48}
                           className="admin-card-icon"
+                          unoptimized
                         />
+                      ) : (
+                        <div className="admin-no-icon">No Icon</div>
                       )}
                       <div>
                         <h3>{project.title}</h3>
                         <p className="admin-card-desc">{project.description}</p>
+                        {project.icon && <small style={{ color: '#666', fontSize: '0.75rem' }}>Icon: {project.icon}</small>}
                       </div>
                     </div>
                     <div className="admin-card-meta">
@@ -758,6 +762,7 @@ function ProjectForm({
               width={48}
               height={48}
               className="admin-card-icon"
+              unoptimized
             />
           )}
           <input
@@ -769,6 +774,7 @@ function ProjectForm({
             }}
           />
           {uploading && <span className="admin-uploading">Uploading...</span>}
+          {project.icon && <small style={{ display: 'block', marginTop: '0.5rem', color: '#666' }}>{project.icon}</small>}
         </div>
       </div>
       <div className="admin-field">

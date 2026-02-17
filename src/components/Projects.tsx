@@ -3,98 +3,25 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 
-const projects = [
-  {
-    title: "PulseAI: Heart Health Monitor",
-    description:
-      "Developing a machine learning-powered smartwatch prototype for heart health monitoring with GSM alerts, real-time cloud sync, and anomaly detection algorithms.",
-    icon: "/icons/projects/pulseai.png",
-    codeLink: "https://github.com/RUSHYOP/pulseai",
-    technologies: ["Python", "Machine Learning", "IoT", "Cloud Sync"],
-  },
-  {
-    title: "ProcSAGE - Host Threat Detection",
-    description:
-      "Python-based ML model to detect anomalies in system calls for enhanced endpoint security. Published at IEEE ESCI 2025 conference.",
-    icon: "/icons/projects/procsage.png",
-    technologies: ["Python", "Machine Learning", "Cybersecurity"],
-    liveLink: "https://ieeexplore.ieee.org/document/10988235",
-    liveLinkLabel: "Paper Publication",
-    codeLink: "https://github.com/RUSHYOP/Procsage",
-  },
-  {
-    title: "Network Scanner Pro",
-    description:
-      "An academic project showing network and cybersecurity related functionalities.",
-    icon: "/icons/projects/networkscannerpro.png",
-    technologies: ["TypeScript", "Next.js", "Node.js", "Tailwind CSS"],
-    liveLink: "https://networkscannerpro.rushy.dev/",
-    codeLink: "https://github.com/RUSHYOP/network-scanner-pro",
-  },
-  {
-    title: "HarvestLink - A Marketplace for Farmers",
-    description:
-      "Developed a full-stack web application connecting farmers with buyers using Python Flask for backend.",
-    icon: "/icons/projects/harvestlink.png",
-    technologies: ["Python", "Flask", "MongoDB"],
-    liveLink: "https://harvestlink.rushy.dev/",
-    codeLink: "https://github.com/RUSHYOP/Harvestlink",
-  },
-  {
-    title: "FinAI - NLP Financial Chatbot",
-    description:
-      "Built a finance-focused chatbot for Google Dev Solution Challenge using Python and Flask Framework. Provides market-based recommendations with legal insights.",
-    icon: "/icons/projects/finai.png",
-    technologies: ["Python", "Flask", "NLP", "Google Cloud"],
-    codeLink: "https://github.com/RUSHYOP/FinAI",
-  },
-  {
-    title: "PigGame Backend System",
-    description:
-      "Developed the backend for a two-player dice-based game using JavaScript. Implemented Fisher-Yates shuffle algorithm for fair and human-like dice rolls.",
-    icon: "/icons/projects/piggame.png",
-    technologies: ["HTML", "CSS", "JavaScript", "Game Logic", "Algorithms"],
-    liveLink: "https://piggame.rushy.dev/",
-    codeLink: "https://github.com/RUSHYOP/pig-game",
-  },
-  {
-    title: "Parkinson's Predictor AI Chatbot",
-    description:
-      "Built an AI chatbot using Python and Gradio to assess risks of Parkinson's disease using symptom inputs. Focused on early diagnosis support.",
-    icon: "/icons/projects/parkinson.png",
-    technologies: ["Python", "Gradio", "AI/ML"],
-    liveLink: "https://huggingface.co/spaces/Rushyy/parkinsons",
-    codeLink: "https://github.com/RUSHYOP/Parkinson-s-predictor",
-  },
-  {
-    title: "SecureVault: Local Password Manager",
-    description:
-      "On a personal quest, built a local storage based password system. It manipulates JSONs. Stores passwords in groups.",
-    icon: "/icons/projects/securevault.png",
-    technologies: ["HTML", "CSS", "JavaScript"],
-    liveLink: "https://passwordmanager.rushy.dev/",
-    codeLink: "https://github.com/RUSHYOP/password-manager",
-  },
-  {
-    title: "MazeSolver: Maze Gen and Maze Path",
-    description:
-      "Built a maze generator and maze solver with path visualization using DFS and BFS searching algorithms",
-    icon: "/icons/projects/mazesolver.png",
-    technologies: ["Python", "Algorithms", "Data Structures"],
-    liveLink: "https://huggingface.co/spaces/Rushyy/mazesolver",
-    codeLink: "https://github.com/RUSHYOP/mazesolver",
-  },
-  {
-    title: "To Do List App",
-    description:
-      "Developed a ToDo List application as part of my academia showing data structure skills.",
-    icon: "/icons/projects/todolist.png",
-    technologies: ["Python", "Data Structures"],
-    codeLink: "https://github.com/RUSHYOP/todolist",
-  },
-];
+interface ProjectData {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  technologies: string[];
+  liveLink: string;
+  liveLinkLabel: string;
+  codeLink: string;
+  showLiveLink: boolean;
+  showCodeLink: boolean;
+  order: number;
+}
 
-export default function Projects() {
+interface ProjectsProps {
+  projects: ProjectData[];
+}
+
+export default function Projects({ projects }: ProjectsProps) {
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -178,7 +105,7 @@ export default function Projects() {
                 ))}
               </div>
               <div className="project-links">
-                {project.liveLink && (
+                {project.showLiveLink && project.liveLink && (
                   <a
                     href={project.liveLink}
                     className="project-link"
@@ -188,7 +115,7 @@ export default function Projects() {
                     {project.liveLinkLabel || "Live Demo"}
                   </a>
                 )}
-                {project.codeLink && (
+                {project.showCodeLink && project.codeLink && (
                   <a
                     href={project.codeLink}
                     className="project-link"

@@ -3,19 +3,17 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 
-const skills = [
-  { name: "JavaScript", logo: "/images/js.png" },
-  { name: "Python", logo: "/images/python.png" },
-  { name: "C Language", logo: "/images/c.png" },
-  { name: "HTML", logo: "/images/html.png" },
-  { name: "CSS", logo: "/images/css.png" },
-  { name: "MySQL", logo: "/images/mysql.png" },
-  { name: "Git", logo: "/images/gitbash.png" },
-  { name: "Flask", logo: "/images/flask.png" },
-  { name: "Machine Learning", logo: "/images/machinelearning.png" },
-  { name: "Google Cloud Computing", logo: "/images/googlecloud.png" },
-  { name: "Jenkins", logo: "/images/jenkins.png" },
-];
+interface SkillData {
+  id: string;
+  name: string;
+  icon: string;
+  order: number;
+}
+
+interface AboutProps {
+  skills: SkillData[];
+  profileImage: string;
+}
 
 const aboutParagraphs = [
   "I'm a Software Developer. Currently speed running through my final year in B.E Computer Science and Engineering.",
@@ -23,7 +21,7 @@ const aboutParagraphs = [
   "When I'm not coding, you can find me gaming, travelling, or just doing something dumb.",
 ];
 
-export default function About() {
+export default function About({ skills, profileImage }: AboutProps) {
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -92,7 +90,7 @@ export default function About() {
       <div className="about-grid">
         <div className="about-visual">
           <Image
-            src="/images/purav.jpg"
+            src={profileImage}
             alt="Purav S"
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
@@ -109,7 +107,7 @@ export default function About() {
             {skills.map((skill) => (
               <div className="skill-item" key={skill.name}>
                 <Image
-                  src={skill.logo}
+                  src={skill.icon}
                   alt={skill.name}
                   width={32}
                   height={32}

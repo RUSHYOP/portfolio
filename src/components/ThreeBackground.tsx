@@ -15,6 +15,7 @@ export default function ThreeBackground() {
   } | null>(null);
   const animationIdRef = useRef<number>(0);
   const mouseRef = useRef({ x: 0, y: 0 });
+  const visibleRef = useRef(true);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -34,6 +35,10 @@ export default function ThreeBackground() {
     canvas.id = "canvas-bg";
     container.appendChild(canvas);
 
+    // Detect mobile for reduced particles
+    const isMobile = window.innerWidth < 768;
+    const dpr = Math.min(window.devicePixelRatio, isMobile ? 1 : 1.5);
+
     // Setup Three.js
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
@@ -48,7 +53,10 @@ export default function ThreeBackground() {
       renderer = new THREE.WebGLRenderer({
         canvas,
         alpha: true,
+        antialias: false,
         powerPreference: "high-performance",
+        stencil: false,
+        depth: false,
       });
     } catch {
       console.warn("WebGL not available");
@@ -57,11 +65,11 @@ export default function ThreeBackground() {
 
     rendererRef.current = renderer;
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(dpr);
 
-    // Create particles
+    // Create particles - fewer on mobile
     const geometry = new THREE.BufferGeometry();
-    const particlesCount = 1000;
+    const particlesCount = isMobile ? 400 : 800;
     const posArray = new Float32Array(particlesCount * 3);
 
     for (let i = 0; i < particlesCount * 3; i++) {
@@ -75,6 +83,7 @@ export default function ThreeBackground() {
       color: "#ffffff",
       transparent: true,
       opacity: 0.8,
+      sizeAttenuation: true,
     });
 
     const particles = new THREE.Points(geometry, material);
@@ -83,36 +92,50 @@ export default function ThreeBackground() {
 
     sceneRef.current = { scene, camera, particles, geometry, material };
 
-    // Mouse interaction
+    // Throttled mouse interaction
+    let mouseThrottle = 0;
     const handleMouseMove = (e: MouseEvent) => {
+      const now = performance.now();
+      if (now - mouseThrottle < 32) return; // ~30fps throttle
+      mouseThrottle = now;
       mouseRef.current.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouseRef.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
     };
 
-    // Handle resize
+    // Throttled resize handler
+    let resizeTimeout: ReturnType<typeof setTimeout>;
     const handleResize = () => {
-      if (!sceneRef.current || !rendererRef.current) return;
-      sceneRef.current.camera.aspect = window.innerWidth / window.innerHeight;
-      sceneRef.current.camera.updateProjectionMatrix();
-      rendererRef.current.setSize(window.innerWidth, window.innerHeight);
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (!sceneRef.current || !rendererRef.current) return;
+        sceneRef.current.camera.aspect = window.innerWidth / window.innerHeight;
+        sceneRef.current.camera.updateProjectionMatrix();
+        rendererRef.current.setSize(window.innerWidth, window.innerHeight);
+      }, 150);
     };
 
-    document.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("resize", handleResize);
+    // Pause when tab is hidden
+    const handleVisibility = () => {
+      visibleRef.current = !document.hidden;
+    };
 
-    // Animation loop
+    document.addEventListener("mousemove", handleMouseMove, { passive: true });
+    window.addEventListener("resize", handleResize, { passive: true });
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // Animation loop with visibility check
     const animate = () => {
-      if (!sceneRef.current || !rendererRef.current) return;
-
       animationIdRef.current = requestAnimationFrame(animate);
+
+      if (!visibleRef.current || !sceneRef.current || !rendererRef.current) return;
 
       const { scene, camera, particles } = sceneRef.current;
 
-      particles.rotation.x += 0.001;
-      particles.rotation.y += 0.001;
+      particles.rotation.x += 0.0008;
+      particles.rotation.y += 0.0008;
 
-      camera.position.x += (mouseRef.current.x * 0.5 - camera.position.x) * 0.05;
-      camera.position.y += (mouseRef.current.y * 0.5 - camera.position.y) * 0.05;
+      camera.position.x += (mouseRef.current.x * 0.5 - camera.position.x) * 0.03;
+      camera.position.y += (mouseRef.current.y * 0.5 - camera.position.y) * 0.03;
       camera.lookAt(scene.position);
 
       rendererRef.current.render(scene, camera);
@@ -122,8 +145,10 @@ export default function ThreeBackground() {
 
     return () => {
       cancelAnimationFrame(animationIdRef.current);
+      clearTimeout(resizeTimeout);
       document.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("resize", handleResize);
+      document.removeEventListener("visibilitychange", handleVisibility);
 
       if (sceneRef.current) {
         sceneRef.current.geometry.dispose();

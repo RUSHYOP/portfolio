@@ -1,0 +1,13 @@
+[
+  { "id": "skill_1", "name": "JavaScript", "icon": "/images/js.png", "order": 0 },
+  { "id": "skill_2", "name": "Python", "icon": "/images/python.png", "order": 1 },
+  { "id": "skill_3", "name": "C Language", "icon": "/images/c.png", "order": 2 },
+  { "id": "skill_4", "name": "HTML", "icon": "/images/html.png", "order": 3 },
+  { "id": "skill_5", "name": "CSS", "icon": "/images/css.png", "order": 4 },
+  { "id": "skill_6", "name": "MySQL", "icon": "/images/mysql.png", "order": 5 },
+  { "id": "skill_7", "name": "Git", "icon": "/images/gitbash.png", "order": 6 },
+  { "id": "skill_8", "name": "Flask", "icon": "/images/flask.png", "order": 7 },
+  { "id": "skill_9", "name": "Machine Learning", "icon": "/images/machinelearning.png", "order": 8 },
+  { "id": "skill_10", "name": "Google Cloud Computing", "icon": "/images/googlecloud.png", "order": 9 },
+  { "id": "skill_11", "name": "Jenkins", "icon": "/images/jenkins.png", "order": 10 }
+]

@@ -11,6 +11,34 @@ interface TypewriterTextProps {
   trigger?: boolean;
 }
 
+interface Segment { text: string; italic: boolean; }
+
+function parseSegments(raw: string): Segment[] {
+  const segments: Segment[] = [];
+  const parts = raw.split(/(\*[^*]+\*)/g);
+  for (const part of parts) {
+    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+      segments.push({ text: part.slice(1, -1), italic: true });
+    } else if (part) {
+      segments.push({ text: part, italic: false });
+    }
+  }
+  return segments;
+}
+
+function renderUpTo(segments: Segment[], count: number): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  let remaining = count;
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    if (remaining <= 0) break;
+    const slice = seg.text.slice(0, remaining);
+    nodes.push(seg.italic ? <em key={i}>{slice}</em> : <span key={i}>{slice}</span>);
+    remaining -= seg.text.length;
+  }
+  return nodes;
+}
+
 export default function TypewriterText({
   text,
   speed = 50,
@@ -19,11 +47,22 @@ export default function TypewriterText({
   onComplete,
   trigger = true,
 }: TypewriterTextProps) {
-  const [displayText, setDisplayText] = useState("");
+  const segments = useRef<Segment[]>(parseSegments(text));
+  const cleanLength = useRef<number>(segments.current.reduce((sum, s) => sum + s.text.length, 0));
+
+  const [count, setCount] = useState(0);
   const [started, setStarted] = useState(false);
   const [done, setDone] = useState(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+
+  useEffect(() => {
+    segments.current = parseSegments(text);
+    cleanLength.current = segments.current.reduce((sum, s) => sum + s.text.length, 0);
+    setCount(0);
+    setStarted(false);
+    setDone(false);
+  }, [text]);
 
   useEffect(() => {
     if (!trigger || started) return;
@@ -33,30 +72,18 @@ export default function TypewriterText({
 
   useEffect(() => {
     if (!started || done) return;
-    if (displayText.length >= text.length) {
+    if (count >= cleanLength.current) {
       setDone(true);
       onCompleteRef.current?.();
       return;
     }
-    const timer = setTimeout(() => {
-      setDisplayText(text.slice(0, displayText.length + 1));
-    }, speed);
+    const timer = setTimeout(() => setCount((c) => c + 1), speed);
     return () => clearTimeout(timer);
-  }, [started, displayText, text, speed, done]);
-
-  const renderFormatted = (t: string) => {
-    const parts = t.split(/(\*[^*]+\*)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
-        return <em key={i}>{part.slice(1, -1)}</em>;
-      }
-      return <span key={i}>{part}</span>;
-    });
-  };
+  }, [started, count, speed, done]);
 
   return (
     <span className={className}>
-      {renderFormatted(displayText)}
+      {renderUpTo(segments.current, count)}
       {started && !done && <span className="tw-cursor">|</span>}
     </span>
   );

@@ -55,6 +55,7 @@ export default function TypewriterText({
   const [done, setDone] = useState(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     segments.current = parseSegments(text);
@@ -69,6 +70,30 @@ export default function TypewriterText({
     const timer = setTimeout(() => setStarted(true), delay);
     return () => clearTimeout(timer);
   }, [trigger, delay, started]);
+
+  // Play typewriter audio while typing
+  useEffect(() => {
+    if (started && !done) {
+      if (!audioRef.current) {
+        const audio = new Audio("/audio/typwriter.mp3");
+        audio.loop = true;
+        audio.volume = 0.15;
+        audioRef.current = audio;
+      }
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {});
+    }
+    if (done && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    return () => {
+      if (done && audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [started, done]);
 
   useEffect(() => {
     if (!started || done) return;

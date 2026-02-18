@@ -160,7 +160,7 @@ body::-webkit-scrollbar {
   text-align: center;
   z-index: 2;
   opacity: 0;
-  animation: heroFadeIn 2s ease-out 0.5s forwards;
+  animation: heroFadeIn 1s ease-out 0.3s forwards;
 }
 
 /* Hero Title - Typewriter */
@@ -178,7 +178,8 @@ body::-webkit-scrollbar {
   display: inline;
 }
 
-.typewriter-cursor {
+.typewriter-cursor,
+.tw-cursor {
   display: inline;
   color: var(--white);
   font-weight: 100;
@@ -362,18 +363,66 @@ body::-webkit-scrollbar {
   transform: translate(5px, 5px);
 }
 
+/* Quote Section */
+.quote-section {
+  padding: 6rem 3rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.quote-inner {
+  position: relative;
+  display: inline-block;
+  max-width: 900px;
+}
+
+.quote-mark {
+  font-size: clamp(6rem, 12vw, 12rem);
+  font-weight: 900;
+  color: var(--border);
+  line-height: 0.6;
+  display: block;
+  text-align: left;
+  margin-bottom: -1rem;
+  user-select: none;
+}
+
+.quote-text {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-weight: 300;
+  color: var(--gray-light);
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  margin: 0;
+  padding: 0;
+  border: none;
+  text-align: left;
+}
+
+.quote-dot {
+  font-size: clamp(4rem, 8vw, 8rem);
+  font-weight: 900;
+  color: var(--white);
+  line-height: 0.5;
+  display: block;
+  text-align: right;
+  margin-top: 1rem;
+  user-select: none;
+}
+
 /* About Section */
 .about-grid {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 6rem;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 5rem;
   align-items: start;
-  margin-top: 4rem;
+  margin-top: 0;
 }
 
 .about-visual {
   position: relative;
-  height: 600px;
+  height: 700px;
   border: 1px solid var(--border);
   background: var(--secondary);
   overflow: hidden;
@@ -414,13 +463,23 @@ body::-webkit-scrollbar {
 
 .about-text {
   color: var(--gray-light);
-  font-size: 1.1rem;
-  line-height: 1.8;
+  font-size: 1.2rem;
+  line-height: 1.9;
   font-weight: 300;
 }
 
+.about-heading {
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-weight: 400;
+  color: var(--white);
+  margin-bottom: 2rem;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  min-height: 1.2em;
+}
+
 .about-text h3 {
-  font-size: 2.5rem;
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
   font-weight: 400;
   color: var(--white);
   margin-bottom: 2rem;
@@ -512,6 +571,15 @@ body::-webkit-scrollbar {
 
 .projects-header .section-title {
   margin-bottom: 0;
+}
+
+.projects-title-tw {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-weight: 300;
+  color: var(--white);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  min-height: 1.2em;
 }
 
 .projects-nav {
@@ -769,6 +837,15 @@ body::-webkit-scrollbar {
   margin-top: 4rem;
 }
 
+.contact-heading {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  color: var(--white);
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+  min-height: 1.2em;
+}
+
 .contact-info h3 {
   font-size: 2rem;
   font-weight: 400;
@@ -888,7 +965,7 @@ body::-webkit-scrollbar {
 .footer {
   background: var(--secondary);
   border-top: 1px solid var(--border);
-  padding: 2rem 0 1rem;
+  padding: 4rem 0 3rem;
   margin-top: 4rem;
 }
 
@@ -896,15 +973,32 @@ body::-webkit-scrollbar {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 3rem;
-  text-align: center;
 }
 
-.footer-links {
+.footer-sections {
   display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-bottom: 1rem;
+  gap: 6rem;
   flex-wrap: wrap;
+}
+
+.footer-section {
+  min-width: 140px;
+}
+
+.footer-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--white);
+  margin-bottom: 1.25rem;
+}
+
+.footer-section-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .footer-link {
@@ -916,12 +1010,6 @@ body::-webkit-scrollbar {
 
 .footer-link:hover {
   color: var(--white);
-}
-
-.footer-content p {
-  color: var(--gray-mid);
-  font-size: 0.8rem;
-  margin: 0;
 }
 
 /* Hover Effects */
@@ -1091,12 +1179,29 @@ body::-webkit-scrollbar {
     padding: 2rem;
   }
 
+  .about-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-visual {
+    height: 400px;
+  }
+
+  .quote-section {
+    padding: 4rem 2rem;
+  }
+
+  .footer-sections {
+    gap: 3rem;
+  }
+
   .skills-grid {
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   }
 
-  .footer-links {
-    gap: 1rem;
+  .footer-sections {
+    flex-direction: column;
+    gap: 2rem;
   }
 
   .footer-content {
@@ -1298,6 +1403,115 @@ body::-webkit-scrollbar {
   10% { opacity: 1; }
   80% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+/* Toast */
+.admin-toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--white);
+  color: var(--primary);
+  padding: 1rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 10001;
+  animation: toastSlide 3s ease forwards;
+  pointer-events: none;
+  border-left: 4px solid #86efac;
+}
+
+.admin-toast.error {
+  border-left-color: #fca5a5;
+}
+
+@keyframes toastSlide {
+  0% { opacity: 0; transform: translateY(20px); }
+  10% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+.admin-section-card {
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-section-card h3 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-link-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.admin-link-row input {
+  flex: 1;
+}
+
+.admin-link-remove {
+  background: transparent;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: #fca5a5;
+  width: 32px;
+  height: 32px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.admin-link-remove:hover {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: #fca5a5;
+}
+
+.admin-footer-section {
+  border: 1px solid var(--border);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  background: var(--primary);
+}
+
+.admin-footer-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.admin-toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--gray-light);
+}
+
+.admin-toggle-switch input[type="checkbox"] {
+  width: 40px;
+  height: 20px;
+  accent-color: var(--white);
+  cursor: pointer;
 }
 
 .admin-tabs {

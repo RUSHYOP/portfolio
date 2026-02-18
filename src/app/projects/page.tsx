@@ -17,13 +17,10 @@ export default async function ProjectsPage() {
       </header>
 
       <main className="projects-page-grid">
-        {projects.map((project, index) => (
+        {projects.map((project) => (
           <div className="project-card" key={project.id}>
             <div className="project-card-inner">
               <div className="project-card-header">
-                <span className="project-number">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
                 <div className="project-tech">
                   {project.technologies.slice(0, 3).map((tech) => (
                     <span className="tech-tag" key={tech}>

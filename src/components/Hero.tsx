@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
+import TypewriterText from "./TypewriterText";
 
 interface HeroProps {
   glitchEffect: boolean;
@@ -8,74 +9,23 @@ interface HeroProps {
 }
 
 export default function Hero({ glitchEffect, onExplore }: HeroProps) {
-  const [nameText, setNameText] = useState("");
-  const [subtitleText, setSubtitleText] = useState("");
-  const [showCursor, setShowCursor] = useState(true);
-  const [phase, setPhase] = useState<"name" | "subtitle" | "done" | "waiting">("waiting");
-  const nameRef = useRef("PURAV S");
-  const subtitleRef = useRef("Software Developer");
+  const [nameDone, setNameDone] = useState(false);
+  const [subtitleDone, setSubtitleDone] = useState(false);
 
-  // Wait for loading screen to finish (4000ms) + small buffer, then start typing
-  useEffect(() => {
-    const delay = setTimeout(() => setPhase("name"), 4400);
-    return () => clearTimeout(delay);
-  }, []);
-
-  useEffect(() => {
-    let timeout: NodeJS.Timeout;
-
-    if (phase === "waiting") return;
-
-    if (phase === "name") {
-      const fullName = nameRef.current;
-      if (nameText.length < fullName.length) {
-        timeout = setTimeout(() => {
-          setNameText(fullName.slice(0, nameText.length + 1));
-        }, 120);
-      } else {
-        timeout = setTimeout(() => setPhase("subtitle"), 400);
-      }
-    } else if (phase === "subtitle") {
-      const fullSub = subtitleRef.current;
-      if (subtitleText.length < fullSub.length) {
-        timeout = setTimeout(() => {
-          setSubtitleText(fullSub.slice(0, subtitleText.length + 1));
-        }, 60);
-      } else {
-        timeout = setTimeout(() => setPhase("done"), 300);
-      }
-    } else if (phase === "done") {
-      // Blink cursor a few times then hide
-      let blinks = 0;
-      const blinkInterval = setInterval(() => {
-        setShowCursor((prev) => !prev);
-        blinks++;
-        if (blinks >= 6) {
-          clearInterval(blinkInterval);
-          setShowCursor(false);
-        }
-      }, 400);
-      return () => clearInterval(blinkInterval);
-    }
-
-    return () => clearTimeout(timeout);
-  }, [nameText, subtitleText, phase]);
+  const onNameComplete = useCallback(() => setNameDone(true), []);
+  const onSubtitleComplete = useCallback(() => setSubtitleDone(true), []);
 
   return (
     <section className="hero" id="hero" aria-label="Introduction">
       <div className="hero-content">
         <h1 className={`hero-title ${glitchEffect ? "glitch" : ""}`}>
-          <span className="typewriter-text">{nameText}</span>
-          {phase === "name" && showCursor && <span className="typewriter-cursor">|</span>}
+          <TypewriterText text="PURAV S" speed={120} delay={500} onComplete={onNameComplete} />
         </h1>
         <p className="hero-subtitle">
-          <span className="typewriter-text">{subtitleText}</span>
-          {(phase === "subtitle" || (phase === "done" && showCursor)) && (
-            <span className="typewriter-cursor">|</span>
-          )}
+          <TypewriterText text="Software Developer" speed={60} delay={200} trigger={nameDone} onComplete={onSubtitleComplete} />
         </p>
         <button
-          className={`hero-cta ${phase === "done" ? "cta-visible" : ""}`}
+          className={`hero-cta ${subtitleDone ? "cta-visible" : ""}`}
           onClick={onExplore}
           aria-label="Explore my work"
         >

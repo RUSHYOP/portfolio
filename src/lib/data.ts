@@ -26,16 +26,31 @@ export interface Skill {
   order: number;
 }
 
+export interface NavLink {
+  label: string;
+  href: string;
+}
+
+export interface FooterSection {
+  title: string;
+  links: { label: string; url: string }[];
+}
+
 export interface Settings {
   profileImage: string;
   audioFile: string;
-  githubUrl: string;
-  linkedinUrl: string;
-  xUrl: string;
-  instagramUrl: string;
-  resumeUrl: string;
   aboutHeading: string;
   aboutText: string;
+  quote1: string;
+  quote2: string;
+  projectsTitle: string;
+  contactHeading: string;
+  contactText: string;
+  contactEmail: string;
+  contactLocation: string;
+  showNavbar: boolean;
+  navLinks: NavLink[];
+  footerSections: FooterSection[];
 }
 
 // ── Projects ──
@@ -185,32 +200,44 @@ export async function deleteSkill(id: string): Promise<boolean> {
 
 // ── Settings ──
 
+const defaultNavLinks: NavLink[] = [
+  { label: "About", href: "#about" },
+  { label: "Projects", href: "#projects" },
+  { label: "Contact", href: "#contact" },
+];
+
+const defaultFooterSections: FooterSection[] = [
+  { title: "Navigate", links: [{ label: "Projects", url: "/projects" }, { label: "About", url: "#about" }, { label: "Contact", url: "#contact" }] },
+  { title: "Social", links: [{ label: "GitHub", url: "https://github.com/RUSHYOP" }, { label: "LinkedIn", url: "https://linkedin.com/in/purav-s" }, { label: "X", url: "https://x.com/rushyyyyyyyyyyy" }, { label: "Instagram", url: "https://instagram.com/_rushyyy" }] },
+  { title: "Other", links: [{ label: "Resume", url: "" }] },
+];
+
+function docToSettings(doc: Record<string, unknown>): Settings {
+  return {
+    profileImage: (doc.profileImage as string) ?? "/images/purav.jpg",
+    audioFile: (doc.audioFile as string) ?? "/audio/space.mp3",
+    aboutHeading: (doc.aboutHeading as string) ?? "Building Efficient Systems",
+    aboutText: (doc.aboutText as string) ?? "",
+    quote1: (doc.quote1 as string) ?? "",
+    quote2: (doc.quote2 as string) ?? "",
+    projectsTitle: (doc.projectsTitle as string) ?? "SOME OF THE THINGS I'VE BUILT",
+    contactHeading: (doc.contactHeading as string) ?? "Let's create something amazing together",
+    contactText: (doc.contactText as string) ?? "I'm always interested in new opportunities and exciting projects.",
+    contactEmail: (doc.contactEmail as string) ?? "puravshrinavalan@gmail.com",
+    contactLocation: (doc.contactLocation as string) ?? "Bangalore, India",
+    showNavbar: (doc.showNavbar as boolean) ?? true,
+    navLinks: (doc.navLinks as NavLink[]) ?? defaultNavLinks,
+    footerSections: (doc.footerSections as FooterSection[]) ?? defaultFooterSections,
+  };
+}
+
 export async function getSettings(): Promise<Settings> {
   await dbConnect();
   let doc = await SettingsModel.findOne({ key: "main" }).lean();
   if (!doc) {
-    doc = await SettingsModel.create({
-      key: "main",
-      profileImage: "/images/purav.jpg",
-      audioFile: "/audio/space.mp3",
-      githubUrl: "https://github.com/RUSHYOP",
-      linkedinUrl: "https://linkedin.com/in/purav-s",
-      xUrl: "https://x.com/rushyyyyyyyyyyy",
-      instagramUrl: "https://instagram.com/_rushyyy",
-      resumeUrl: "https://github.com/RUSHYOP/certifications/blob/f2c6cb24e2517e922a0dd771114ce9000fff5086/purav-s-resume.pdf",
-    });
+    doc = await SettingsModel.create({ key: "main" });
   }
-  return {
-    profileImage: doc.profileImage,
-    audioFile: doc.audioFile,
-    githubUrl: doc.githubUrl,
-    linkedinUrl: doc.linkedinUrl,
-    xUrl: doc.xUrl,
-    instagramUrl: doc.instagramUrl,
-    resumeUrl: doc.resumeUrl,
-    aboutHeading: doc.aboutHeading ?? "Building Efficient Systems",
-    aboutText: doc.aboutText ?? "",
-  };
+  return docToSettings(doc as unknown as Record<string, unknown>);
 }
 
 export async function updateSettings(updates: Partial<Settings>): Promise<Settings> {
@@ -220,15 +247,5 @@ export async function updateSettings(updates: Partial<Settings>): Promise<Settin
     { $set: updates },
     { new: true, upsert: true, lean: true }
   );
-  return {
-    profileImage: doc!.profileImage,
-    audioFile: doc!.audioFile,
-    githubUrl: doc!.githubUrl,
-    linkedinUrl: doc!.linkedinUrl,
-    xUrl: doc!.xUrl,
-    instagramUrl: doc!.instagramUrl,
-    resumeUrl: doc!.resumeUrl,
-    aboutHeading: doc!.aboutHeading ?? "Building Efficient Systems",
-    aboutText: doc!.aboutText ?? "",
-  };
+  return docToSettings(doc as unknown as Record<string, unknown>);
 }

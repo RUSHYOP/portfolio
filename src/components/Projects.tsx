@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import TypewriterText, { useInView } from "./TypewriterText";
 
 interface ProjectData {
   id: string;
@@ -18,14 +19,46 @@ interface ProjectData {
 
 interface ProjectsProps {
   projects: ProjectData[];
+  projectsTitle: string;
 }
 
-export default function Projects({ projects }: ProjectsProps) {
+function ProjectCardTitle({ id, title, scrollContainer }: { id: string; title: string; scrollContainer: React.RefObject<HTMLDivElement | null> }) {
+  const cardRef = useRef<HTMLHeadingElement>(null);
+  const [visible, setVisible] = useState(false);
+  const typedRef = useRef(false);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    const root = scrollContainer.current;
+    if (!el || !root) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !typedRef.current) {
+          setVisible(true);
+          typedRef.current = true;
+          observer.disconnect();
+        }
+      },
+      { root, threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [scrollContainer]);
+
+  if (typedRef.current && visible) {
+    return <h3 className="project-title" ref={cardRef}><TypewriterText text={title.toUpperCase()} speed={30} trigger={visible} /></h3>;
+  }
+
+  return <h3 className="project-title" ref={cardRef}>{visible ? <TypewriterText text={title.toUpperCase()} speed={30} trigger={visible} /> : "\u00A0"}</h3>;
+}
+
+export default function Projects({ projects, projectsTitle }: ProjectsProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isHoveredRef = useRef(false);
   const animFrameRef = useRef<number>(0);
-  const scrollSpeedRef = useRef(0.25);
+  const { ref: titleRef, inView: titleInView } = useInView(0.3);
 
   // Section visibility observer
   useEffect(() => {
@@ -39,22 +72,18 @@ export default function Projects({ projects }: ProjectsProps) {
       },
       { threshold: 0.1, rootMargin: "0px 0px -100px 0px" }
     );
-
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
+    if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
   }, []);
 
-  // Auto-scroll animation - uses ref for hover to avoid restarting RAF loop
+  // Auto-scroll animation
   useEffect(() => {
     const tick = () => {
       const container = scrollRef.current;
       if (container && !isHoveredRef.current) {
-        container.scrollLeft += scrollSpeedRef.current;
+        container.scrollLeft += 0.3;
         const maxScroll = container.scrollWidth - container.clientWidth;
-        if (container.scrollLeft >= maxScroll) {
+        if (container.scrollLeft >= maxScroll - 1) {
           container.scrollLeft = 0;
         }
       }
@@ -64,17 +93,16 @@ export default function Projects({ projects }: ProjectsProps) {
     return () => cancelAnimationFrame(animFrameRef.current);
   }, []);
 
-  const scrollByCard = (dir: 1 | -1) => {
+  const scrollByCard = useCallback((dir: 1 | -1) => {
     const container = scrollRef.current;
     if (!container) return;
-    const cardWidth = 480 + 32; // card width + gap
+    const cardWidth = 480 + 32;
     const target = container.scrollLeft + dir * cardWidth;
     const start = container.scrollLeft;
     const distance = target - start;
     const duration = 400;
     let startTime: number | null = null;
 
-    // Pause auto-scroll during manual animation
     isHoveredRef.current = true;
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
@@ -89,13 +117,13 @@ export default function Projects({ projects }: ProjectsProps) {
       }
     };
     requestAnimationFrame(animate);
-  };
+  }, []);
 
   return (
     <section className="section projects-section" id="projects" ref={sectionRef}>
-      <div className="projects-header">
-        <h2 className="section-title" data-title="PROJECTS">
-          PROJECTS
+      <div className="projects-header" ref={titleRef as React.RefObject<HTMLDivElement>}>
+        <h2 className="projects-title-tw">
+          <TypewriterText text={projectsTitle} speed={30} trigger={titleInView} />
         </h2>
         <div className="projects-nav">
           <button className="projects-nav-btn" onClick={() => scrollByCard(-1)} aria-label="Previous project">
@@ -113,13 +141,10 @@ export default function Projects({ projects }: ProjectsProps) {
         onMouseLeave={() => { isHoveredRef.current = false; }}
       >
         <div className="projects-scroll-track">
-          {projects.map((project, index) => (
+          {projects.map((project) => (
             <div className="project-card" key={project.id}>
               <div className="project-card-inner">
                 <div className="project-card-header">
-                  <span className="project-number">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
                   <div className="project-tech">
                     {project.technologies.slice(0, 3).map((tech) => (
                       <span className="tech-tag" key={tech}>
@@ -130,29 +155,19 @@ export default function Projects({ projects }: ProjectsProps) {
                 </div>
 
                 <div className="project-card-body">
-                  <h3 className="project-title">{project.title}</h3>
+                  <ProjectCardTitle id={project.id} title={project.title} scrollContainer={scrollRef} />
                   <p className="project-desc">{project.description}</p>
                 </div>
 
                 <div className="project-card-footer">
                   <div className="project-links">
                     {project.showLiveLink && project.liveLink && (
-                      <a
-                        href={project.liveLink}
-                        className="project-link"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                      <a href={project.liveLink} className="project-link" target="_blank" rel="noopener noreferrer">
                         {project.liveLinkLabel || "Live Demo"}
                       </a>
                     )}
                     {project.showCodeLink && project.codeLink && (
-                      <a
-                        href={project.codeLink}
-                        className="project-link"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                      <a href={project.codeLink} className="project-link" target="_blank" rel="noopener noreferrer">
                         Github
                       </a>
                     )}

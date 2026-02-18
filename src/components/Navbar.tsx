@@ -1,12 +1,20 @@
 "use client";
 
-interface NavbarProps {
-  visible: boolean;
-  scrollTo: (id: string) => void;
-  resumeUrl: string;
+interface NavLink {
+  label: string;
+  href: string;
 }
 
-export default function Navbar({ visible, scrollTo, resumeUrl }: NavbarProps) {
+interface NavbarProps {
+  visible: boolean;
+  showNavbar: boolean;
+  scrollTo: (id: string) => void;
+  navLinks: NavLink[];
+}
+
+export default function Navbar({ visible, showNavbar, scrollTo, navLinks }: NavbarProps) {
+  if (!showNavbar) return null;
+
   return (
     <nav 
       className={`navbar ${visible ? "visible" : ""}`}
@@ -18,56 +26,33 @@ export default function Navbar({ visible, scrollTo, resumeUrl }: NavbarProps) {
           PURAV S
         </a>
         <ul className="nav-menu" role="list">
-          <li>
-            <a
-              href="#about"
-              className="nav-link"
-              tabIndex={visible ? 0 : -1}
-              onClick={(e) => {
-                e.preventDefault();
-                scrollTo("about");
-              }}
-            >
-              About
-            </a>
-          </li>
-          <li>
-            <a
-              href="#projects"
-              className="nav-link"
-              tabIndex={visible ? 0 : -1}
-              onClick={(e) => {
-                e.preventDefault();
-                scrollTo("projects");
-              }}
-            >
-              Projects
-            </a>
-          </li>
-          <li>
-            <a
-              href="#contact"
-              className="nav-link"
-              tabIndex={visible ? 0 : -1}
-              onClick={(e) => {
-                e.preventDefault();
-                scrollTo("contact");
-              }}
-            >
-              Contact
-            </a>
-          </li>
-          <li>
-            <a
-              href={resumeUrl}
-              className="nav-link"
-              tabIndex={visible ? 0 : -1}
-              download="purav-s-resume.pdf"
-              aria-label="Download resume"
-            >
-              Resume
-            </a>
-          </li>
+          {navLinks.map((link) => (
+            <li key={link.label}>
+              {link.href.startsWith("#") ? (
+                <a
+                  href={link.href}
+                  className="nav-link"
+                  tabIndex={visible ? 0 : -1}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    scrollTo(link.href.replace("#", ""));
+                  }}
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <a
+                  href={link.href}
+                  className="nav-link"
+                  tabIndex={visible ? 0 : -1}
+                  target={link.href.startsWith("http") ? "_blank" : undefined}
+                  rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                >
+                  {link.label}
+                </a>
+              )}
+            </li>
+          ))}
         </ul>
       </div>
     </nav>

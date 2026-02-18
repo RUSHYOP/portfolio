@@ -12,15 +12,7 @@ export default async function Home() {
     <PageClient
       projects={projects}
       skills={skills}
-      profileImage={settings.profileImage}
-      audioFile={settings.audioFile}
-      githubUrl={settings.githubUrl}
-      linkedinUrl={settings.linkedinUrl}
-      xUrl={settings.xUrl}
-      instagramUrl={settings.instagramUrl}
-      resumeUrl={settings.resumeUrl}
-      aboutHeading={settings.aboutHeading}
-      aboutText={settings.aboutText}
+      settings={settings}
     />
   );
 }

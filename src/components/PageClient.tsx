@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import LoadingScreen from "@/components/LoadingScreen";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
+import QuoteSection from "@/components/QuoteSection";
 import Projects from "@/components/Projects";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
@@ -35,22 +35,38 @@ interface SkillData {
   order: number;
 }
 
+interface NavLink {
+  label: string;
+  href: string;
+}
+
+interface FooterSection {
+  title: string;
+  links: { label: string; url: string }[];
+}
+
 interface PageClientProps {
   projects: ProjectData[];
   skills: SkillData[];
-  profileImage: string;
-  audioFile: string;
-  githubUrl: string;
-  linkedinUrl: string;
-  xUrl: string;
-  instagramUrl: string;
-  resumeUrl: string;
-  aboutHeading: string;
-  aboutText: string;
+  settings: {
+    profileImage: string;
+    audioFile: string;
+    aboutHeading: string;
+    aboutText: string;
+    quote1: string;
+    quote2: string;
+    projectsTitle: string;
+    contactHeading: string;
+    contactText: string;
+    contactEmail: string;
+    contactLocation: string;
+    showNavbar: boolean;
+    navLinks: NavLink[];
+    footerSections: FooterSection[];
+  };
 }
 
-export default function PageClient({ projects, skills, profileImage, audioFile, githubUrl, linkedinUrl, xUrl, instagramUrl, resumeUrl, aboutHeading, aboutText }: PageClientProps) {
-  const [loading, setLoading] = useState(true);
+export default function PageClient({ projects, skills, settings }: PageClientProps) {
   const [showNav, setShowNav] = useState(false);
   const [glitchEffect, setGlitchEffect] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -59,35 +75,24 @@ export default function PageClient({ projects, skills, profileImage, audioFile, 
   const initializeAudio = useCallback(() => {
     if (audioRef.current && !audioInitialized) {
       audioRef.current.volume = 0.05;
-      audioRef.current.play().catch(() => {
-        // Audio autoplay blocked, will try on user interaction
-      });
+      audioRef.current.play().catch(() => {});
       setAudioInitialized(true);
     }
   }, [audioInitialized]);
 
   useEffect(() => {
-    const handleInteraction = () => {
-      initializeAudio();
-    };
-
+    const handleInteraction = () => initializeAudio();
     document.addEventListener("click", handleInteraction, { once: true });
     document.addEventListener("keydown", handleInteraction, { once: true });
-
     return () => {
       document.removeEventListener("click", handleInteraction);
       document.removeEventListener("keydown", handleInteraction);
     };
   }, [initializeAudio]);
 
+  // Show nav after hero typewriter finishes (~3s)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-      setTimeout(() => {
-        setShowNav(true);
-      }, 1000);
-    }, 4000);
-
+    const timer = setTimeout(() => setShowNav(true), 3000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -96,21 +101,16 @@ export default function PageClient({ projects, skills, profileImage, audioFile, 
       setGlitchEffect(true);
       setTimeout(() => setGlitchEffect(false), 200);
     }, 10000);
-
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      if (e.key === "Escape") window.scrollTo({ top: 0, behavior: "smooth" });
     };
-
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("keydown", handleKeyDown);
-
     return () => {
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("keydown", handleKeyDown);
@@ -122,35 +122,32 @@ export default function PageClient({ projects, skills, profileImage, audioFile, 
     if (element) {
       const navHeight = 80;
       const targetPosition = element.offsetTop - navHeight;
-      window.scrollTo({
-        top: targetPosition,
-        behavior: "smooth",
-      });
+      window.scrollTo({ top: targetPosition, behavior: "smooth" });
     }
   };
 
   return (
     <>
       <audio ref={audioRef} loop preload="auto" style={{ display: "none" }}>
-        <source src={audioFile} type="audio/mpeg" />
+        <source src={settings.audioFile} type="audio/mpeg" />
       </audio>
 
       <ThreeBackground />
-      <LoadingScreen loading={loading} />
-      <Navbar visible={showNav} scrollTo={scrollTo} resumeUrl={resumeUrl} />
+      <Navbar visible={showNav} showNavbar={settings.showNavbar} scrollTo={scrollTo} navLinks={settings.navLinks} />
       <main id="main-content">
         <Hero glitchEffect={glitchEffect} onExplore={() => scrollTo("about")} />
-        <About skills={skills} profileImage={profileImage} aboutHeading={aboutHeading} aboutText={aboutText} />
-        <Projects projects={projects} />
-        <Contact />
+        <QuoteSection quote={settings.quote1} />
+        <About skills={skills} profileImage={settings.profileImage} aboutHeading={settings.aboutHeading} aboutText={settings.aboutText} />
+        <QuoteSection quote={settings.quote2} />
+        <Projects projects={projects} projectsTitle={settings.projectsTitle} />
+        <Contact
+          contactHeading={settings.contactHeading}
+          contactText={settings.contactText}
+          contactEmail={settings.contactEmail}
+          contactLocation={settings.contactLocation}
+        />
       </main>
-      <Footer 
-        githubUrl={githubUrl}
-        linkedinUrl={linkedinUrl}
-        xUrl={xUrl}
-        instagramUrl={instagramUrl}
-        resumeUrl={resumeUrl}
-      />
+      <Footer footerSections={settings.footerSections} />
     </>
   );
 }

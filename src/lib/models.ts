@@ -55,13 +55,18 @@ export interface ISettings extends Document {
   key: string;
   profileImage: string;
   audioFile: string;
-  githubUrl: string;
-  linkedinUrl: string;
-  xUrl: string;
-  instagramUrl: string;
-  resumeUrl: string;
   aboutHeading: string;
   aboutText: string;
+  quote1: string;
+  quote2: string;
+  projectsTitle: string;
+  contactHeading: string;
+  contactText: string;
+  contactEmail: string;
+  contactLocation: string;
+  showNavbar: boolean;
+  navLinks: { label: string; href: string }[];
+  footerSections: { title: string; links: { label: string; url: string }[] }[];
 }
 
 const SettingsSchema = new Schema<ISettings>(
@@ -69,13 +74,32 @@ const SettingsSchema = new Schema<ISettings>(
     key: { type: String, required: true, unique: true, default: "main" },
     profileImage: { type: String, default: "/images/purav.jpg" },
     audioFile: { type: String, default: "/audio/space.mp3" },
-    githubUrl: { type: String, default: "https://github.com/RUSHYOP" },
-    linkedinUrl: { type: String, default: "https://linkedin.com/in/purav-s" },
-    xUrl: { type: String, default: "https://x.com/rushyyyyyyyyyyy" },
-    instagramUrl: { type: String, default: "https://instagram.com/_rushyyy" },
-    resumeUrl: { type: String, default: "https://github.com/RUSHYOP/certifications/blob/f2c6cb24e2517e922a0dd771114ce9000fff5086/purav-s-resume.pdf" },
     aboutHeading: { type: String, default: "Building Efficient Systems" },
     aboutText: { type: String, default: "I'm a Software Developer. Currently speed running through my final year in B.E Computer Science and Engineering.\nMy skills include literally anything full stack and machine learning integration, but that is not all. I enjoy writing code and building stuff that brings out the best in me.\nWhen I'm not coding, you can find me gaming, travelling, or just doing something dumb." },
+    quote1: { type: String, default: "" },
+    quote2: { type: String, default: "" },
+    projectsTitle: { type: String, default: "SOME OF THE THINGS I'VE BUILT" },
+    contactHeading: { type: String, default: "Let's create something amazing together" },
+    contactText: { type: String, default: "I'm always interested in new opportunities and exciting projects. Whether you have a question or just want to say hi, I'll try my best to get back to you!" },
+    contactEmail: { type: String, default: "puravshrinavalan@gmail.com" },
+    contactLocation: { type: String, default: "Bangalore, India" },
+    showNavbar: { type: Boolean, default: true },
+    navLinks: {
+      type: Schema.Types.Mixed,
+      default: [
+        { label: "About", href: "#about" },
+        { label: "Projects", href: "#projects" },
+        { label: "Contact", href: "#contact" },
+      ],
+    },
+    footerSections: {
+      type: Schema.Types.Mixed,
+      default: [
+        { title: "Navigate", links: [{ label: "Projects", url: "/projects" }, { label: "About", url: "#about" }, { label: "Contact", url: "#contact" }] },
+        { title: "Social", links: [{ label: "GitHub", url: "https://github.com/RUSHYOP" }, { label: "LinkedIn", url: "https://linkedin.com/in/purav-s" }, { label: "X", url: "https://x.com/rushyyyyyyyyyyy" }, { label: "Instagram", url: "https://instagram.com/_rushyyy" }] },
+        { title: "Other", links: [{ label: "Resume", url: "" }] },
+      ],
+    },
   },
   { timestamps: true }
 );

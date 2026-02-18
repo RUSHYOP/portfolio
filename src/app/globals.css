@@ -76,7 +76,6 @@ body {
   font-family: "Styrene A", var(--font-space-grotesk), "Space Grotesk", sans-serif;
   background: var(--primary);
   color: var(--white);
-  overflow-x: hidden;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -365,27 +364,9 @@ body::-webkit-scrollbar {
 
 /* Quote Section */
 .quote-section {
-  padding: 6rem 3rem;
+  padding: 5rem clamp(2rem, 6vw, 8rem);
   max-width: 1400px;
   margin: 0 auto;
-  text-align: center;
-}
-
-.quote-inner {
-  position: relative;
-  display: inline-block;
-  max-width: 900px;
-}
-
-.quote-mark {
-  font-size: clamp(6rem, 12vw, 12rem);
-  font-weight: 900;
-  color: var(--border);
-  line-height: 0.6;
-  display: block;
-  text-align: left;
-  margin-bottom: -1rem;
-  user-select: none;
 }
 
 .quote-text {
@@ -397,18 +378,7 @@ body::-webkit-scrollbar {
   margin: 0;
   padding: 0;
   border: none;
-  text-align: left;
-}
-
-.quote-dot {
-  font-size: clamp(4rem, 8vw, 8rem);
-  font-weight: 900;
-  color: var(--white);
-  line-height: 0.5;
-  display: block;
-  text-align: right;
-  margin-top: 1rem;
-  user-select: none;
+  max-width: 900px;
 }
 
 /* About Section */

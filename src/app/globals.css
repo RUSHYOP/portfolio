@@ -370,37 +370,56 @@ body::-webkit-scrollbar {
 }
 
 .quote-inner {
-  display: inline-block;
-  max-width: 720px;
-  border: 1px solid var(--border);
-  padding: 2rem 2.5rem 2.5rem 2.5rem;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-width: 800px;
 }
 
 .quote-mark {
-  font-size: 1.8rem;
+  font-size: clamp(4rem, 8vw, 7rem);
   font-weight: 900;
   color: var(--white);
-  line-height: 1;
+  line-height: 0.8;
   display: block;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   user-select: none;
   font-family: Georgia, serif;
 }
 
 .quote-text {
-  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  font-size: clamp(1.3rem, 2.5vw, 2rem);
   font-weight: 300;
   color: var(--gray-light);
   line-height: 1.6;
   letter-spacing: -0.01em;
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 1rem;
   border: none;
 }
 
+.quote-bottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  margin-top: 1.25rem;
+}
+
 .quote-dot {
-  display: none;
+  font-size: clamp(3rem, 6vw, 5rem);
+  font-weight: 900;
+  color: var(--white);
+  line-height: 0.5;
+  user-select: none;
+}
+
+.quote-close {
+  font-size: clamp(3rem, 6vw, 5rem);
+  font-weight: 900;
+  color: var(--white);
+  line-height: 0.5;
+  user-select: none;
+  font-family: Georgia, serif;
 }
 
 /* About Section */

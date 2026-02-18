@@ -44,9 +44,19 @@ export default function TypewriterText({
     return () => clearTimeout(timer);
   }, [started, displayText, text, speed, done]);
 
+  const renderFormatted = (t: string) => {
+    const parts = t.split(/(\*[^*]+\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+        return <em key={i}>{part.slice(1, -1)}</em>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
   return (
     <span className={className}>
-      {displayText}
+      {renderFormatted(displayText)}
       {started && !done && <span className="tw-cursor">|</span>}
     </span>
   );

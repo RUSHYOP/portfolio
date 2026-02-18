@@ -18,6 +18,10 @@ export default function QuoteSection({ quote }: QuoteSectionProps) {
         <p className="quote-text">
           <TypewriterText text={quote.endsWith(".") ? quote : quote + "."} speed={40} trigger={inView} />
         </p>
+        <div className="quote-bottom">
+          <span className="quote-dot">.</span>
+          <span className="quote-close">&rdquo;</span>
+        </div>
       </div>
     </div>
   );

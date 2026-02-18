@@ -45,9 +45,11 @@ interface PageClientProps {
   xUrl: string;
   instagramUrl: string;
   resumeUrl: string;
+  aboutHeading: string;
+  aboutText: string;
 }
 
-export default function PageClient({ projects, skills, profileImage, audioFile, githubUrl, linkedinUrl, xUrl, instagramUrl, resumeUrl }: PageClientProps) {
+export default function PageClient({ projects, skills, profileImage, audioFile, githubUrl, linkedinUrl, xUrl, instagramUrl, resumeUrl, aboutHeading, aboutText }: PageClientProps) {
   const [loading, setLoading] = useState(true);
   const [showNav, setShowNav] = useState(false);
   const [glitchEffect, setGlitchEffect] = useState(false);
@@ -138,7 +140,7 @@ export default function PageClient({ projects, skills, profileImage, audioFile, 
       <Navbar visible={showNav} scrollTo={scrollTo} resumeUrl={resumeUrl} />
       <main id="main-content">
         <Hero glitchEffect={glitchEffect} onExplore={() => scrollTo("about")} />
-        <About skills={skills} profileImage={profileImage} />
+        <About skills={skills} profileImage={profileImage} aboutHeading={aboutHeading} aboutText={aboutText} />
         <Projects projects={projects} />
         <Contact />
       </main>

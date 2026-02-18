@@ -19,6 +19,8 @@ export default async function Home() {
       xUrl={settings.xUrl}
       instagramUrl={settings.instagramUrl}
       resumeUrl={settings.resumeUrl}
+      aboutHeading={settings.aboutHeading}
+      aboutText={settings.aboutText}
     />
   );
 }

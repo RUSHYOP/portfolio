@@ -42,6 +42,8 @@ interface Settings {
   xUrl: string;
   instagramUrl: string;
   resumeUrl: string;
+  aboutHeading: string;
+  aboutText: string;
 }
 
 type Tab = "projects" | "skills" | "media";
@@ -76,7 +78,24 @@ export default function AdminPage() {
     linkedinUrl: "",
     xUrl: "",
     instagramUrl: "",
-    resumeUrl: ""
+    resumeUrl: "",
+    aboutHeading: "",
+    aboutText: "",
+  });
+
+  // Local state for links form (to avoid saving on every keystroke)
+  const [linksForm, setLinksForm] = useState({
+    githubUrl: "",
+    linkedinUrl: "",
+    xUrl: "",
+    instagramUrl: "",
+    resumeUrl: "",
+  });
+
+  // Local state for about form
+  const [aboutForm, setAboutForm] = useState({
+    aboutHeading: "",
+    aboutText: "",
   });
 
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -117,7 +136,21 @@ export default function AdminPage() {
     ]);
     if (pRes.ok) setProjects(await pRes.json());
     if (sRes.ok) setSkills(await sRes.json());
-    if (setRes.ok) setSettings(await setRes.json());
+    if (setRes.ok) {
+      const s = await setRes.json();
+      setSettings(s);
+      setLinksForm({
+        githubUrl: s.githubUrl || "",
+        linkedinUrl: s.linkedinUrl || "",
+        xUrl: s.xUrl || "",
+        instagramUrl: s.instagramUrl || "",
+        resumeUrl: s.resumeUrl || "",
+      });
+      setAboutForm({
+        aboutHeading: s.aboutHeading || "",
+        aboutText: s.aboutText || "",
+      });
+    }
   }, [authenticated]);
 
   useEffect(() => {
@@ -296,6 +329,26 @@ export default function AdminPage() {
       flash("Settings updated");
       loadData();
     } else flash("Failed to update");
+  };
+
+  const saveLinks = async () => {
+    const res = await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(linksForm),
+    });
+    if (res.ok) { flash("Links saved"); loadData(); }
+    else flash("Failed to save links");
+  };
+
+  const saveAbout = async () => {
+    const res = await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(aboutForm),
+    });
+    if (res.ok) { flash("About content saved"); loadData(); }
+    else flash("Failed to save about content");
   };
 
   // --- Render ---
@@ -743,14 +796,44 @@ export default function AdminPage() {
             </div>
 
             <div className="admin-card" style={{ marginTop: "1.5rem" }}>
+              <h3>About Content</h3>
+              <div className="admin-project-form">
+                <div className="admin-field">
+                  <label>Heading</label>
+                  <input
+                    type="text"
+                    value={aboutForm.aboutHeading}
+                    onChange={(e) => setAboutForm({ ...aboutForm, aboutHeading: e.target.value })}
+                    placeholder="Building Efficient Systems"
+                  />
+                </div>
+                <div className="admin-field">
+                  <label>Paragraphs (one per line)</label>
+                  <textarea
+                    value={aboutForm.aboutText}
+                    onChange={(e) => setAboutForm({ ...aboutForm, aboutText: e.target.value })}
+                    placeholder="Write each paragraph on a new line..."
+                    rows={6}
+                    style={{ resize: "vertical" }}
+                  />
+                </div>
+                <div className="admin-form-actions">
+                  <button className="admin-btn admin-btn-primary" onClick={saveAbout}>
+                    Save About
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="admin-card" style={{ marginTop: "1.5rem" }}>
               <h3>Footer Links</h3>
               <div className="admin-project-form">
                 <div className="admin-field">
                   <label>GitHub URL</label>
                   <input
                     type="url"
-                    value={settings.githubUrl || ""}
-                    onChange={(e) => updateSettingsField("githubUrl", e.target.value)}
+                    value={linksForm.githubUrl}
+                    onChange={(e) => setLinksForm({ ...linksForm, githubUrl: e.target.value })}
                     placeholder="https://github.com/username"
                   />
                 </div>
@@ -758,8 +841,8 @@ export default function AdminPage() {
                   <label>LinkedIn URL</label>
                   <input
                     type="url"
-                    value={settings.linkedinUrl || ""}
-                    onChange={(e) => updateSettingsField("linkedinUrl", e.target.value)}
+                    value={linksForm.linkedinUrl}
+                    onChange={(e) => setLinksForm({ ...linksForm, linkedinUrl: e.target.value })}
                     placeholder="https://linkedin.com/in/username"
                   />
                 </div>
@@ -767,8 +850,8 @@ export default function AdminPage() {
                   <label>X (Twitter) URL</label>
                   <input
                     type="url"
-                    value={settings.xUrl || ""}
-                    onChange={(e) => updateSettingsField("xUrl", e.target.value)}
+                    value={linksForm.xUrl}
+                    onChange={(e) => setLinksForm({ ...linksForm, xUrl: e.target.value })}
                     placeholder="https://x.com/username"
                   />
                 </div>
@@ -776,8 +859,8 @@ export default function AdminPage() {
                   <label>Instagram URL</label>
                   <input
                     type="url"
-                    value={settings.instagramUrl || ""}
-                    onChange={(e) => updateSettingsField("instagramUrl", e.target.value)}
+                    value={linksForm.instagramUrl}
+                    onChange={(e) => setLinksForm({ ...linksForm, instagramUrl: e.target.value })}
                     placeholder="https://instagram.com/username"
                   />
                 </div>
@@ -785,10 +868,15 @@ export default function AdminPage() {
                   <label>Resume URL</label>
                   <input
                     type="url"
-                    value={settings.resumeUrl || ""}
-                    onChange={(e) => updateSettingsField("resumeUrl", e.target.value)}
+                    value={linksForm.resumeUrl}
+                    onChange={(e) => setLinksForm({ ...linksForm, resumeUrl: e.target.value })}
                     placeholder="https://github.com/username/resume.pdf"
                   />
+                </div>
+                <div className="admin-form-actions">
+                  <button className="admin-btn admin-btn-primary" onClick={saveLinks}>
+                    Save Links
+                  </button>
                 </div>
               </div>
             </div>

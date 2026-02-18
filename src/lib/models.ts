@@ -60,6 +60,8 @@ export interface ISettings extends Document {
   xUrl: string;
   instagramUrl: string;
   resumeUrl: string;
+  aboutHeading: string;
+  aboutText: string;
 }
 
 const SettingsSchema = new Schema<ISettings>(
@@ -72,6 +74,8 @@ const SettingsSchema = new Schema<ISettings>(
     xUrl: { type: String, default: "https://x.com/rushyyyyyyyyyyy" },
     instagramUrl: { type: String, default: "https://instagram.com/_rushyyy" },
     resumeUrl: { type: String, default: "https://github.com/RUSHYOP/certifications/blob/f2c6cb24e2517e922a0dd771114ce9000fff5086/purav-s-resume.pdf" },
+    aboutHeading: { type: String, default: "Building Efficient Systems" },
+    aboutText: { type: String, default: "I'm a Software Developer. Currently speed running through my final year in B.E Computer Science and Engineering.\nMy skills include literally anything full stack and machine learning integration, but that is not all. I enjoy writing code and building stuff that brings out the best in me.\nWhen I'm not coding, you can find me gaming, travelling, or just doing something dumb." },
   },
   { timestamps: true }
 );

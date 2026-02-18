@@ -34,6 +34,8 @@ export interface Settings {
   xUrl: string;
   instagramUrl: string;
   resumeUrl: string;
+  aboutHeading: string;
+  aboutText: string;
 }
 
 // ── Projects ──
@@ -206,6 +208,8 @@ export async function getSettings(): Promise<Settings> {
     xUrl: doc.xUrl,
     instagramUrl: doc.instagramUrl,
     resumeUrl: doc.resumeUrl,
+    aboutHeading: doc.aboutHeading ?? "Building Efficient Systems",
+    aboutText: doc.aboutText ?? "",
   };
 }
 
@@ -224,5 +228,7 @@ export async function updateSettings(updates: Partial<Settings>): Promise<Settin
     xUrl: doc!.xUrl,
     instagramUrl: doc!.instagramUrl,
     resumeUrl: doc!.resumeUrl,
+    aboutHeading: doc!.aboutHeading ?? "Building Efficient Systems",
+    aboutText: doc!.aboutText ?? "",
   };
 }

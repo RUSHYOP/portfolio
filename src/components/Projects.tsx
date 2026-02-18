@@ -23,7 +23,7 @@ interface ProjectsProps {
 export default function Projects({ projects }: ProjectsProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
+  const isHoveredRef = useRef(false);
   const animFrameRef = useRef<number>(0);
   const scrollSpeedRef = useRef(0.25);
 
@@ -47,35 +47,48 @@ export default function Projects({ projects }: ProjectsProps) {
     return () => observer.disconnect();
   }, []);
 
-  // Auto-scroll animation
-  const autoScroll = useCallback(() => {
-    const container = scrollRef.current;
-    if (!container || isHovered) {
-      animFrameRef.current = requestAnimationFrame(autoScroll);
-      return;
-    }
-
-    container.scrollLeft += scrollSpeedRef.current;
-
-    // Loop back when reaching the end
-    const maxScroll = container.scrollWidth - container.clientWidth;
-    if (container.scrollLeft >= maxScroll) {
-      container.scrollLeft = 0;
-    }
-
-    animFrameRef.current = requestAnimationFrame(autoScroll);
-  }, [isHovered]);
-
+  // Auto-scroll animation - uses ref for hover to avoid restarting RAF loop
   useEffect(() => {
-    animFrameRef.current = requestAnimationFrame(autoScroll);
+    const tick = () => {
+      const container = scrollRef.current;
+      if (container && !isHoveredRef.current) {
+        container.scrollLeft += scrollSpeedRef.current;
+        const maxScroll = container.scrollWidth - container.clientWidth;
+        if (container.scrollLeft >= maxScroll) {
+          container.scrollLeft = 0;
+        }
+      }
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+    animFrameRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [autoScroll]);
+  }, []);
 
   const scrollByCard = (dir: 1 | -1) => {
     const container = scrollRef.current;
     if (!container) return;
     const cardWidth = 480 + 32; // card width + gap
-    container.scrollBy({ left: dir * cardWidth, behavior: "smooth" });
+    const target = container.scrollLeft + dir * cardWidth;
+    const start = container.scrollLeft;
+    const distance = target - start;
+    const duration = 400;
+    let startTime: number | null = null;
+
+    // Pause auto-scroll during manual animation
+    isHoveredRef.current = true;
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      container.scrollLeft = start + distance * ease;
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        isHoveredRef.current = false;
+      }
+    };
+    requestAnimationFrame(animate);
   };
 
   return (
@@ -96,8 +109,8 @@ export default function Projects({ projects }: ProjectsProps) {
       <div
         className="projects-scroll-container"
         ref={scrollRef}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={() => { isHoveredRef.current = true; }}
+        onMouseLeave={() => { isHoveredRef.current = false; }}
       >
         <div className="projects-scroll-track">
           {projects.map((project, index) => (

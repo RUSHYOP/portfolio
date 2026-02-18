@@ -13,15 +13,11 @@ interface SkillData {
 interface AboutProps {
   skills: SkillData[];
   profileImage: string;
+  aboutHeading: string;
+  aboutText: string;
 }
 
-const aboutParagraphs = [
-  "I'm a Software Developer. Currently speed running through my final year in B.E Computer Science and Engineering.",
-  "My skills include literally anything full stack and machine learning integration, but that is not all. I enjoy writing code and building stuff that brings out the best in me.",
-  "When I'm not coding, you can find me gaming, travelling, or just doing something dumb.",
-];
-
-export default function About({ skills, profileImage }: AboutProps) {
+export default function About({ skills, profileImage, aboutHeading, aboutText }: AboutProps) {
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -84,9 +80,6 @@ export default function About({ skills, profileImage }: AboutProps) {
 
   return (
     <section className="section" id="about" ref={sectionRef}>
-      <h2 className="section-title" data-title="ABOUT">
-        ABOUT
-      </h2>
       <div className="about-grid">
         <div className="about-visual">
           <Image
@@ -99,8 +92,8 @@ export default function About({ skills, profileImage }: AboutProps) {
           />
         </div>
         <div className="about-text">
-          <h3>Building Efficient Systems</h3>
-          {aboutParagraphs.map((paragraph, index) => (
+          {aboutHeading && <h3>{aboutHeading}</h3>}
+          {aboutText && aboutText.split("\n").filter(Boolean).map((paragraph, index) => (
             <p key={index}>{paragraph}</p>
           ))}
           <div className="skills-grid">

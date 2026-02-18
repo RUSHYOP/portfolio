@@ -11,17 +11,17 @@ export default function QuoteSection({ quote }: QuoteSectionProps) {
 
   if (!quote) return null;
 
+  const cleanQuote = quote.replace(/\.+$/, "");
+
   return (
     <div className="quote-section" ref={ref as React.RefObject<HTMLDivElement>}>
       <div className="quote-inner">
         <span className="quote-mark">&ldquo;</span>
         <p className="quote-text">
-          <TypewriterText text={quote.endsWith(".") ? quote : quote + "."} speed={40} trigger={inView} />
-        </p>
-        <div className="quote-bottom">
+          <TypewriterText text={cleanQuote} speed={40} trigger={inView} />
           <span className="quote-dot">.</span>
-          <span className="quote-close">&rdquo;</span>
-        </div>
+        </p>
+        <span className="quote-close">&rdquo;</span>
       </div>
     </div>
   );

@@ -78,26 +78,32 @@ export default function Projects({ projects, projectsTitle }: ProjectsProps) {
 
   // Auto-scroll animation with fractional accumulator
   const posRef = useRef(0);
+  const halfWidthRef = useRef(0);
 
   useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    // Calculate half the track (one full set of cards) for seamless reset
+    const track = container.firstElementChild as HTMLElement;
+    if (track) halfWidthRef.current = track.scrollWidth / 2;
+
     const tick = () => {
-      const container = scrollRef.current;
-      if (container && !isHoveredRef.current) {
+      const el = scrollRef.current;
+      if (el && !isHoveredRef.current) {
         posRef.current += 0.5;
-        const maxScroll = container.scrollWidth - container.clientWidth;
-        if (posRef.current >= maxScroll) {
-          posRef.current = 0;
+        // When we've scrolled past the first set, jump back seamlessly
+        if (halfWidthRef.current > 0 && posRef.current >= halfWidthRef.current) {
+          posRef.current -= halfWidthRef.current;
         }
-        container.scrollLeft = Math.round(posRef.current);
-      } else if (container) {
-        // Sync posRef when user hovers so it doesn't jump back
-        posRef.current = container.scrollLeft;
+        el.scrollLeft = Math.round(posRef.current);
+      } else if (el) {
+        posRef.current = el.scrollLeft;
       }
       animFrameRef.current = requestAnimationFrame(tick);
     };
     animFrameRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, []);
+  }, [projects]);
 
   const scrollByCard = useCallback((dir: 1 | -1) => {
     const container = scrollRef.current;
@@ -148,8 +154,8 @@ export default function Projects({ projects, projectsTitle }: ProjectsProps) {
         onMouseLeave={() => { isHoveredRef.current = false; }}
       >
         <div className="projects-scroll-track">
-          {projects.map((project) => (
-            <div className="project-card" key={project.id}>
+          {[...projects, ...projects].map((project, index) => (
+            <div className="project-card" key={`${project.id}-${index}`}>
               <div className="project-card-inner">
                 <div className="project-card-header">
                   <div className="project-tech">
@@ -162,7 +168,7 @@ export default function Projects({ projects, projectsTitle }: ProjectsProps) {
                 </div>
 
                 <div className="project-card-body">
-                  <ProjectCardTitle id={project.id} title={project.title} scrollContainer={scrollRef} />
+                  <ProjectCardTitle id={`${project.id}-${index}`} title={project.title} scrollContainer={scrollRef} />
                   <p className="project-desc">{project.description}</p>
                 </div>
 

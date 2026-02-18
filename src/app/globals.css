@@ -369,16 +369,43 @@ body::-webkit-scrollbar {
   margin: 0 auto;
 }
 
+.quote-inner {
+  max-width: 860px;
+  display: flex;
+  flex-direction: column;
+}
+
+.quote-mark {
+  font-size: clamp(5rem, 10vw, 9rem);
+  font-weight: 900;
+  color: var(--white);
+  line-height: 0.8;
+  display: block;
+  margin-bottom: 0.5rem;
+  user-select: none;
+  font-family: Georgia, serif;
+}
+
 .quote-text {
-  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-size: clamp(1.4rem, 2.5vw, 2.2rem);
   font-weight: 300;
   color: var(--gray-light);
-  line-height: 1.5;
+  line-height: 1.55;
   letter-spacing: -0.01em;
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 2rem;
   border: none;
-  max-width: 900px;
+}
+
+.quote-dot {
+  font-size: clamp(4rem, 8vw, 7rem);
+  font-weight: 900;
+  color: var(--white);
+  line-height: 0.6;
+  display: block;
+  text-align: right;
+  margin-top: 1.5rem;
+  user-select: none;
 }
 
 /* About Section */

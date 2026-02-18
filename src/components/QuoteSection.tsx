@@ -14,9 +14,13 @@ export default function QuoteSection({ quote }: QuoteSectionProps) {
 
   return (
     <div className="quote-section" ref={ref as React.RefObject<HTMLDivElement>}>
-      <blockquote className="quote-text">
-        <TypewriterText text={quote} speed={40} trigger={inView} />
-      </blockquote>
+      <div className="quote-inner">
+        <span className="quote-mark">&ldquo;</span>
+        <blockquote className="quote-text">
+          <TypewriterText text={quote} speed={40} trigger={inView} />
+        </blockquote>
+        <span className="quote-dot">.</span>
+      </div>
     </div>
   );
 }

@@ -11,12 +11,20 @@ export default function Hero({ glitchEffect, onExplore }: HeroProps) {
   const [nameText, setNameText] = useState("");
   const [subtitleText, setSubtitleText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
-  const [phase, setPhase] = useState<"name" | "subtitle" | "done">("name");
+  const [phase, setPhase] = useState<"name" | "subtitle" | "done" | "waiting">("waiting");
   const nameRef = useRef("PURAV S");
   const subtitleRef = useRef("Software Developer");
 
+  // Wait for loading screen to finish (4000ms) + small buffer, then start typing
+  useEffect(() => {
+    const delay = setTimeout(() => setPhase("name"), 4400);
+    return () => clearTimeout(delay);
+  }, []);
+
   useEffect(() => {
     let timeout: NodeJS.Timeout;
+
+    if (phase === "waiting") return;
 
     if (phase === "name") {
       const fullName = nameRef.current;

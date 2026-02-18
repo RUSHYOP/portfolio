@@ -76,16 +76,22 @@ export default function Projects({ projects, projectsTitle }: ProjectsProps) {
     return () => observer.disconnect();
   }, []);
 
-  // Auto-scroll animation
+  // Auto-scroll animation with fractional accumulator
+  const posRef = useRef(0);
+
   useEffect(() => {
     const tick = () => {
       const container = scrollRef.current;
       if (container && !isHoveredRef.current) {
-        container.scrollLeft += 0.3;
+        posRef.current += 0.5;
         const maxScroll = container.scrollWidth - container.clientWidth;
-        if (container.scrollLeft >= maxScroll - 1) {
-          container.scrollLeft = 0;
+        if (posRef.current >= maxScroll) {
+          posRef.current = 0;
         }
+        container.scrollLeft = Math.round(posRef.current);
+      } else if (container) {
+        // Sync posRef when user hovers so it doesn't jump back
+        posRef.current = container.scrollLeft;
       }
       animFrameRef.current = requestAnimationFrame(tick);
     };
@@ -113,6 +119,7 @@ export default function Projects({ projects, projectsTitle }: ProjectsProps) {
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
+        posRef.current = container.scrollLeft;
         isHoveredRef.current = false;
       }
     };

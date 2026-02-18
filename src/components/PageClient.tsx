@@ -72,23 +72,13 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioInitialized, setAudioInitialized] = useState(false);
 
-  const initializeAudio = useCallback(() => {
+  useEffect(() => {
     if (audioRef.current && !audioInitialized) {
       audioRef.current.volume = 0.05;
       audioRef.current.play().catch(() => {});
       setAudioInitialized(true);
     }
   }, [audioInitialized]);
-
-  useEffect(() => {
-    const handleInteraction = () => initializeAudio();
-    document.addEventListener("click", handleInteraction, { once: true });
-    document.addEventListener("keydown", handleInteraction, { once: true });
-    return () => {
-      document.removeEventListener("click", handleInteraction);
-      document.removeEventListener("keydown", handleInteraction);
-    };
-  }, [initializeAudio]);
 
   // Show nav after hero typewriter finishes (~3s)
   useEffect(() => {

@@ -25,7 +25,7 @@ export default function Projects({ projects }: ProjectsProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const animFrameRef = useRef<number>(0);
-  const scrollSpeedRef = useRef(0.5);
+  const scrollSpeedRef = useRef(0.25);
 
   // Section visibility observer
   useEffect(() => {
@@ -71,11 +71,28 @@ export default function Projects({ projects }: ProjectsProps) {
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [autoScroll]);
 
+  const scrollByCard = (dir: 1 | -1) => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const cardWidth = 480 + 32; // card width + gap
+    container.scrollBy({ left: dir * cardWidth, behavior: "smooth" });
+  };
+
   return (
-    <section className="section" id="projects" ref={sectionRef}>
-      <h2 className="section-title" data-title="PROJECTS">
-        PROJECTS
-      </h2>
+    <section className="section projects-section" id="projects" ref={sectionRef}>
+      <div className="projects-header">
+        <h2 className="section-title" data-title="PROJECTS">
+          PROJECTS
+        </h2>
+        <div className="projects-nav">
+          <button className="projects-nav-btn" onClick={() => scrollByCard(-1)} aria-label="Previous project">
+            ←
+          </button>
+          <button className="projects-nav-btn" onClick={() => scrollByCard(1)} aria-label="Next project">
+            →
+          </button>
+        </div>
+      </div>
       <div
         className="projects-scroll-container"
         ref={scrollRef}
@@ -83,12 +100,12 @@ export default function Projects({ projects }: ProjectsProps) {
         onMouseLeave={() => setIsHovered(false)}
       >
         <div className="projects-scroll-track">
-          {projects.map((project) => (
+          {projects.map((project, index) => (
             <div className="project-card" key={project.id}>
               <div className="project-card-inner">
                 <div className="project-card-header">
                   <span className="project-number">
-                    {String(projects.indexOf(project) + 1).padStart(2, "0")}
+                    {String(index + 1).padStart(2, "0")}
                   </span>
                   <div className="project-tech">
                     {project.technologies.slice(0, 3).map((tech) => (

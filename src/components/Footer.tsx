@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 interface FooterProps {
   githubUrl: string;
   linkedinUrl: string;
@@ -11,6 +13,9 @@ export default function Footer({ githubUrl, linkedinUrl, xUrl, instagramUrl, res
     <footer className="footer" role="contentinfo">
       <div className="footer-content">
         <nav className="footer-links" aria-label="Social links">
+          <Link href="/projects" className="footer-link" aria-label="Projects page">
+            Projects
+          </Link>
           <a
             href={githubUrl}
             className="footer-link"

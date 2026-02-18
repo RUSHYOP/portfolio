@@ -48,6 +48,7 @@ export interface Settings {
   contactText: string;
   contactEmail: string;
   contactLocation: string;
+  showHeroButton: boolean;
   showNavbar: boolean;
   navLinks: NavLink[];
   footerSections: FooterSection[];
@@ -225,6 +226,7 @@ function docToSettings(doc: Record<string, unknown>): Settings {
     contactText: (doc.contactText as string) ?? "I'm always interested in new opportunities and exciting projects.",
     contactEmail: (doc.contactEmail as string) ?? "puravshrinavalan@gmail.com",
     contactLocation: (doc.contactLocation as string) ?? "Bangalore, India",
+    showHeroButton: (doc.showHeroButton as boolean) ?? true,
     showNavbar: (doc.showNavbar as boolean) ?? true,
     navLinks: (doc.navLinks as NavLink[]) ?? defaultNavLinks,
     footerSections: (doc.footerSections as FooterSection[]) ?? defaultFooterSections,

@@ -64,6 +64,7 @@ export interface ISettings extends Document {
   contactText: string;
   contactEmail: string;
   contactLocation: string;
+  showHeroButton: boolean;
   showNavbar: boolean;
   navLinks: { label: string; href: string }[];
   footerSections: { title: string; links: { label: string; url: string }[] }[];
@@ -83,6 +84,7 @@ const SettingsSchema = new Schema<ISettings>(
     contactText: { type: String, default: "I'm always interested in new opportunities and exciting projects. Whether you have a question or just want to say hi, I'll try my best to get back to you!" },
     contactEmail: { type: String, default: "puravshrinavalan@gmail.com" },
     contactLocation: { type: String, default: "Bangalore, India" },
+    showHeroButton: { type: Boolean, default: true },
     showNavbar: { type: Boolean, default: true },
     navLinks: {
       type: Schema.Types.Mixed,

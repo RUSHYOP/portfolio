@@ -12,7 +12,7 @@ interface Settings {
   profileImage: string; audioFile: string; aboutHeading: string; aboutText: string;
   quote1: string; quote2: string; projectsTitle: string;
   contactHeading: string; contactText: string; contactEmail: string; contactLocation: string;
-  showNavbar: boolean; navLinks: NavLink[]; footerSections: FooterSection[];
+  showHeroButton: boolean; showNavbar: boolean; navLinks: NavLink[]; footerSections: FooterSection[];
 }
 
 type Tab = "content" | "projects" | "skills" | "navigation" | "media";
@@ -23,7 +23,7 @@ const DEFAULT_SETTINGS: Settings = {
   profileImage: "", audioFile: "", aboutHeading: "", aboutText: "",
   quote1: "", quote2: "", projectsTitle: "SOME OF THE THINGS I'VE BUILT",
   contactHeading: "", contactText: "", contactEmail: "", contactLocation: "",
-  showNavbar: true, navLinks: [], footerSections: [],
+  showHeroButton: true, showNavbar: true, navLinks: [], footerSections: [],
 };
 
 export default function AdminPage() {
@@ -40,7 +40,7 @@ export default function AdminPage() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   // Local form states
-  const [contentForm, setContentForm] = useState({ aboutHeading: "", aboutText: "", quote1: "", quote2: "", projectsTitle: "", contactHeading: "", contactText: "", contactEmail: "", contactLocation: "" });
+  const [contentForm, setContentForm] = useState({ aboutHeading: "", aboutText: "", quote1: "", quote2: "", projectsTitle: "", contactHeading: "", contactText: "", contactEmail: "", contactLocation: "", showHeroButton: true });
   const [navForm, setNavForm] = useState<{ showNavbar: boolean; navLinks: NavLink[] }>({ showNavbar: true, navLinks: [] });
   const [footerForm, setFooterForm] = useState<FooterSection[]>([]);
 
@@ -78,7 +78,7 @@ export default function AdminPage() {
     if (setRes.ok) {
       const s: Settings = await setRes.json();
       setSettings(s);
-      setContentForm({ aboutHeading: s.aboutHeading || "", aboutText: s.aboutText || "", quote1: s.quote1 || "", quote2: s.quote2 || "", projectsTitle: s.projectsTitle || "", contactHeading: s.contactHeading || "", contactText: s.contactText || "", contactEmail: s.contactEmail || "", contactLocation: s.contactLocation || "" });
+      setContentForm({ aboutHeading: s.aboutHeading || "", aboutText: s.aboutText || "", quote1: s.quote1 || "", quote2: s.quote2 || "", projectsTitle: s.projectsTitle || "", contactHeading: s.contactHeading || "", contactText: s.contactText || "", contactEmail: s.contactEmail || "", contactLocation: s.contactLocation || "", showHeroButton: s.showHeroButton ?? true });
       setNavForm({ showNavbar: s.showNavbar ?? true, navLinks: s.navLinks || [] });
       setFooterForm(s.footerSections || []);
     }
@@ -166,6 +166,14 @@ export default function AdminPage() {
           <section>
             <h2>Page Content</h2>
             <p style={{ color: "var(--gray-mid)", marginBottom: "1.5rem", fontSize: "0.85rem" }}>Use <code>*text*</code> for <em>italics</em> in text fields.</p>
+
+            <div className="admin-section-card">
+              <h3>Hero Section</h3>
+              <label className="admin-toggle-switch">
+                <input type="checkbox" checked={contentForm.showHeroButton} onChange={(e) => setContentForm({ ...contentForm, showHeroButton: e.target.checked })} />
+                <span>&quot;HIT IT&quot; Button: {contentForm.showHeroButton ? "Visible" : "Hidden"}</span>
+              </label>
+            </div>
 
             <div className="admin-section-card">
               <h3>About Section</h3>

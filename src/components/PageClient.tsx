@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
@@ -60,6 +60,7 @@ interface PageClientProps {
     contactText: string;
     contactEmail: string;
     contactLocation: string;
+    showHeroButton: boolean;
     showNavbar: boolean;
     navLinks: NavLink[];
     footerSections: FooterSection[];
@@ -125,7 +126,7 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
       <ThreeBackground />
       <Navbar visible={showNav} showNavbar={settings.showNavbar} scrollTo={scrollTo} navLinks={settings.navLinks} />
       <main id="main-content">
-        <Hero glitchEffect={glitchEffect} onExplore={() => scrollTo("about")} />
+        <Hero glitchEffect={glitchEffect} onExplore={() => scrollTo("about")} showButton={settings.showHeroButton} />
         <QuoteSection quote={settings.quote1} />
         <About skills={skills} profileImage={settings.profileImage} aboutHeading={settings.aboutHeading} aboutText={settings.aboutText} />
         <QuoteSection quote={settings.quote2} />

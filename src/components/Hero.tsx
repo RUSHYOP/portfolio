@@ -6,9 +6,10 @@ import TypewriterText from "./TypewriterText";
 interface HeroProps {
   glitchEffect: boolean;
   onExplore: () => void;
+  showButton?: boolean;
 }
 
-export default function Hero({ glitchEffect, onExplore }: HeroProps) {
+export default function Hero({ glitchEffect, onExplore, showButton = true }: HeroProps) {
   const [nameDone, setNameDone] = useState(false);
   const [subtitleDone, setSubtitleDone] = useState(false);
 
@@ -24,13 +25,15 @@ export default function Hero({ glitchEffect, onExplore }: HeroProps) {
         <p className="hero-subtitle">
           <TypewriterText text="Software Developer" speed={60} delay={200} trigger={nameDone} onComplete={onSubtitleComplete} />
         </p>
-        <button
-          className={`hero-cta ${subtitleDone ? "cta-visible" : ""}`}
-          onClick={onExplore}
-          aria-label="Explore my work"
-        >
-          HIT IT
-        </button>
+        {showButton && (
+          <button
+            className={`hero-cta ${subtitleDone ? "cta-visible" : ""}`}
+            onClick={onExplore}
+            aria-label="Explore my work"
+          >
+            HIT IT
+          </button>
+        )}
       </div>
     </section>
   );

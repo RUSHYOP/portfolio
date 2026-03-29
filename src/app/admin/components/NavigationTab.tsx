@@ -9,6 +9,7 @@ interface NavigationTabProps {
 }
 
 export default function NavigationTab({ settings, onSave }: NavigationTabProps) {
+  const [saving, setSaving] = useState(false);
   const [navForm, setNavForm] = useState<{ showNavbar: boolean; navLinks: NavLink[] }>({ showNavbar: true, navLinks: [] });
   const [footerForm, setFooterForm] = useState<FooterSection[]>([]);
 
@@ -63,7 +64,7 @@ export default function NavigationTab({ settings, onSave }: NavigationTabProps) 
       </div>
 
       <div className="admin-form-actions">
-        <button className="admin-btn admin-btn-primary" onClick={() => onSave({ showNavbar: navForm.showNavbar, navLinks: navForm.navLinks, footerSections: footerForm })}>Save Navigation</button>
+        <button className="admin-btn admin-btn-primary" disabled={saving} onClick={async () => { setSaving(true); try { await onSave({ showNavbar: navForm.showNavbar, navLinks: navForm.navLinks, footerSections: footerForm }); } finally { setSaving(false); } }}>{saving ? "Saving..." : "Save Navigation"}</button>
       </div>
     </section>
   );

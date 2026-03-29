@@ -1,0 +1,244 @@
+/* ====== Projects Carousel Component Styles ====== */
+
+.projectsSection {
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow: visible;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 clamp(2rem, 6vw, 8rem);
+  margin-bottom: 3rem;
+}
+
+.header .sectionTitle {
+  margin-bottom: 0;
+}
+
+.titleTypewriter {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-weight: 300;
+  color: var(--white);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  min-height: 1.2em;
+}
+
+.nav {
+  display: flex;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+}
+
+.navBtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--white);
+  width: 48px;
+  height: 48px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+
+.navBtn:hover {
+  border-color: var(--white);
+  background: var(--white);
+  color: var(--primary);
+}
+
+.scrollContainer {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2rem;
+  cursor: grab;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-600, #555) transparent;
+}
+
+.scrollContainer:active {
+  cursor: grabbing;
+}
+
+.scrollTrack {
+  display: flex;
+  gap: 2rem;
+  padding: 0 clamp(2rem, 6vw, 8rem);
+  padding-left: calc(100vw - 480px - clamp(2rem, 6vw, 8rem));
+  width: max-content;
+}
+
+.card {
+  width: 480px;
+  min-width: 480px;
+  height: 520px;
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  transform: translateY(-4px);
+}
+
+.cardInner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 2.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.number {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-dark);
+  letter-spacing: 0.1em;
+}
+
+.cardBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 900;
+  color: var(--white);
+  line-height: 1.05;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.desc {
+  color: var(--gray-mid);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  max-width: 380px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tech {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.techTag {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--gray-mid);
+  padding: 0.25rem 0.6rem;
+  font-size: 0.65rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: all 0.3s ease;
+}
+
+.techTag:hover {
+  border-color: var(--white);
+  color: var(--white);
+}
+
+.cardFooter {
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.link {
+  color: var(--white);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.link::after {
+  content: "↗";
+  margin-left: 0.3rem;
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.link:hover {
+  color: var(--gray-light);
+}
+
+.link:hover::after {
+  transform: translate(3px, -3px);
+}
+
+@media (max-width: 768px) {
+  .card {
+    width: 340px;
+    min-width: 340px;
+    height: 440px;
+  }
+
+  .cardInner {
+    padding: 1.75rem;
+  }
+
+  .title {
+    font-size: 1.8rem;
+  }
+}

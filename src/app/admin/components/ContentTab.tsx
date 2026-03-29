@@ -9,6 +9,7 @@ interface ContentTabProps {
 }
 
 export default function ContentTab({ settings, onSave }: ContentTabProps) {
+  const [saving, setSaving] = useState(false);
   const [contentForm, setContentForm] = useState({
     aboutHeading: "", aboutText: "", quote1: "", quote2: "", projectsTitle: "",
     contactHeading: "", contactText: "", contactEmail: "", contactLocation: "",
@@ -65,7 +66,7 @@ export default function ContentTab({ settings, onSave }: ContentTabProps) {
       </div>
 
       <div className="admin-form-actions">
-        <button className="admin-btn admin-btn-primary" onClick={() => onSave(contentForm)}>Save All Content</button>
+        <button className="admin-btn admin-btn-primary" disabled={saving} onClick={async () => { setSaving(true); try { await onSave(contentForm); } finally { setSaving(false); } }}>{saving ? "Saving..." : "Save All Content"}</button>
       </div>
     </section>
   );

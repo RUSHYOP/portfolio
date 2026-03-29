@@ -9,6 +9,7 @@ import QuoteSection from "@/components/QuoteSection";
 import Projects from "@/components/Projects";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), {
   ssr: false,
@@ -70,16 +71,19 @@ interface PageClientProps {
 export default function PageClient({ projects, skills, settings }: PageClientProps) {
   const [showNav, setShowNav] = useState(false);
   const [glitchEffect, setGlitchEffect] = useState(false);
+  const [muted, setMuted] = useState(true);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [audioInitialized, setAudioInitialized] = useState(false);
 
+  // Play/pause background audio based on muted state (user-initiated only)
   useEffect(() => {
-    if (audioRef.current && !audioInitialized) {
-      audioRef.current.volume = 0.05;
+    if (!audioRef.current) return;
+    audioRef.current.volume = 0.05;
+    if (muted) {
+      audioRef.current.pause();
+    } else {
       audioRef.current.play().catch(() => {});
-      setAudioInitialized(true);
     }
-  }, [audioInitialized]);
+  }, [muted]);
 
   // Show nav after hero typewriter finishes (~3s)
   useEffect(() => {
@@ -95,19 +99,6 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") window.scrollTo({ top: 0, behavior: "smooth" });
-    };
-    document.addEventListener("contextmenu", handleContextMenu);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("contextmenu", handleContextMenu);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
   const scrollTo = (elementId: string) => {
     const element = document.getElementById(elementId);
     if (element) {
@@ -116,6 +107,13 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
       window.scrollTo({ top: targetPosition, behavior: "smooth" });
     }
   };
+
+  const handleExplore = () => {
+    if (muted) setMuted(false);
+    scrollTo("about");
+  };
+
+  const toggleMute = () => setMuted((prev) => !prev);
 
   return (
     <>
@@ -126,7 +124,7 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
       <ThreeBackground />
       <Navbar visible={showNav} showNavbar={settings.showNavbar} scrollTo={scrollTo} navLinks={settings.navLinks} />
       <main id="main-content">
-        <Hero glitchEffect={glitchEffect} onExplore={() => scrollTo("about")} showButton={settings.showHeroButton} />
+        <Hero glitchEffect={glitchEffect} onExplore={handleExplore} showButton={settings.showHeroButton} muted={muted} />
         <QuoteSection quote={settings.quote1} />
         <About skills={skills} profileImage={settings.profileImage} aboutHeading={settings.aboutHeading} aboutText={settings.aboutText} />
         <QuoteSection quote={settings.quote2} />
@@ -139,6 +137,31 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
         />
       </main>
       <Footer footerSections={settings.footerSections} />
+
+      <ThemeToggle />
+      <button
+        onClick={toggleMute}
+        aria-label={muted ? "Unmute audio" : "Mute audio"}
+        style={{
+          position: "fixed",
+          bottom: "1rem",
+          right: "1rem",
+          zIndex: 1000,
+          background: "rgba(0, 0, 0, 0.5)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+          borderRadius: "50%",
+          width: "2.5rem",
+          height: "2.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          color: "white",
+          fontSize: "1.2rem",
+        }}
+      >
+        {muted ? "🔇" : "🔊"}
+      </button>
     </>
   );
 }

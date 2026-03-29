@@ -17,17 +17,17 @@ export interface IProject extends Document {
 
 const ProjectSchema = new Schema<IProject>(
   {
-    projectId: { type: String, required: true, unique: true },
-    title: { type: String, required: true, default: "" },
-    description: { type: String, default: "" },
+    projectId: { type: String, required: true, unique: true, trim: true },
+    title: { type: String, required: true, default: "", trim: true },
+    description: { type: String, default: "", trim: true },
     icon: { type: String, default: "" },
     technologies: { type: [String], default: [] },
     liveLink: { type: String, default: "" },
-    liveLinkLabel: { type: String, default: "" },
+    liveLinkLabel: { type: String, default: "", trim: true },
     codeLink: { type: String, default: "" },
     showLiveLink: { type: Boolean, default: false },
     showCodeLink: { type: Boolean, default: true },
-    order: { type: Number, default: 0 },
+    order: { type: Number, default: 0, index: true },
   },
   { timestamps: true }
 );
@@ -42,10 +42,10 @@ export interface ISkill extends Document {
 
 const SkillSchema = new Schema<ISkill>(
   {
-    skillId: { type: String, required: true, unique: true },
-    name: { type: String, required: true, default: "" },
+    skillId: { type: String, required: true, unique: true, trim: true },
+    name: { type: String, required: true, default: "", trim: true },
     icon: { type: String, default: "" },
-    order: { type: Number, default: 0 },
+    order: { type: Number, default: 0, index: true },
   },
   { timestamps: true }
 );
@@ -67,27 +67,51 @@ export interface ISettings extends Document {
   showHeroButton: boolean;
   showNavbar: boolean;
   navLinks: { label: string; href: string }[];
-  footerSections: { title: string; links: { label: string; url: string }[] }[];
+  footerSections: { title: string; links: { label: string; href: string }[] }[];
 }
+
+const NavLinkSchema = new Schema(
+  {
+    label: { type: String, trim: true },
+    href: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const FooterLinkSchema = new Schema(
+  {
+    label: { type: String, trim: true },
+    href: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const FooterSectionSchema = new Schema(
+  {
+    title: { type: String, trim: true },
+    links: { type: [FooterLinkSchema], default: [] },
+  },
+  { _id: false }
+);
 
 const SettingsSchema = new Schema<ISettings>(
   {
-    key: { type: String, required: true, unique: true, default: "main" },
+    key: { type: String, required: true, unique: true, default: "main", trim: true },
     profileImage: { type: String, default: "/images/purav.jpg" },
     audioFile: { type: String, default: "/audio/space.mp3" },
-    aboutHeading: { type: String, default: "Building Efficient Systems" },
-    aboutText: { type: String, default: "I'm a Software Developer. Currently speed running through my final year in B.E Computer Science and Engineering.\nMy skills include literally anything full stack and machine learning integration, but that is not all. I enjoy writing code and building stuff that brings out the best in me.\nWhen I'm not coding, you can find me gaming, travelling, or just doing something dumb." },
+    aboutHeading: { type: String, default: "Building Efficient Systems", trim: true },
+    aboutText: { type: String, default: "I'm a Software Developer. Currently speed running through my final year in B.E Computer Science and Engineering.\nMy skills include literally anything full stack and machine learning integration, but that is not all. I enjoy writing code and building stuff that brings out the best in me.\nWhen I'm not coding, you can find me gaming, travelling, or just doing something dumb.", trim: true },
     quote1: { type: String, default: "" },
     quote2: { type: String, default: "" },
-    projectsTitle: { type: String, default: "SOME OF THE THINGS I'VE BUILT" },
-    contactHeading: { type: String, default: "Let's create something amazing together" },
-    contactText: { type: String, default: "I'm always interested in new opportunities and exciting projects. Whether you have a question or just want to say hi, I'll try my best to get back to you!" },
-    contactEmail: { type: String, default: "puravshrinavalan@gmail.com" },
-    contactLocation: { type: String, default: "Bangalore, India" },
+    projectsTitle: { type: String, default: "SOME OF THE THINGS I'VE BUILT", trim: true },
+    contactHeading: { type: String, default: "Let's create something amazing together", trim: true },
+    contactText: { type: String, default: "I'm always interested in new opportunities and exciting projects. Whether you have a question or just want to say hi, I'll try my best to get back to you!", trim: true },
+    contactEmail: { type: String, default: "puravshrinavalan@gmail.com", trim: true },
+    contactLocation: { type: String, default: "Bangalore, India", trim: true },
     showHeroButton: { type: Boolean, default: true },
     showNavbar: { type: Boolean, default: true },
     navLinks: {
-      type: Schema.Types.Mixed,
+      type: [NavLinkSchema],
       default: [
         { label: "About", href: "#about" },
         { label: "Projects", href: "#projects" },
@@ -95,11 +119,11 @@ const SettingsSchema = new Schema<ISettings>(
       ],
     },
     footerSections: {
-      type: Schema.Types.Mixed,
+      type: [FooterSectionSchema],
       default: [
-        { title: "Navigate", links: [{ label: "Projects", url: "/projects" }, { label: "About", url: "#about" }, { label: "Contact", url: "#contact" }] },
-        { title: "Social", links: [{ label: "GitHub", url: "https://github.com/RUSHYOP" }, { label: "LinkedIn", url: "https://linkedin.com/in/purav-s" }, { label: "X", url: "https://x.com/rushyyyyyyyyyyy" }, { label: "Instagram", url: "https://instagram.com/_rushyyy" }] },
-        { title: "Other", links: [{ label: "Resume", url: "" }] },
+        { title: "Navigate", links: [{ label: "Projects", href: "/projects" }, { label: "About", href: "#about" }, { label: "Contact", href: "#contact" }] },
+        { title: "Social", links: [{ label: "GitHub", href: "https://github.com/RUSHYOP" }, { label: "LinkedIn", href: "https://linkedin.com/in/purav-s" }, { label: "X", href: "https://x.com/rushyyyyyyyyyyy" }, { label: "Instagram", href: "https://instagram.com/_rushyyy" }] },
+        { title: "Other", links: [{ label: "Resume", href: "" }] },
       ],
     },
   },

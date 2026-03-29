@@ -17,16 +17,27 @@ export default function SkillsTab({ skills, uploading, toast, loadData, uploadFi
   const [addingSkill, setAddingSkill] = useState(false);
   const [newSkillName, setNewSkillName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
 
   const saveSkill = async (skill: Skill) => {
-    const res = await fetch(`/api/skills/${skill.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(skill) });
-    if (res.ok) { toast("Skill saved"); setEditingSkill(null); loadData(); } else toast("Failed to save skill", true);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/skills/${skill.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(skill) });
+      if (res.ok) { toast("Skill saved"); setEditingSkill(null); loadData(); } else { const d = await res.json().catch(() => null); toast(d?.error || "Failed to save skill", true); }
+    } finally { setSaving(false); }
   };
   const createSkill = async (name: string, icon: string) => {
-    const res = await fetch("/api/skills", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, icon }) });
-    if (res.ok) { toast("Skill added"); setAddingSkill(false); setNewSkillName(""); loadData(); } else toast("Failed to add skill", true);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/skills", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, icon }) });
+      if (res.ok) { toast("Skill added"); setAddingSkill(false); setNewSkillName(""); loadData(); } else { const d = await res.json().catch(() => null); toast(d?.error || "Failed to add skill", true); }
+    } finally { setSaving(false); }
   };
-  const removeSkill = async (id: string) => { if (!confirm("Delete this skill?")) return; const res = await fetch(`/api/skills/${id}`, { method: "DELETE" }); if (res.ok) { toast("Skill deleted"); loadData(); } else toast("Failed to delete", true); };
+  const removeSkill = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${name}"?`)) return;
+    const res = await fetch(`/api/skills/${id}`, { method: "DELETE" });
+    if (res.ok) { toast("Skill deleted"); loadData(); } else { const d = await res.json().catch(() => null); toast(d?.error || "Failed to delete skill", true); }
+  };
 
   return (
     <section>
@@ -37,7 +48,7 @@ export default function SkillsTab({ skills, uploading, toast, loadData, uploadFi
           <div className="admin-field"><label>Name</label><input type="text" value={newSkillName} onChange={(e) => setNewSkillName(e.target.value)} placeholder="Skill name" /></div>
           <div className="admin-field"><label>Icon</label><input ref={fileRef} type="file" accept="image/*" onChange={async (e) => { const file = e.target.files?.[0]; if (!file || !newSkillName) return; const path = await uploadFile(file, "skill_icon"); if (path) await createSkill(newSkillName, path); }} />{uploading && <span className="admin-uploading">Uploading...</span>}</div>
           <div className="admin-form-actions">
-            <button className="admin-btn admin-btn-primary" onClick={() => { if (newSkillName) createSkill(newSkillName, ""); }}>Add without icon</button>
+            <button className="admin-btn admin-btn-primary" disabled={saving} onClick={() => { if (newSkillName) createSkill(newSkillName, ""); }}>{saving ? "Saving..." : "Add without icon"}</button>
             <button className="admin-btn admin-btn-outline" onClick={() => { setAddingSkill(false); setNewSkillName(""); }}>Cancel</button>
           </div>
         </div>
@@ -48,7 +59,7 @@ export default function SkillsTab({ skills, uploading, toast, loadData, uploadFi
             <div key={skill.id} className="admin-skill-row admin-skill-editing">
               <div className="admin-field" style={{ flex: 1 }}><input type="text" value={editingSkill.name} onChange={(e) => setEditingSkill({ ...editingSkill, name: e.target.value })} /></div>
               <div className="admin-field"><input type="file" accept="image/*" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; const path = await uploadFile(file, "skill_icon"); if (path) setEditingSkill({ ...editingSkill, icon: path }); }} /></div>
-              <button className="admin-btn admin-btn-sm" onClick={() => saveSkill(editingSkill)}>Save</button>
+              <button className="admin-btn admin-btn-sm" disabled={saving} onClick={() => saveSkill(editingSkill)}>{saving ? "Saving..." : "Save"}</button>
               <button className="admin-btn admin-btn-sm admin-btn-outline" onClick={() => setEditingSkill(null)}>Cancel</button>
             </div>
           ) : (
@@ -56,7 +67,7 @@ export default function SkillsTab({ skills, uploading, toast, loadData, uploadFi
               <div className="admin-skill-info">{skill.icon && <Image src={skill.icon} alt={skill.name} width={32} height={32} className="admin-skill-icon" unoptimized />}<span>{skill.name}</span></div>
               <div className="admin-skill-actions">
                 <button className="admin-btn admin-btn-sm" onClick={() => setEditingSkill(skill)}>Edit</button>
-                <button className="admin-btn admin-btn-sm admin-btn-danger" onClick={() => removeSkill(skill.id)}>Delete</button>
+                <button className="admin-btn admin-btn-sm admin-btn-danger" onClick={() => removeSkill(skill.id, skill.name)}>Delete</button>
               </div>
             </div>
           )

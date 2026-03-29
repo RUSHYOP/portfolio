@@ -28,7 +28,7 @@ export default function LoadingScreen({ loading }: LoadingScreenProps) {
   return (
     <div className={`loading-screen ${!loading ? "hidden" : ""}`}>
       <div className="loader"></div>
-      <div className="loading-text">{loadingTexts[textIndex]}</div>
+      <div className="loading-text" role="status" aria-live="polite">{loadingTexts[textIndex]}</div>
       <div className="audio-prompt">🔊 Click anywhere to enable audio</div>
     </div>
   );

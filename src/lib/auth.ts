@@ -2,11 +2,35 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "alwayspurav@gmail.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "puravshri!@12";
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "prtfl_s3cr3t_k3y_ch4ng3_1n_pr0d_2025!"
-);
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `Missing required environment variable: ${name}. ` +
+      `Set it in your .env file or hosting environment.`
+    );
+  }
+  return value;
+}
+
+let _adminEmail: string | undefined;
+let _adminPassword: string | undefined;
+let _jwtSecret: Uint8Array | undefined;
+
+function getAdminEmail(): string {
+  if (!_adminEmail) _adminEmail = requireEnv("ADMIN_EMAIL");
+  return _adminEmail;
+}
+
+function getAdminPassword(): string {
+  if (!_adminPassword) _adminPassword = requireEnv("ADMIN_PASSWORD");
+  return _adminPassword;
+}
+
+function getJwtSecret(): Uint8Array {
+  if (!_jwtSecret) _jwtSecret = new TextEncoder().encode(requireEnv("JWT_SECRET"));
+  return _jwtSecret;
+}
 const TOKEN_NAME = "admin_token";
 const TOKEN_EXPIRY = "8h";
 
@@ -34,8 +58,8 @@ export function checkRateLimit(ip: string): { allowed: boolean; retryAfterMs: nu
 
 export function validateCredentials(email: string, password: string): boolean {
   if (!email || !password) return false;
-  const emailMatch = timingSafeEqual(email, ADMIN_EMAIL);
-  const passMatch = timingSafeEqual(password, ADMIN_PASSWORD);
+  const emailMatch = timingSafeEqual(email, getAdminEmail());
+  const passMatch = timingSafeEqual(password, getAdminPassword());
   return emailMatch && passMatch;
 }
 
@@ -60,12 +84,12 @@ export async function createToken(): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(TOKEN_EXPIRY)
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 export async function verifyToken(token: string): Promise<boolean> {
   try {
-    await jwtVerify(token, JWT_SECRET);
+    await jwtVerify(token, getJwtSecret());
     return true;
   } catch {
     return false;

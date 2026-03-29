@@ -17,8 +17,29 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Purav S - Software Developer",
-  description: "Software Developer Portfolio",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://puravs.dev"
+  ),
+  title: {
+    default: "Purav S | Portfolio",
+    template: "%s | Purav S",
+  },
+  description:
+    "Software developer portfolio showcasing projects, skills, and experience.",
+  openGraph: {
+    title: "Purav S | Portfolio",
+    description:
+      "Software developer portfolio showcasing projects, skills, and experience.",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { parseSegments, type Segment } from "@/lib/format";
 
 interface TypewriterTextProps {
   text: string;
@@ -9,21 +10,7 @@ interface TypewriterTextProps {
   className?: string;
   onComplete?: () => void;
   trigger?: boolean;
-}
-
-interface Segment { text: string; italic: boolean; }
-
-function parseSegments(raw: string): Segment[] {
-  const segments: Segment[] = [];
-  const parts = raw.split(/(\*[^*]+\*)/g);
-  for (const part of parts) {
-    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
-      segments.push({ text: part.slice(1, -1), italic: true });
-    } else if (part) {
-      segments.push({ text: part, italic: false });
-    }
-  }
-  return segments;
+  muted?: boolean;
 }
 
 function renderUpTo(segments: Segment[], count: number): React.ReactNode[] {
@@ -46,6 +33,7 @@ export default function TypewriterText({
   className = "",
   onComplete,
   trigger = true,
+  muted = true,
 }: TypewriterTextProps) {
   const segments = useRef<Segment[]>(parseSegments(text));
   const cleanLength = useRef<number>(segments.current.reduce((sum, s) => sum + s.text.length, 0));
@@ -71,29 +59,31 @@ export default function TypewriterText({
     return () => clearTimeout(timer);
   }, [trigger, delay, started]);
 
-  // Play typewriter audio while typing
+  // Create Audio instance once, clean up on unmount
   useEffect(() => {
-    if (started && !done) {
-      if (!audioRef.current) {
-        const audio = new Audio("/audio/typwriter.mp3");
-        audio.loop = true;
-        audio.volume = 0.15;
-        audioRef.current = audio;
-      }
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {});
-    }
-    if (done && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+    const audio = new Audio("/audio/typwriter.mp3");
+    audio.loop = true;
+    audio.volume = 0.15;
+    audioRef.current = audio;
     return () => {
-      if (done && audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
+      audio.pause();
+      audio.src = "";
+      audioRef.current = null;
     };
-  }, [started, done]);
+  }, []);
+
+  // Control typewriter audio playback based on typing state and muted prop
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (started && !done && !muted) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+      if (done) audio.currentTime = 0;
+    }
+  }, [started, done, muted]);
 
   useEffect(() => {
     if (!started || done) return;
@@ -114,25 +104,4 @@ export default function TypewriterText({
   );
 }
 
-export function useInView(threshold = 0.3) {
-  const ref = useRef<HTMLElement>(null);
-  const [inView, setInView] = useState(false);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [threshold]);
-
-  return { ref, inView };
-}

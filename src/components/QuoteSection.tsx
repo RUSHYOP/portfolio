@@ -1,13 +1,14 @@
 "use client";
 
-import TypewriterText, { useInView } from "./TypewriterText";
+import TypewriterText from "./TypewriterText";
+import { useInView } from "@/hooks/useInView";
 
 interface QuoteSectionProps {
   quote: string;
 }
 
 export default function QuoteSection({ quote }: QuoteSectionProps) {
-  const { ref, inView } = useInView(0.5);
+  const { ref, inView } = useInView({ threshold: 0.5 });
 
   if (!quote) return null;
 

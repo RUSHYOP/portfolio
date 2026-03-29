@@ -17,16 +17,27 @@ export default function ProjectsTab({ projects, uploading, toast, loadData, uplo
   const [addingProject, setAddingProject] = useState(false);
   const [newProject, setNewProject] = useState<Omit<Project, "id" | "order">>(EMPTY_PROJECT);
   const [techInput, setTechInput] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const saveProject = async (project: Project) => {
-    const res = await fetch(`/api/projects/${project.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(project) });
-    if (res.ok) { toast("Project saved"); setEditingProject(null); loadData(); } else toast("Failed to save project", true);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(project) });
+      if (res.ok) { toast("Project saved"); setEditingProject(null); loadData(); } else { const d = await res.json().catch(() => null); toast(d?.error || "Failed to save project", true); }
+    } finally { setSaving(false); }
   };
   const createProject = async () => {
-    const res = await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newProject) });
-    if (res.ok) { toast("Project created"); setAddingProject(false); setNewProject(EMPTY_PROJECT); setTechInput(""); loadData(); } else toast("Failed to create project", true);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newProject) });
+      if (res.ok) { toast("Project created"); setAddingProject(false); setNewProject(EMPTY_PROJECT); setTechInput(""); loadData(); } else { const d = await res.json().catch(() => null); toast(d?.error || "Failed to create project", true); }
+    } finally { setSaving(false); }
   };
-  const removeProject = async (id: string) => { if (!confirm("Delete this project?")) return; const res = await fetch(`/api/projects/${id}`, { method: "DELETE" }); if (res.ok) { toast("Project deleted"); loadData(); } else toast("Failed to delete", true); };
+  const removeProject = async (id: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
+    const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
+    if (res.ok) { toast("Project deleted"); loadData(); } else { const d = await res.json().catch(() => null); toast(d?.error || "Failed to delete project", true); }
+  };
 
   return (
     <section>
@@ -37,7 +48,7 @@ export default function ProjectsTab({ projects, uploading, toast, loadData, uplo
           <h3>New Project</h3>
           <ProjectForm project={newProject} techInput={techInput} onChange={(p) => setNewProject(p)} onTechChange={setTechInput} onUploadIcon={async (file) => { const path = await uploadFile(file, "project_icon"); if (path) setNewProject((prev) => ({ ...prev, icon: path })); }} uploading={uploading} />
           <div className="admin-form-actions">
-            <button className="admin-btn admin-btn-primary" onClick={createProject}>Create</button>
+            <button className="admin-btn admin-btn-primary" disabled={saving} onClick={createProject}>{saving ? "Saving..." : "Create"}</button>
             <button className="admin-btn admin-btn-outline" onClick={() => { setAddingProject(false); setNewProject(EMPTY_PROJECT); }}>Cancel</button>
           </div>
         </div>
@@ -50,7 +61,7 @@ export default function ProjectsTab({ projects, uploading, toast, loadData, uplo
               <h3>Edit Project</h3>
               <ProjectForm project={editingProject} techInput={editingProject.technologies.join(", ")} onChange={(p) => setEditingProject({ ...editingProject, ...p } as Project)} onTechChange={(v) => setEditingProject({ ...editingProject, technologies: v.split(",").map((t) => t.trim()).filter(Boolean) })} onUploadIcon={async (file) => { const path = await uploadFile(file, "project_icon"); if (path) setEditingProject((prev) => prev ? { ...prev, icon: path } : prev); }} uploading={uploading} />
               <div className="admin-form-actions">
-                <button className="admin-btn admin-btn-primary" onClick={() => saveProject(editingProject)}>Save</button>
+                <button className="admin-btn admin-btn-primary" disabled={saving} onClick={() => saveProject(editingProject)}>{saving ? "Saving..." : "Save"}</button>
                 <button className="admin-btn admin-btn-outline" onClick={() => setEditingProject(null)}>Cancel</button>
               </div>
             </div>
@@ -66,7 +77,7 @@ export default function ProjectsTab({ projects, uploading, toast, loadData, uplo
               </div>
               <div className="admin-card-actions">
                 <button className="admin-btn admin-btn-sm" onClick={() => setEditingProject(project)}>Edit</button>
-                <button className="admin-btn admin-btn-sm admin-btn-danger" onClick={() => removeProject(project.id)}>Delete</button>
+                <button className="admin-btn admin-btn-sm admin-btn-danger" onClick={() => removeProject(project.id, project.title)}>Delete</button>
               </div>
             </div>
           )

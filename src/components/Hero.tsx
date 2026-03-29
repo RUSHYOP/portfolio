@@ -7,9 +7,10 @@ interface HeroProps {
   glitchEffect: boolean;
   onExplore: () => void;
   showButton?: boolean;
+  muted?: boolean;
 }
 
-export default function Hero({ glitchEffect, onExplore, showButton = true }: HeroProps) {
+export default function Hero({ glitchEffect, onExplore, showButton = true, muted = true }: HeroProps) {
   const [nameDone, setNameDone] = useState(false);
   const [subtitleDone, setSubtitleDone] = useState(false);
 
@@ -20,16 +21,16 @@ export default function Hero({ glitchEffect, onExplore, showButton = true }: Her
     <section className="hero" id="hero" aria-label="Introduction">
       <div className="hero-content">
         <h1 className={`hero-title ${glitchEffect ? "glitch" : ""}`}>
-          <TypewriterText text="PURAV S" speed={120} delay={500} onComplete={onNameComplete} />
+          <TypewriterText text="PURAV S" speed={120} delay={500} onComplete={onNameComplete} muted={muted} />
         </h1>
         <p className="hero-subtitle">
-          <TypewriterText text="Software Developer" speed={60} delay={200} trigger={nameDone} onComplete={onSubtitleComplete} />
+          <TypewriterText text="Software Developer" speed={60} delay={200} trigger={nameDone} onComplete={onSubtitleComplete} muted={muted} />
         </p>
         {showButton && (
           <button
             className={`hero-cta ${subtitleDone ? "cta-visible" : ""}`}
             onClick={onExplore}
-            aria-label="Explore my work"
+            aria-label="Begin exploring - HIT IT"
           >
             HIT IT
           </button>

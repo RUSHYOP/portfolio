@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import Image from "next/image";
-import TypewriterText, { useInView } from "./TypewriterText";
+import TypewriterText from "./TypewriterText";
+import { useInView } from "@/hooks/useInView";
 import { renderFormatted } from "@/lib/format";
 
 interface SkillData {
@@ -20,35 +20,16 @@ interface AboutProps {
 }
 
 export default function About({ skills, profileImage, aboutHeading, aboutText }: AboutProps) {
-  const sectionRef = useRef<HTMLElement>(null);
-  const { ref: twRef, inView } = useInView(0.2);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("visible");
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: "0px 0px -100px 0px" }
-    );
-
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
+  const { ref: sectionRef, inView: sectionVisible } = useInView({ threshold: 0.1, rootMargin: "0px 0px -100px 0px" });
+  const { ref: twRef, inView } = useInView({ threshold: 0.2 });
 
   return (
-    <section className="section" id="about" ref={sectionRef}>
+    <section className={`section${sectionVisible ? " visible" : ""}`} id="about" ref={sectionRef}>
       <div className="about-grid" ref={twRef as React.RefObject<HTMLDivElement>}>
         <div className="about-visual">
           <Image
             src={profileImage}
-            alt="Purav S"
+            alt="Profile photo of Purav S"
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
             style={{ objectFit: "cover" }}
@@ -65,7 +46,7 @@ export default function About({ skills, profileImage, aboutHeading, aboutText }:
           {aboutText && aboutText.split("\n").filter(Boolean).map((paragraph, index) => (
             <p key={index}>{renderFormatted(paragraph)}</p>
           ))}
-          <div className="skills-grid">
+          <section className="skills-grid" aria-label="Skills">
             {skills.map((skill) => (
               <div className="skill-item" key={skill.name}>
                 <Image
@@ -79,7 +60,7 @@ export default function About({ skills, profileImage, aboutHeading, aboutText }:
                 <span className="skill-name">{skill.name}</span>
               </div>
             ))}
-          </div>
+          </section>
         </div>
       </div>
     </section>

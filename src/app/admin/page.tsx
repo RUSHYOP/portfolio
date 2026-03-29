@@ -57,7 +57,7 @@ export default function AdminPage() {
 
   const saveSettings = async (updates: Partial<Settings>) => {
     const res = await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
-    if (res.ok) { toast("Saved"); loadData(); } else toast("Failed to save", true);
+    if (res.ok) { toast("Saved"); loadData(); } else { const d = await res.json().catch(() => null); toast(d?.error || "Failed to save", true); }
   };
 
   if (checking) return <div className="admin-loading"><div className="loader"></div></div>;

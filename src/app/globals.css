@@ -4,7 +4,7 @@
   src: url("/fonts/StyreneA-Thin.otf") format("opentype");
   font-weight: 100;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -12,7 +12,7 @@
   src: url("/fonts/StyreneA-Light.otf") format("opentype");
   font-weight: 300;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -20,7 +20,7 @@
   src: url("/fonts/StyreneA-Regular.otf") format("opentype");
   font-weight: 400;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -28,7 +28,7 @@
   src: url("/fonts/StyreneA-Medium.otf") format("opentype");
   font-weight: 500;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -36,7 +36,7 @@
   src: url("/fonts/StyreneA-Bold.otf") format("opentype");
   font-weight: 700;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -44,7 +44,7 @@
   src: url("/fonts/StyreneA-Black.otf") format("opentype");
   font-weight: 900;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 

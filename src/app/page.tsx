@@ -1,12 +1,14 @@
 import { getProjects, getSkills, getSettings } from "@/lib/data";
 import PageClient from "@/components/PageClient";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export default async function Home() {
-  const projects = await getProjects();
-  const skills = await getSkills();
-  const settings = await getSettings();
+  const [projects, skills, settings] = await Promise.all([
+    getProjects(),
+    getSkills(),
+    getSettings(),
+  ]);
 
   return (
     <PageClient

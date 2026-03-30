@@ -34,7 +34,6 @@ export default function About({ skills, profileImage, aboutHeading, aboutText }:
             sizes="(max-width: 768px) 100vw, 50vw"
             style={{ objectFit: "cover" }}
             priority
-            unoptimized
           />
         </div>
         <div className="about-text">
@@ -55,7 +54,6 @@ export default function About({ skills, profileImage, aboutHeading, aboutText }:
                   width={32}
                   height={32}
                   className="skill-logo"
-                  unoptimized
                 />
                 <span className="skill-name">{skill.name}</span>
               </div>

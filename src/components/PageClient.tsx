@@ -72,6 +72,7 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
   const [showNav, setShowNav] = useState(false);
   const [glitchEffect, setGlitchEffect] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [showBg, setShowBg] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Play/pause background audio based on muted state (user-initiated only)
@@ -85,10 +86,11 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
     }
   }, [muted]);
 
-  // Show nav after hero typewriter finishes (~3s)
+  // Show nav after hero typewriter finishes (~3s), defer Three.js until after LCP
   useEffect(() => {
-    const timer = setTimeout(() => setShowNav(true), 3000);
-    return () => clearTimeout(timer);
+    const navTimer = setTimeout(() => setShowNav(true), 3000);
+    const bgTimer = setTimeout(() => setShowBg(true), 3500);
+    return () => { clearTimeout(navTimer); clearTimeout(bgTimer); };
   }, []);
 
   useEffect(() => {
@@ -117,11 +119,11 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
 
   return (
     <>
-      <audio ref={audioRef} loop preload="auto" style={{ display: "none" }}>
+      <audio ref={audioRef} loop preload="none" style={{ display: "none" }}>
         <source src={settings.audioFile} type="audio/mpeg" />
       </audio>
 
-      <ThreeBackground />
+      {showBg && <ThreeBackground />}
       <Navbar visible={showNav} showNavbar={settings.showNavbar} scrollTo={scrollTo} navLinks={settings.navLinks} />
       <main id="main-content">
         <Hero glitchEffect={glitchEffect} onExplore={handleExplore} showButton={settings.showHeroButton} muted={muted} />

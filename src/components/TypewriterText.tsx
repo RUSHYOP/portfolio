@@ -114,10 +114,10 @@ export default function TypewriterText({
     return () => clearTimeout(timer);
   }, [trigger, delay, started]);
 
-  // Preload the keystroke audio buffer
+  // Preload the keystroke audio buffer only when unmuted
   useEffect(() => {
-    loadKeystrokeBuffer();
-  }, []);
+    if (!muted) loadKeystrokeBuffer();
+  }, [muted]);
 
   // Play a keystroke sound for each new character
   const playForChar = useCallback(

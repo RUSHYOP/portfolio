@@ -23,13 +23,40 @@ export default function AdminPage() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   const [uploading, setUploading] = useState(false);
-  const [toasts, setToasts] = useState<{ id: number; msg: string; error?: boolean }[]>([]);
+  const [toasts, setToasts] = useState<{ id: number; msg: string; error?: boolean; undo?: () => void }[]>([]);
   const toastId = useRef(0);
+  const dirtyTabs = useRef(new Set<Tab>());
 
-  const toast = useCallback((msg: string, error = false) => {
+  const toast = useCallback((msg: string, error = false, undo?: () => void) => {
     const id = ++toastId.current;
-    setToasts((prev) => [...prev, { id, msg, error }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
+    setToasts((prev) => [...prev, { id, msg, error, undo }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), undo ? 6000 : 3500);
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const setDirty = useCallback((tabName: Tab, dirty: boolean) => {
+    if (dirty) dirtyTabs.current.add(tabName);
+    else dirtyTabs.current.delete(tabName);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyTabs.current.size > 0) { e.preventDefault(); }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
+  const switchTab = useCallback((next: Tab) => {
+    if (dirtyTabs.current.size > 0 && !dirtyTabs.current.has(next)) {
+      const names = Array.from(dirtyTabs.current).join(", ");
+      if (!window.confirm(`You have unsaved changes in: ${names}. Switch tab anyway?`)) return;
+      dirtyTabs.current.clear();
+    }
+    setTab(next);
   }, []);
 
   useEffect(() => { fetch("/api/auth/verify").then((r) => { if (r.ok) setAuthenticated(true); }).finally(() => setChecking(false)); }, []);
@@ -57,7 +84,7 @@ export default function AdminPage() {
 
   const saveSettings = async (updates: Partial<Settings>) => {
     const res = await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
-    if (res.ok) { toast("Saved"); loadData(); } else { const d = await res.json().catch(() => null); toast(d?.error || "Failed to save", true); }
+    if (res.ok) { toast("Saved"); dirtyTabs.current.delete(tab); loadData(); } else { const d = await res.json().catch(() => null); toast(d?.error || "Failed to save", true); }
   };
 
   if (checking) return <div className="admin-loading"><div className="loader"></div></div>;
@@ -78,7 +105,14 @@ export default function AdminPage() {
 
   return (
     <div className="admin-wrapper">
-      {toasts.map((t) => <div key={t.id} className={`admin-toast ${t.error ? "error" : ""}`}>{t.msg}</div>)}
+      <div className="admin-toast-container">
+        {toasts.map((t) => (
+          <div key={t.id} className={`admin-toast ${t.error ? "error" : ""}`}>
+            <span>{t.msg}</span>
+            {t.undo && <button className="admin-toast-undo" onClick={() => { t.undo!(); dismissToast(t.id); }}>Undo</button>}
+          </div>
+        ))}
+      </div>
 
       <header className="admin-header">
         <h1>Portfolio Admin</h1>
@@ -87,15 +121,15 @@ export default function AdminPage() {
 
       <nav className="admin-tabs">
         {(["content", "projects", "skills", "navigation", "media"] as Tab[]).map((t) => (
-          <button key={t} className={`admin-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
+          <button key={t} className={`admin-tab ${tab === t ? "active" : ""}`} onClick={() => switchTab(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
         ))}
       </nav>
 
       <main className="admin-main">
-        {tab === "content" && <ContentTab settings={settings} onSave={saveSettings} />}
-        {tab === "projects" && <ProjectsTab projects={projects} uploading={uploading} toast={toast} loadData={loadData} uploadFile={uploadFile} />}
-        {tab === "skills" && <SkillsTab skills={skills} uploading={uploading} toast={toast} loadData={loadData} uploadFile={uploadFile} />}
-        {tab === "navigation" && <NavigationTab settings={settings} onSave={saveSettings} />}
+        {tab === "content" && <ContentTab settings={settings} onSave={saveSettings} onDirtyChange={(d) => setDirty("content", d)} />}
+        {tab === "projects" && <ProjectsTab projects={projects} uploading={uploading} toast={toast} loadData={loadData} uploadFile={uploadFile} onDirtyChange={(d) => setDirty("projects", d)} />}
+        {tab === "skills" && <SkillsTab skills={skills} uploading={uploading} toast={toast} loadData={loadData} uploadFile={uploadFile} onDirtyChange={(d) => setDirty("skills", d)} />}
+        {tab === "navigation" && <NavigationTab settings={settings} onSave={saveSettings} onDirtyChange={(d) => setDirty("navigation", d)} />}
         {tab === "media" && <MediaTab settings={settings} uploading={uploading} toast={toast} uploadFile={uploadFile} onSave={saveSettings} />}
       </main>
     </div>

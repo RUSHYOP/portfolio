@@ -2125,6 +2125,82 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+/* ====== SECTION: Floating Controls ====== */
+.floating-controls {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(20, 20, 20, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  padding: 0.25rem;
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.floating-controls:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(20, 20, 20, 0.8);
+}
+
+[data-theme="light"] .floating-controls {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .floating-controls:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.fc-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.fc-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.fc-btn:active {
+  transform: scale(0.92);
+}
+
+[data-theme="light"] .fc-btn {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+[data-theme="light"] .fc-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #000;
+}
+
+.fc-divider {
+  width: 1px;
+  height: 1.25rem;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .fc-divider {
+  background: rgba(0, 0, 0, 0.12);
+}
+
 /* ====== SECTION: Reduced Motion ====== */
 /* Reduced motion safety net */
 @media (prefers-reduced-motion: reduce) {

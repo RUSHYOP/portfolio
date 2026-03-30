@@ -9,7 +9,7 @@ import QuoteSection from "@/components/QuoteSection";
 import Projects from "@/components/Projects";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
-import ThemeToggle from "@/components/ThemeToggle";
+import { FloatingControls } from "@/components/ThemeToggle";
 
 const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), {
   ssr: false,
@@ -138,30 +138,7 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
       </main>
       <Footer footerSections={settings.footerSections} />
 
-      <ThemeToggle />
-      <button
-        onClick={toggleMute}
-        aria-label={muted ? "Unmute audio" : "Mute audio"}
-        style={{
-          position: "fixed",
-          bottom: "1rem",
-          right: "1rem",
-          zIndex: 1000,
-          background: "rgba(0, 0, 0, 0.5)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          borderRadius: "50%",
-          width: "2.5rem",
-          height: "2.5rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          color: "white",
-          fontSize: "1.2rem",
-        }}
-      >
-        {muted ? "🔇" : "🔊"}
-      </button>
+      <FloatingControls muted={muted} onToggleMute={toggleMute} />
     </>
   );
 }

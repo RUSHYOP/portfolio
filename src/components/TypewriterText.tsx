@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { parseSegments, type Segment } from "@/lib/format";
 
 interface TypewriterTextProps {
@@ -26,6 +26,60 @@ function renderUpTo(segments: Segment[], count: number): React.ReactNode[] {
   return nodes;
 }
 
+// Shared AudioContext for all TypewriterText instances
+let sharedCtx: AudioContext | null = null;
+let sharedBuffer: AudioBuffer | null = null;
+let loadingPromise: Promise<void> | null = null;
+
+function getAudioContext(): AudioContext {
+  if (!sharedCtx) sharedCtx = new AudioContext();
+  return sharedCtx;
+}
+
+function loadKeystrokeBuffer(): Promise<void> {
+  if (sharedBuffer) return Promise.resolve();
+  if (loadingPromise) return loadingPromise;
+
+  loadingPromise = fetch("/audio/typwriter.mp3")
+    .then((res) => res.arrayBuffer())
+    .then((buf) => getAudioContext().decodeAudioData(buf))
+    .then((decoded) => {
+      // Extract a short ~40ms snippet from the start for a single keystroke
+      const ctx = getAudioContext();
+      const snippetDuration = 0.04;
+      const snippetFrames = Math.min(
+        Math.floor(ctx.sampleRate * snippetDuration),
+        decoded.length
+      );
+      const snippet = ctx.createBuffer(decoded.numberOfChannels, snippetFrames, ctx.sampleRate);
+      for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+        snippet.copyToChannel(decoded.getChannelData(ch).slice(0, snippetFrames), ch);
+      }
+      sharedBuffer = snippet;
+    })
+    .catch(() => {
+      loadingPromise = null;
+    });
+  return loadingPromise;
+}
+
+function playKeystroke(volume: number) {
+  if (!sharedBuffer || !sharedCtx) return;
+  if (sharedCtx.state === "suspended") sharedCtx.resume();
+
+  const source = sharedCtx.createBufferSource();
+  source.buffer = sharedBuffer;
+
+  // Slight pitch variation for natural feel (±8%)
+  source.playbackRate.value = 0.92 + Math.random() * 0.16;
+
+  const gain = sharedCtx.createGain();
+  gain.gain.value = volume * (0.7 + Math.random() * 0.3);
+
+  source.connect(gain).connect(sharedCtx.destination);
+  source.start();
+}
+
 export default function TypewriterText({
   text,
   speed = 50,
@@ -43,7 +97,7 @@ export default function TypewriterText({
   const [done, setDone] = useState(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const prevCountRef = useRef(0);
 
   useEffect(() => {
     segments.current = parseSegments(text);
@@ -51,6 +105,7 @@ export default function TypewriterText({
     setCount(0);
     setStarted(false);
     setDone(false);
+    prevCountRef.current = 0;
   }, [text]);
 
   useEffect(() => {
@@ -59,31 +114,31 @@ export default function TypewriterText({
     return () => clearTimeout(timer);
   }, [trigger, delay, started]);
 
-  // Create Audio instance once, clean up on unmount
+  // Preload the keystroke audio buffer
   useEffect(() => {
-    const audio = new Audio("/audio/typwriter.mp3");
-    audio.loop = true;
-    audio.volume = 0.15;
-    audioRef.current = audio;
-    return () => {
-      audio.pause();
-      audio.src = "";
-      audioRef.current = null;
-    };
+    loadKeystrokeBuffer();
   }, []);
 
-  // Control typewriter audio playback based on typing state and muted prop
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (started && !done && !muted) {
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
-    } else {
-      audio.pause();
-      if (done) audio.currentTime = 0;
-    }
-  }, [started, done, muted]);
+  // Play a keystroke sound for each new character
+  const playForChar = useCallback(
+    (newCount: number) => {
+      if (muted || newCount <= prevCountRef.current) return;
+      // Get the character that was just typed
+      let pos = 0;
+      for (const seg of segments.current) {
+        const segEnd = pos + seg.text.length;
+        if (newCount > pos && newCount <= segEnd) {
+          const ch = seg.text[newCount - pos - 1];
+          // Skip sound for spaces (feels more natural)
+          if (ch !== " ") playKeystroke(0.18);
+          break;
+        }
+        pos = segEnd;
+      }
+      prevCountRef.current = newCount;
+    },
+    [muted]
+  );
 
   useEffect(() => {
     if (!started || done) return;
@@ -92,9 +147,15 @@ export default function TypewriterText({
       onCompleteRef.current?.();
       return;
     }
-    const timer = setTimeout(() => setCount((c) => c + 1), speed);
+    const timer = setTimeout(() => {
+      setCount((c) => {
+        const next = c + 1;
+        playForChar(next);
+        return next;
+      });
+    }, speed);
     return () => clearTimeout(timer);
-  }, [started, count, speed, done]);
+  }, [started, count, speed, done, playForChar]);
 
   return (
     <span className={className}>
@@ -103,5 +164,3 @@ export default function TypewriterText({
     </span>
   );
 }
-
-

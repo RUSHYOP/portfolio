@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
@@ -10,10 +10,10 @@ import Projects from "@/components/Projects";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 import { FloatingControls } from "@/components/ThemeToggle";
+import { useAudio } from "@/hooks/useAudio";
 
-const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), {
-  ssr: false,
-});
+const ThreeBackground = dynamic(() => import("@/components/ThreeBackground"), { ssr: false });
+const CinematicIntro = dynamic(() => import("@/components/motion/CinematicIntro"), { ssr: false });
 
 interface ProjectData {
   id: string;
@@ -70,63 +70,70 @@ interface PageClientProps {
 
 export default function PageClient({ projects, skills, settings }: PageClientProps) {
   const [showNav, setShowNav] = useState(false);
-  const [glitchEffect, setGlitchEffect] = useState(false);
-  const [muted, setMuted] = useState(true);
   const [showBg, setShowBg] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const [introDone, setIntroDone] = useState(false);
+  const { engine, state, toggleMuted } = useAudio();
 
-  // Play/pause background audio based on muted state (user-initiated only)
+  // Register background URL with the audio engine
   useEffect(() => {
-    if (!audioRef.current) return;
-    audioRef.current.volume = 0.05;
-    if (muted) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(() => {});
-    }
-  }, [muted]);
+    if (settings.audioFile) engine.setBackgroundUrl(settings.audioFile);
+  }, [engine, settings.audioFile]);
 
-  // Show nav after hero typewriter finishes (~3s), defer Three.js until after LCP
+  // Stage the UI after intro completes
   useEffect(() => {
-    const navTimer = setTimeout(() => setShowNav(true), 3000);
-    const bgTimer = setTimeout(() => setShowBg(true), 3500);
-    return () => { clearTimeout(navTimer); clearTimeout(bgTimer); };
-  }, []);
+    if (!introDone) return;
+    const navTimer = setTimeout(() => setShowNav(true), 100);
+    const bgTimer = setTimeout(() => setShowBg(true), 250);
+    return () => {
+      clearTimeout(navTimer);
+      clearTimeout(bgTimer);
+    };
+  }, [introDone]);
 
+  // Scroll-velocity → audio filter cutoff (only when unmuted)
+  const lastScrollRef = useRef({ y: 0, t: 0 });
   useEffect(() => {
-    const interval = setInterval(() => {
-      setGlitchEffect(true);
-      setTimeout(() => setGlitchEffect(false), 200);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
+    if (state.muted) return;
+    let raf = 0;
+    const tick = () => {
+      const now = performance.now();
+      const dy = Math.abs(window.scrollY - lastScrollRef.current.y);
+      const dt = Math.max(1, now - lastScrollRef.current.t);
+      const energy = Math.min(1, dy / dt / 2); // px/ms normalized
+      engine.setScrollEnergy(energy);
+      lastScrollRef.current = { y: window.scrollY, t: now };
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [engine, state.muted]);
 
-  const scrollTo = (elementId: string) => {
+  const scrollTo = useCallback((elementId: string) => {
     const element = document.getElementById(elementId);
     if (element) {
       const navHeight = 80;
       const targetPosition = element.offsetTop - navHeight;
       window.scrollTo({ top: targetPosition, behavior: "smooth" });
     }
-  };
+  }, []);
 
-  const handleExplore = () => {
-    if (muted) setMuted(false);
-    scrollTo("about");
-  };
-
-  const toggleMute = () => setMuted((prev) => !prev);
+  const handleExplore = useCallback(() => {
+    if (state.muted) {
+      // First interaction also unmutes
+      void engine.setMuted(false);
+    }
+    engine.impact();
+    setTimeout(() => scrollTo("about"), 200);
+  }, [engine, state.muted, scrollTo]);
 
   return (
     <>
-      <audio ref={audioRef} loop preload="none" style={{ display: "none" }}>
-        <source src={settings.audioFile} type="audio/mpeg" />
-      </audio>
+      {!introDone && <CinematicIntro onComplete={() => setIntroDone(true)} />}
 
       {showBg && <ThreeBackground />}
       <Navbar visible={showNav} showNavbar={settings.showNavbar} scrollTo={scrollTo} navLinks={settings.navLinks} />
       <main id="main-content">
-        <Hero glitchEffect={glitchEffect} onExplore={handleExplore} showButton={settings.showHeroButton} muted={muted} />
+        <Hero onExplore={handleExplore} showButton={settings.showHeroButton} />
         <QuoteSection quote={settings.quote1} />
         <About skills={skills} profileImage={settings.profileImage} aboutHeading={settings.aboutHeading} aboutText={settings.aboutText} />
         <QuoteSection quote={settings.quote2} />
@@ -140,7 +147,7 @@ export default function PageClient({ projects, skills, settings }: PageClientPro
       </main>
       <Footer footerSections={settings.footerSections} />
 
-      <FloatingControls muted={muted} onToggleMute={toggleMute} />
+      <FloatingControls muted={state.muted} onToggleMute={toggleMuted} />
     </>
   );
 }

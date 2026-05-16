@@ -410,6 +410,25 @@ body {
   width: 100%;
 }
 
+/* Framer-motion shared-layout underline (replaces ::after on hover) */
+.nav-menu li {
+  position: relative;
+}
+.nav-link:hover::after,
+.nav-link.active::after {
+  /* Suppress legacy underline when the motion one is mounted */
+  display: none;
+}
+.nav-underline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -5px;
+  height: 1px;
+  background: var(--white);
+  border-radius: 1px;
+}
+
 
 /* ====== SECTION: Layout – Sections ====== */
 /* Sections */
@@ -1458,12 +1477,12 @@ body {
   padding: 1rem 1.5rem;
   font-size: 0.9rem;
   font-weight: 500;
-  animation: toastSlide 0.3s ease forwards;
   pointer-events: auto;
   border-left: 4px solid #86efac;
   display: flex;
   align-items: center;
   gap: 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 .admin-toast.error {
@@ -1482,13 +1501,6 @@ body {
 }
 
 .admin-toast-undo:hover { background: var(--accent); color: var(--white); }
-
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes toastSlide {
-    0% { opacity: 0; transform: translateY(20px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-}
 
 /* Dirty dot on tab */
 .admin-dirty-dot {
@@ -1736,18 +1748,22 @@ body {
   padding: 0 2rem;
 }
 
+.admin-tabs {
+  position: relative;
+}
+
 .admin-tab {
+  position: relative;
   padding: 1rem 1.5rem;
   background: transparent;
   border: none;
-  border-bottom: 2px solid transparent;
   color: var(--gray-mid);
   font-size: 0.85rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: color 0.25s ease;
   font-family: inherit;
 }
 
@@ -1757,7 +1773,78 @@ body {
 
 .admin-tab.active {
   color: var(--white);
-  border-bottom-color: var(--white);
+}
+
+.admin-tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.admin-tab-indicator {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: -1px;
+  height: 2px;
+  background: var(--white);
+  border-radius: 1px;
+}
+
+.admin-dirty-pulse {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}
+
+.admin-shortcut-hint {
+  margin-left: auto;
+  align-self: center;
+  padding-right: 0.5rem;
+  font-family: var(--font-mono, ui-monospace), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--gray-mid);
+  opacity: 0.6;
+  user-select: none;
+}
+
+.admin-header-mark {
+  margin-left: 0.75rem;
+  font-family: var(--font-mono, ui-monospace), monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: var(--gray-mid);
+  vertical-align: middle;
+  opacity: 0.7;
+}
+
+.admin-tab-panel {
+  min-height: 60vh;
+}
+
+.admin-progress {
+  position: relative;
+  width: 200px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.admin-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: var(--white);
+}
+
+@media (max-width: 640px) {
+  .admin-shortcut-hint { display: none; }
 }
 
 .admin-main {
@@ -2378,10 +2465,208 @@ body {
 }
 
 /* ====== SECTION: Reduced Motion ====== */
-/* Reduced motion safety net */
+/* Reduced motion: shorten durations + neutralise framer-motion transforms
+   but allow simple opacity fades to keep UI legible. */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .film-grain,
+  .vignette,
+  .cursor-dot,
+  .cursor-ring {
+    display: none !important;
   }
 }
+
+/* ====== SECTION: Cinematic Overlays ====== */
+.cinematic-overlay-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9000;
+}
+
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--white);
+  transform-origin: 0 50%;
+  z-index: 9500;
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+
+.film-grain {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+  z-index: 9100;
+}
+[data-theme="light"] .film-grain {
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+}
+
+.vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9050;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+[data-theme="light"] .vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 50%,
+    rgba(0, 0, 0, 0.18) 100%
+  );
+}
+
+/* Custom cursor */
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 9999;
+  mix-blend-mode: difference;
+  will-change: transform;
+}
+.cursor-dot {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  background: #ffffff;
+}
+.cursor-ring {
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  border: 1px solid #ffffff;
+}
+@media (pointer: coarse) {
+  .cursor-dot,
+  .cursor-ring {
+    display: none;
+  }
+}
+/* Hide native cursor on interactive elements when custom cursor is active */
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  body:has(.cursor-dot) a,
+  body:has(.cursor-dot) button,
+  body:has(.cursor-dot) [data-cursor="hover"] {
+    cursor: none;
+  }
+}
+
+/* ====== SECTION: Cinematic Intro ====== */
+.intro-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.intro-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50vh;
+  background: #000;
+  transform-origin: center;
+  z-index: 2;
+}
+.intro-bar-top { top: 0; transform-origin: top center; }
+.intro-bar-bottom { bottom: 0; transform-origin: bottom center; }
+
+.intro-stage {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+.intro-name {
+  font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
+  font-size: clamp(3rem, 10vw, 8rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #fff;
+  margin: 0;
+  display: flex;
+  gap: 0.02em;
+}
+.intro-letter-mask {
+  display: inline-block;
+  overflow: hidden;
+  line-height: 1;
+}
+.intro-letter {
+  display: inline-block;
+  will-change: transform;
+}
+.intro-rule {
+  width: clamp(120px, 14vw, 200px);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.6);
+  transform-origin: center;
+}
+
+/* ====== SECTION: Audio Visualizer ====== */
+.audio-visualizer {
+  display: block;
+  margin: 0 0.25rem;
+  transition: opacity 0.4s ease;
+}
+
+/* ====== SECTION: Theme wipe ====== */
+.theme-wipe {
+  position: fixed;
+  inset: 0;
+  z-index: 9800;
+  pointer-events: none;
+  background: var(--primary);
+  border-radius: 50%;
+  will-change: transform, opacity;
+}
+
+/* ====== SECTION: 3D carousel perspective ====== */
+.projects-3d-track {
+  perspective: 1400px;
+  perspective-origin: center center;
+}
+
+/* Word-reveal helper (used by motion sections) */
+.word-mask {
+  display: inline-block;
+  overflow: hidden;
+  line-height: 1.1;
+  vertical-align: bottom;
+}
+.word-mask > span {
+  display: inline-block;
+}
+

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { parseSegments, type Segment } from "@/lib/format";
+import { getAudioEngine } from "@/lib/audio/AudioEngine";
 
 interface TypewriterTextProps {
   text: string;
@@ -10,6 +11,7 @@ interface TypewriterTextProps {
   className?: string;
   onComplete?: () => void;
   trigger?: boolean;
+  /** Kept for API back-compat; engine handles mute state internally. */
   muted?: boolean;
 }
 
@@ -26,60 +28,6 @@ function renderUpTo(segments: Segment[], count: number): React.ReactNode[] {
   return nodes;
 }
 
-// Shared AudioContext for all TypewriterText instances
-let sharedCtx: AudioContext | null = null;
-let sharedBuffer: AudioBuffer | null = null;
-let loadingPromise: Promise<void> | null = null;
-
-function getAudioContext(): AudioContext {
-  if (!sharedCtx) sharedCtx = new AudioContext();
-  return sharedCtx;
-}
-
-function loadKeystrokeBuffer(): Promise<void> {
-  if (sharedBuffer) return Promise.resolve();
-  if (loadingPromise) return loadingPromise;
-
-  loadingPromise = fetch("/audio/typwriter.mp3")
-    .then((res) => res.arrayBuffer())
-    .then((buf) => getAudioContext().decodeAudioData(buf))
-    .then((decoded) => {
-      // Extract a short ~40ms snippet from the start for a single keystroke
-      const ctx = getAudioContext();
-      const snippetDuration = 0.04;
-      const snippetFrames = Math.min(
-        Math.floor(ctx.sampleRate * snippetDuration),
-        decoded.length
-      );
-      const snippet = ctx.createBuffer(decoded.numberOfChannels, snippetFrames, ctx.sampleRate);
-      for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
-        snippet.copyToChannel(decoded.getChannelData(ch).slice(0, snippetFrames), ch);
-      }
-      sharedBuffer = snippet;
-    })
-    .catch(() => {
-      loadingPromise = null;
-    });
-  return loadingPromise;
-}
-
-function playKeystroke(volume: number) {
-  if (!sharedBuffer || !sharedCtx) return;
-  if (sharedCtx.state === "suspended") sharedCtx.resume();
-
-  const source = sharedCtx.createBufferSource();
-  source.buffer = sharedBuffer;
-
-  // Slight pitch variation for natural feel (±8%)
-  source.playbackRate.value = 0.92 + Math.random() * 0.16;
-
-  const gain = sharedCtx.createGain();
-  gain.gain.value = volume * (0.7 + Math.random() * 0.3);
-
-  source.connect(gain).connect(sharedCtx.destination);
-  source.start();
-}
-
 export default function TypewriterText({
   text,
   speed = 50,
@@ -87,10 +35,11 @@ export default function TypewriterText({
   className = "",
   onComplete,
   trigger = true,
-  muted = true,
 }: TypewriterTextProps) {
   const segments = useRef<Segment[]>(parseSegments(text));
-  const cleanLength = useRef<number>(segments.current.reduce((sum, s) => sum + s.text.length, 0));
+  const cleanLength = useRef<number>(
+    segments.current.reduce((sum, s) => sum + s.text.length, 0)
+  );
 
   const [count, setCount] = useState(0);
   const [started, setStarted] = useState(false);
@@ -114,31 +63,24 @@ export default function TypewriterText({
     return () => clearTimeout(timer);
   }, [trigger, delay, started]);
 
-  // Preload the keystroke audio buffer only when unmuted
-  useEffect(() => {
-    if (!muted) loadKeystrokeBuffer();
-  }, [muted]);
-
-  // Play a keystroke sound for each new character
-  const playForChar = useCallback(
-    (newCount: number) => {
-      if (muted || newCount <= prevCountRef.current) return;
-      // Get the character that was just typed
-      let pos = 0;
-      for (const seg of segments.current) {
-        const segEnd = pos + seg.text.length;
-        if (newCount > pos && newCount <= segEnd) {
-          const ch = seg.text[newCount - pos - 1];
-          // Skip sound for spaces (feels more natural)
-          if (ch !== " ") playKeystroke(0.18);
-          break;
+  const playForChar = useCallback((newCount: number) => {
+    if (newCount <= prevCountRef.current) return;
+    const engine = getAudioEngine();
+    let pos = 0;
+    for (const seg of segments.current) {
+      const segEnd = pos + seg.text.length;
+      if (newCount > pos && newCount <= segEnd) {
+        const ch = seg.text[newCount - pos - 1];
+        if (ch !== " ") {
+          const pan = ((newCount % 9) - 4) / 12;
+          engine.keystroke(0.16, pan);
         }
-        pos = segEnd;
+        break;
       }
-      prevCountRef.current = newCount;
-    },
-    [muted]
-  );
+      pos = segEnd;
+    }
+    prevCountRef.current = newCount;
+  }, []);
 
   useEffect(() => {
     if (!started || done) return;

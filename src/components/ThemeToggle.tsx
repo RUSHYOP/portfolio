@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useAudio } from "@/hooks/useAudio";
+import AudioVisualizer from "./AudioVisualizer";
 
 type Theme = "dark" | "light";
 
@@ -8,9 +11,7 @@ const STORAGE_KEY = "theme-preference";
 
 function getSystemTheme(): Theme {
   if (typeof window === "undefined") return "dark";
-  return window.matchMedia("(prefers-color-scheme: light)").matches
-    ? "light"
-    : "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
 const SunIcon = () => (
@@ -57,41 +58,90 @@ interface FloatingControlsProps {
 export function FloatingControls({ muted, onToggleMute }: FloatingControlsProps) {
   const [theme, setTheme] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
+  const [wipe, setWipe] = useState<{ x: number; y: number; color: string } | null>(null);
+  const themeBtnRef = useRef<HTMLButtonElement>(null);
+  const { engine } = useAudio();
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
     const initial = stored ?? getSystemTheme();
     setTheme(initial);
     document.documentElement.setAttribute("data-theme", initial);
+    engine.setTheme(initial);
     setMounted(true);
-  }, []);
+  }, [engine]);
 
   const toggleTheme = () => {
     const next: Theme = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem(STORAGE_KEY, next);
+    const btn = themeBtnRef.current;
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      // Color of the *incoming* theme so it can blanket the viewport
+      const incomingColor = next === "dark" ? "#000000" : "#f5f5f5";
+      setWipe({ x: r.left + r.width / 2, y: r.top + r.height / 2, color: incomingColor });
+    }
+    // Slight delay so the wipe covers before the swap
+    setTimeout(() => {
+      setTheme(next);
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem(STORAGE_KEY, next);
+      engine.setTheme(next);
+      engine.click({ volume: 0.06, pitch: next === "dark" ? 0.9 : 1.3 });
+    }, 220);
+    // Clear wipe after animation
+    setTimeout(() => setWipe(null), 900);
+  };
+
+  const handleMute = () => {
+    onToggleMute();
+    engine.click({ volume: 0.06 });
   };
 
   if (!mounted) return null;
 
   return (
-    <div className="floating-controls">
-      <button
-        onClick={onToggleMute}
-        aria-label={muted ? "Unmute audio" : "Mute audio"}
-        className="fc-btn"
-      >
-        {muted ? <VolumeOffIcon /> : <VolumeOnIcon />}
-      </button>
-      <div className="fc-divider" />
-      <button
-        onClick={toggleTheme}
-        aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-        className="fc-btn"
-      >
-        {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-      </button>
-    </div>
+    <>
+      <div className="floating-controls">
+        <button
+          onClick={handleMute}
+          aria-label={muted ? "Unmute audio" : "Mute audio"}
+          className="fc-btn"
+          data-cursor="hover"
+        >
+          {muted ? <VolumeOffIcon /> : <VolumeOnIcon />}
+        </button>
+        <AudioVisualizer active={!muted} />
+        <div className="fc-divider" />
+        <button
+          ref={themeBtnRef}
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+          className="fc-btn"
+          data-cursor="hover"
+        >
+          {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {wipe && (
+          <motion.div
+            key={`${wipe.x}-${wipe.y}`}
+            className="theme-wipe"
+            initial={{
+              clipPath: `circle(0px at ${wipe.x}px ${wipe.y}px)`,
+              opacity: 1,
+            }}
+            animate={{
+              clipPath: `circle(150vmax at ${wipe.x}px ${wipe.y}px)`,
+              opacity: 1,
+            }}
+            exit={{ opacity: 0, transition: { duration: 0.25 } }}
+            transition={{ duration: 0.7, ease: [0.7, 0, 0.2, 1] }}
+            style={{ background: wipe.color }}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 }

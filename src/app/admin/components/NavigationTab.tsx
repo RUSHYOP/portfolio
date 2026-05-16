@@ -23,8 +23,8 @@ function navLinkWarning(link: NavLink): string | null {
 }
 
 function footerLinkWarning(link: { label: string; url: string }): string | null {
-  const hasLabel = link.label.trim().length > 0;
-  const hasUrl = link.url.trim().length > 0;
+  const hasLabel = (link.label ?? "").trim().length > 0;
+  const hasUrl = (link.url ?? "").trim().length > 0;
   if (hasLabel !== hasUrl) return "Both label and URL are required";
   return null;
 }

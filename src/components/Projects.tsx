@@ -153,22 +153,35 @@ function ProjectCard({
 export default function Projects({ projects, projectsTitle }: ProjectsProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const firstHalfRef = useRef<HTMLDivElement>(null);
   const isInteractingRef = useRef(false);
   const animFrameRef = useRef<number>(0);
   const titleRef = useRef<HTMLDivElement>(null);
   const titleInView = useInView(titleRef, { amount: 0.3, once: true });
   const sectionInView = useInView(sectionRef, { amount: 0.1, once: true });
 
-  // Auto-scroll with seamless wrap (looped via duplicated track)
+  // Auto-scroll with seamless wrap. The track holds two identical halves with
+  // a viewport-wide spacer between them so the loop seam is never visible
+  // at the same time as the cards — the carousel reads as continuous, not duplicated.
   const posRef = useRef(0);
   const halfWidthRef = useRef(0);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const container = scrollRef.current;
-    if (!container) return;
-    const track = container.firstElementChild as HTMLElement;
-    if (track) halfWidthRef.current = track.scrollWidth / 2;
+    const firstHalf = firstHalfRef.current;
+    if (!container || !firstHalf) return;
+
+    // Wrap distance = width of one half + the spacer that follows it.
+    const measure = () => {
+      const spacer = firstHalf.nextElementSibling as HTMLElement | null;
+      const spacerWidth = spacer ? spacer.getBoundingClientRect().width : 0;
+      halfWidthRef.current = firstHalf.getBoundingClientRect().width + spacerWidth;
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(firstHalf);
+    window.addEventListener("resize", measure);
 
     const tick = () => {
       const el = scrollRef.current;
@@ -179,12 +192,27 @@ export default function Projects({ projects, projectsTitle }: ProjectsProps) {
         }
         el.scrollLeft = Math.round(posRef.current);
       } else if (el) {
-        posRef.current = el.scrollLeft;
+        // While user interacts, keep our virtual position in sync and wrap if needed.
+        let next = el.scrollLeft;
+        if (halfWidthRef.current > 0) {
+          if (next >= halfWidthRef.current) {
+            next -= halfWidthRef.current;
+            el.scrollLeft = next;
+          } else if (next < 0) {
+            next += halfWidthRef.current;
+            el.scrollLeft = next;
+          }
+        }
+        posRef.current = next;
       }
       animFrameRef.current = requestAnimationFrame(tick);
     };
     animFrameRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(animFrameRef.current);
+    return () => {
+      cancelAnimationFrame(animFrameRef.current);
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, [projects]);
 
   const pauseInteract = useCallback(() => {
@@ -275,15 +303,29 @@ export default function Projects({ projects, projectsTitle }: ProjectsProps) {
         onWheel={pauseInteract}
       >
         <div className={styles.scrollTrack}>
-          {[...projects, ...projects].map((project, index) => (
-            <ProjectCard
-              key={`${project.id}-${index}`}
-              project={project}
-              index={index}
-              total={projects.length}
-              scrollContainer={scrollRef}
-            />
-          ))}
+          <div className={styles.trackHalf} ref={firstHalfRef}>
+            {projects.map((project, index) => (
+              <ProjectCard
+                key={`a-${project.id}-${index}`}
+                project={project}
+                index={index}
+                total={projects.length}
+                scrollContainer={scrollRef}
+              />
+            ))}
+          </div>
+          <div className={styles.loopSpacer} aria-hidden="true" />
+          <div className={styles.trackHalf} aria-hidden="true">
+            {projects.map((project, index) => (
+              <ProjectCard
+                key={`b-${project.id}-${index}`}
+                project={project}
+                index={index}
+                total={projects.length}
+                scrollContainer={scrollRef}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>

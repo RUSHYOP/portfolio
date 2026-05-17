@@ -62,6 +62,22 @@
   cursor: grab;
   scrollbar-width: thin;
   scrollbar-color: var(--color-gray-600, #555) transparent;
+  /* Soft fade at both edges so cards appear to enter/leave the carousel
+     rather than hard-cut at the viewport — masks the loop visually. */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 8%,
+    #000 92%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 8%,
+    #000 92%,
+    transparent 100%
+  );
 }
 
 .scrollContainer:active {
@@ -70,10 +86,22 @@
 
 .scrollTrack {
   display: flex;
-  gap: 2rem;
+  align-items: stretch;
   padding: 0 clamp(2rem, 6vw, 8rem);
   padding-left: calc(100vw - 480px - clamp(2rem, 6vw, 8rem));
   width: max-content;
+}
+
+.trackHalf {
+  display: flex;
+  gap: 2rem;
+}
+
+/* Empty space between the two looped halves — sized so the seam is never
+   visible at the same time as cards on either side. */
+.loopSpacer {
+  flex-shrink: 0;
+  width: 100vw;
 }
 
 .card {

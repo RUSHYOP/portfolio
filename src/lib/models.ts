@@ -67,7 +67,7 @@ export interface ISettings extends Document {
   showHeroButton: boolean;
   showNavbar: boolean;
   navLinks: { label: string; href: string }[];
-  footerSections: { title: string; links: { label: string; href: string }[] }[];
+  footerSections: { title: string; links: { label: string; url: string }[] }[];
 }
 
 const NavLinkSchema = new Schema(
@@ -81,7 +81,7 @@ const NavLinkSchema = new Schema(
 const FooterLinkSchema = new Schema(
   {
     label: { type: String, trim: true },
-    href: { type: String, trim: true },
+    url: { type: String, trim: true },
   },
   { _id: false }
 );
@@ -121,9 +121,9 @@ const SettingsSchema = new Schema<ISettings>(
     footerSections: {
       type: [FooterSectionSchema],
       default: [
-        { title: "Navigate", links: [{ label: "Projects", href: "/projects" }, { label: "About", href: "#about" }, { label: "Contact", href: "#contact" }] },
-        { title: "Social", links: [{ label: "GitHub", href: "https://github.com/RUSHYOP" }, { label: "LinkedIn", href: "https://linkedin.com/in/purav-s" }, { label: "X", href: "https://x.com/rushyyyyyyyyyyy" }, { label: "Instagram", href: "https://instagram.com/_rushyyy" }] },
-        { title: "Other", links: [{ label: "Resume", href: "" }] },
+        { title: "Navigate", links: [{ label: "Projects", url: "/projects" }, { label: "About", url: "#about" }, { label: "Contact", url: "#contact" }] },
+        { title: "Social", links: [{ label: "GitHub", url: "https://github.com/RUSHYOP" }, { label: "LinkedIn", url: "https://linkedin.com/in/purav-s" }, { label: "X", url: "https://x.com/rushyyyyyyyyyyy" }, { label: "Instagram", url: "https://instagram.com/_rushyyy" }] },
+        { title: "Other", links: [{ label: "Resume", url: "" }] },
       ],
     },
   },

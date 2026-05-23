@@ -229,7 +229,15 @@ function docToSettings(doc: Record<string, unknown>): Settings {
     showHeroButton: (doc.showHeroButton as boolean) ?? true,
     showNavbar: (doc.showNavbar as boolean) ?? true,
     navLinks: (doc.navLinks as NavLink[]) ?? defaultNavLinks,
-    footerSections: (doc.footerSections as FooterSection[]) ?? defaultFooterSections,
+    footerSections: ((doc.footerSections as Record<string, unknown>[] | undefined) ?? defaultFooterSections).map(
+      (s: Record<string, unknown>) => ({
+        title: s.title as string,
+        links: ((s.links as Record<string, unknown>[]) || []).map((l) => ({
+          label: l.label as string,
+          url: (l.url as string) ?? (l.href as string) ?? "",
+        })),
+      })
+    ),
   };
 }
 

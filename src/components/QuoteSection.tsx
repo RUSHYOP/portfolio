@@ -9,6 +9,12 @@ interface QuoteSectionProps {
 }
 
 export default function QuoteSection({ quote }: QuoteSectionProps) {
+  // Bail out before any ref-dependent hooks run, so useScroll never targets an unmounted ref.
+  if (!quote) return null;
+  return <QuoteSectionContent quote={quote} />;
+}
+
+function QuoteSectionContent({ quote }: { quote: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.5, once: true });
 
@@ -19,7 +25,6 @@ export default function QuoteSection({ quote }: QuoteSectionProps) {
   const openX = useTransform(scrollYProgress, [0, 1], [-12, 12]);
   const closeX = useTransform(scrollYProgress, [0, 1], [12, -12]);
 
-  if (!quote) return null;
   const cleanQuote = quote.replace(/\.+$/, "");
 
   return (

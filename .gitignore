@@ -28,6 +28,10 @@ yarn-error.log*
 # Vercel
 .vercel
 
+# Claude Code local hook state
+.claude/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+.env*

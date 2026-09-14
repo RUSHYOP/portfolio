@@ -2643,16 +2643,6 @@ body {
 }
 
 /* ====== SECTION: Theme wipe ====== */
-.theme-wipe {
-  position: fixed;
-  inset: 0;
-  z-index: 9800;
-  pointer-events: none;
-  background: var(--primary);
-  border-radius: 50%;
-  will-change: transform, opacity;
-}
-
 /* ====== SECTION: 3D carousel perspective ====== */
 .projects-3d-track {
   perspective: 1400px;

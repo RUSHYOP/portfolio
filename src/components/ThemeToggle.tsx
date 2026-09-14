@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { useAudio } from "@/hooks/useAudio";
 import AudioVisualizer from "./AudioVisualizer";
 
@@ -58,8 +57,6 @@ interface FloatingControlsProps {
 export function FloatingControls({ muted, onToggleMute }: FloatingControlsProps) {
   const [theme, setTheme] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
-  const [wipe, setWipe] = useState<{ x: number; y: number; color: string } | null>(null);
-  const themeBtnRef = useRef<HTMLButtonElement>(null);
   const { engine } = useAudio();
 
   useEffect(() => {
@@ -73,23 +70,11 @@ export function FloatingControls({ muted, onToggleMute }: FloatingControlsProps)
 
   const toggleTheme = () => {
     const next: Theme = theme === "dark" ? "light" : "dark";
-    const btn = themeBtnRef.current;
-    if (btn) {
-      const r = btn.getBoundingClientRect();
-      // Color of the *incoming* theme so it can blanket the viewport
-      const incomingColor = next === "dark" ? "#000000" : "#f5f5f5";
-      setWipe({ x: r.left + r.width / 2, y: r.top + r.height / 2, color: incomingColor });
-    }
-    // Slight delay so the wipe covers before the swap
-    setTimeout(() => {
-      setTheme(next);
-      document.documentElement.setAttribute("data-theme", next);
-      localStorage.setItem(STORAGE_KEY, next);
-      engine.setTheme(next);
-      engine.click({ volume: 0.06, pitch: next === "dark" ? 0.9 : 1.3 });
-    }, 220);
-    // Clear wipe after animation
-    setTimeout(() => setWipe(null), 900);
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem(STORAGE_KEY, next);
+    engine.setTheme(next);
+    engine.click({ volume: 0.06, pitch: next === "dark" ? 0.9 : 1.3 });
   };
 
   const handleMute = () => {
@@ -113,7 +98,6 @@ export function FloatingControls({ muted, onToggleMute }: FloatingControlsProps)
         <AudioVisualizer active={!muted} />
         <div className="fc-divider" />
         <button
-          ref={themeBtnRef}
           onClick={toggleTheme}
           aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
           className="fc-btn"
@@ -122,26 +106,6 @@ export function FloatingControls({ muted, onToggleMute }: FloatingControlsProps)
           {theme === "dark" ? <SunIcon /> : <MoonIcon />}
         </button>
       </div>
-
-      <AnimatePresence>
-        {wipe && (
-          <motion.div
-            key={`${wipe.x}-${wipe.y}`}
-            className="theme-wipe"
-            initial={{
-              clipPath: `circle(0px at ${wipe.x}px ${wipe.y}px)`,
-              opacity: 1,
-            }}
-            animate={{
-              clipPath: `circle(150vmax at ${wipe.x}px ${wipe.y}px)`,
-              opacity: 1,
-            }}
-            exit={{ opacity: 0, transition: { duration: 0.25 } }}
-            transition={{ duration: 0.7, ease: [0.7, 0, 0.2, 1] }}
-            style={{ background: wipe.color }}
-          />
-        )}
-      </AnimatePresence>
     </>
   );
 }

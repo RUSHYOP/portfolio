@@ -20,6 +20,7 @@
 - DOM motion: fade-up 12px, 0.5s, ease `[0.2, 0.7, 0.2, 1]`. Nothing bounces.
 - FOV **60° → 70°** with scroll velocity. Camera **never reverses**: position `z` is non-increasing along the path and the forward vector always has negative `z`.
 - `distanceAU` is monotonically non-increasing with progress and is `0` from chapter `pilot` onward.
+- Scroll geometry: `VOYAGE_SCROLL_VH = 1300` is the scrollable range, and the final section carries an extra `VOYAGE_TAIL_VH = 100` so the track is 1400vh and `scrollHeight - innerHeight === VOYAGE_SCROLL_VH`. That identity is required: the store's progress is `scrollY / (scrollHeight - innerHeight)`, so sharing one denominator with the section offsets is what makes chapter `c` begin at document offset `c.start * VOYAGE_SCROLL_VH` and `scrollTo(c.start)` land on the section it names. 1300 also guarantees the smallest content span (0.08) clears the 100vh `.chapter__pin`, which cannot stick inside a shorter parent. Section heights come from `sectionHeightVh(chapter)`, never from an inline `(end - start) * VOYAGE_SCROLL_VH`.
 - `prefers-reduced-motion`: tier `still`, no Lenis, no camera motion, Ignition skipped, Letterbox never shown.
 - Ignition ≤ 1.2s, skippable (click / Escape / Enter / Space), plays once per session (`sessionStorage["voyage-ignition-played"]`).
 - No `TypewriterText`, no keystroke sounds anywhere in new code.
@@ -78,12 +79,14 @@
   export interface Chapter { id: ChapterId; label: string; index: string; start: number; end: number; micro: boolean; }
   export const CHAPTERS: readonly Chapter[];
   export const CONTENT_CHAPTERS: readonly Chapter[];          // micro === false
-  export const VOYAGE_SCROLL_VH = 1100;                        // total track height in vh
+  export const VOYAGE_SCROLL_VH = 1300;                        // scrollable range in vh
+  export const VOYAGE_TAIL_VH = 100;                           // extra viewport on the final section
+  export function sectionHeightVh(chapter: Chapter): number;   // DOM height of a chapter's section
   export function chapterAt(progress: number): { chapter: Chapter; chapterProgress: number };
   export interface CameraPose { position: THREE.Vector3; lookAt: THREE.Vector3; }
   export function getCameraPose(progress: number, out?: CameraPose): CameraPose;
   export const STAR_POSITION: THREE.Vector3;                  // (6, -3, -140)
-  export function starScale(progress: number): number;        // 0.25 → 6, holds from pilot
+  export function starScale(progress: number): number;        // 0.25 → 2.4 (tuned from 6 in browser review), holds from pilot
   export function distanceAU(progress: number): number;       // 9.4 → 0, 0 from pilot
   export const FOV_MIN = 60; export const FOV_MAX = 70;
   export function fovForVelocity(velocity01: number): number;
@@ -254,7 +257,8 @@ export const CHAPTERS: readonly Chapter[] = [
 export const CONTENT_CHAPTERS: readonly Chapter[] = CHAPTERS.filter((c) => !c.micro);
 
 /** Total scroll track height in vh. Each chapter's section height = (end - start) * this. */
-export const VOYAGE_SCROLL_VH = 1100;
+export const VOYAGE_SCROLL_VH = 1300;
+export const VOYAGE_TAIL_VH = 100;
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -636,9 +640,9 @@ EOF
   export const TIER_SETTINGS: Record<Tier, TierSettings>;
   export interface QualityEnv { isMobile: boolean; reducedMotion: boolean; webgl: boolean; }
   export function selectTier(env: QualityEnv): Tier;
-  export function probeDemote(tier: Tier, fps: number): Tier;      // < 45 → one tier down
-  export function detectEnv(): QualityEnv;                          // browser only
-  export function runFpsProbe(durationMs?: number): Promise<number>; // browser only
+  export function probeDemote(tier: Tier, fps: number | null): Tier; // < 45 → one tier down; null/NaN → unchanged
+  export function detectEnv(): QualityEnv;                          // server → { isMobile:false, reducedMotion:true, webgl:false }
+  export function runFpsProbe(durationMs?: number): Promise<number | null>; // null = inconclusive (tab hidden / no document)
   export function logClient(event: LogEvent, data?: Record<string, unknown>): void; // clientLog.ts
   export type LogEvent = "quality.tier" | "quality.probe" | "scene.context_lost";
   ```
@@ -842,10 +846,10 @@ export async function POST(request: NextRequest) {
 
 - [ ] **Step 7: Ignore the logs directory**
 
-Append to `.gitignore`:
+Append to `.gitignore` (root-anchored — an unanchored `logs/` would also ignore `src/app/api/logs/`):
 ```
 # runtime logs
-logs/
+/logs/
 ```
 
 - [ ] **Step 8: Run tests to verify they pass**
@@ -2495,7 +2499,7 @@ export default function Ignition({ enabled, onComplete, onLetterbox }: IgnitionP
 "use client";
 
 import { motion } from "framer-motion";
-import { CHAPTERS, VOYAGE_SCROLL_VH } from "@/scene/camera/flightPath";
+import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
 import { useVoyage } from "@/scene/scroll/useVoyage";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { getAudioEngine } from "@/lib/audio/AudioEngine";
@@ -2533,7 +2537,7 @@ export default function Launch({ headline, subheadline, ready }: LaunchProps) {
     <section
       id="launch"
       className="chapter chapter--launch"
-      style={{ height: `${(chapter.end - chapter.start) * VOYAGE_SCROLL_VH}vh` }}
+      style={{ height: `${sectionHeightVh(chapter)}vh` }}
       aria-label="Launch"
     >
       <div className="chapter__pin">
@@ -2600,7 +2604,7 @@ EOF
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Settings } from "@/lib/data";
-import { CHAPTERS, VOYAGE_SCROLL_VH } from "@/scene/camera/flightPath";
+import { CHAPTERS, VOYAGE_SCROLL_VH, VOYAGE_TAIL_VH, sectionHeightVh } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import VoyageScroll from "@/scene/scroll/VoyageScroll";
 import { detectEnv, selectTier, probeDemote, runFpsProbe, type Tier } from "@/scene/quality";
@@ -2650,8 +2654,9 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
     let cancelled = false;
     runFpsProbe(1000).then((fps) => {
       if (cancelled) return;
+      // fps === null means the probe was inconclusive (tab hidden) — keep the tier.
       const next = probeDemote(tier, fps);
-      logClient("quality.probe", { fps: Math.round(fps), from: tier, to: next });
+      logClient("quality.probe", { fps: fps === null ? null : Math.round(fps), from: tier, to: next });
       if (next !== tier) setTier(next);
     });
     return () => { cancelled = true; };
@@ -2681,14 +2686,14 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
 
       <Ignition enabled={animated} onComplete={onIgnitionComplete} onLetterbox={setLetterbox} />
 
-      <main className="voyage-track" style={{ minHeight: `${VOYAGE_SCROLL_VH}vh` }}>
+      <main className="voyage-track" style={{ minHeight: `${VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH}vh` }}>
         <Launch headline={settings.heroHeadline} subheadline={settings.heroSubheadline} ready={ignited} />
         {placeholders.map((c) => (
           <section
             key={c.id}
             id={c.id}
             className={`chapter chapter--placeholder${c.micro ? " chapter--micro" : ""}`}
-            style={{ height: `${(c.end - c.start) * VOYAGE_SCROLL_VH}vh` }}
+            style={{ height: `${sectionHeightVh(c)}vh` }}
             aria-label={c.label}
           >
             {!c.micro && (
@@ -2939,6 +2944,35 @@ EOF
 
 This is the see-it step. Do not mark the slice done without it.
 
+- [ ] **Step 0: Repair the lint script (Next 16 removed `next lint`)**
+
+`npm run lint` currently fails with "Invalid project directory provided, no such directory: …/lint". `eslint@9.39` and `eslint-config-next@16.0.7` are already installed and the latter exports flat configs. Create `eslint.config.mjs`:
+
+```js
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+export default [
+  ...nextVitals,
+  ...nextTs,
+  {
+    ignores: [".next/**", "node_modules/**", "screenshots/**", "docs/**", "logs/**", "audio/**", "images/**", "public/**"],
+  },
+];
+```
+
+Change the `lint` script in `package.json` to `"lint": "eslint ."`. Run `npm run lint`; fix any errors it reports in files this plan created (do not touch pre-existing violations in unrelated files — list them in the worklog instead). Commit:
+
+```bash
+git add eslint.config.mjs package.json
+git commit -m "$(cat <<'EOF'
+chore: restore lint — flat ESLint config for Next 16 (next lint was removed)
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+EOF
+)"
+```
+
 - [ ] **Step 1: Desktop review at 1440×900**
 
 With `npm run dev` running, use the chrome-devtools MCP:
@@ -2950,6 +2984,8 @@ With `npm run dev` running, use the chrome-devtools MCP:
 6. `list_console_messages` → expect zero errors; copy the `quality.tier` and `quality.probe` JSON lines into the worklog.
 
 Checklist to judge against the spec: star is a small amber point low-right at launch and visibly grows by 50%; streaks lengthen while scrolling and relax on stop; telemetry distance counts down; rail dot tracks; dock compacts after the hero; H1 is legible over the scene; no layout shift when Ignition lifts.
+
+Then a **mid-page hard reload**: scroll to ~50%, `navigate_page` type `reload`, wait 1s without scrolling, capture `desktop-reload-p50.png`. The telemetry, rail dot, and dock active-link must already reflect ~50% (chapter "worlds"), not "launch" — this verifies the Lenis-branch store seed from Task 7.
 
 - [ ] **Step 2: Mobile review at 390×844**
 

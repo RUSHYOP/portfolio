@@ -39,6 +39,9 @@ export interface FooterSection {
 export interface Settings {
   profileImage: string;
   audioFile: string;
+  // Hero copy (Task 11); the hero reads these from settings instead of hardcoding.
+  heroHeadline: string;
+  heroSubheadline: string;
   aboutHeading: string;
   aboutText: string;
   quote1: string;
@@ -217,6 +220,11 @@ function docToSettings(doc: Record<string, unknown>): Settings {
   return {
     profileImage: (doc.profileImage as string) ?? "/images/purav.jpg",
     audioFile: (doc.audioFile as string) ?? "/audio/space.mp3",
+    // Same consulting defaults as the schema, for docs written before these fields existed.
+    heroHeadline: (doc.heroHeadline as string) ?? "I build AI-powered products, end to end.",
+    heroSubheadline:
+      (doc.heroSubheadline as string) ??
+      "Full-stack builds and system architecture for founders and teams who want it shipped, not just scoped.",
     aboutHeading: (doc.aboutHeading as string) ?? "Building Efficient Systems",
     aboutText: (doc.aboutText as string) ?? "",
     quote1: (doc.quote1 as string) ?? "",
@@ -229,7 +237,11 @@ function docToSettings(doc: Record<string, unknown>): Settings {
     showHeroButton: (doc.showHeroButton as boolean) ?? true,
     showNavbar: (doc.showNavbar as boolean) ?? true,
     navLinks: (doc.navLinks as NavLink[]) ?? defaultNavLinks,
-    footerSections: ((doc.footerSections as Record<string, unknown>[] | undefined) ?? defaultFooterSections).map(
+    // Give the fallback the same element type so `.map` has one callback signature.
+    footerSections: (
+      (doc.footerSections as Record<string, unknown>[] | undefined) ??
+      (defaultFooterSections as unknown as Record<string, unknown>[])
+    ).map(
       (s: Record<string, unknown>) => ({
         title: s.title as string,
         links: ((s.links as Record<string, unknown>[]) || []).map((l) => ({

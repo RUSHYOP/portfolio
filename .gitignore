@@ -35,3 +35,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*
+
+# runtime logs (root-anchored: an unanchored `logs/` would also ignore src/app/api/logs)
+/logs/

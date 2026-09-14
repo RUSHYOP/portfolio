@@ -2940,6 +2940,35 @@ EOF
 
 This is the see-it step. Do not mark the slice done without it.
 
+- [ ] **Step 0: Repair the lint script (Next 16 removed `next lint`)**
+
+`npm run lint` currently fails with "Invalid project directory provided, no such directory: …/lint". `eslint@9.39` and `eslint-config-next@16.0.7` are already installed and the latter exports flat configs. Create `eslint.config.mjs`:
+
+```js
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+export default [
+  ...nextVitals,
+  ...nextTs,
+  {
+    ignores: [".next/**", "node_modules/**", "screenshots/**", "docs/**", "logs/**", "audio/**", "images/**", "public/**"],
+  },
+];
+```
+
+Change the `lint` script in `package.json` to `"lint": "eslint ."`. Run `npm run lint`; fix any errors it reports in files this plan created (do not touch pre-existing violations in unrelated files — list them in the worklog instead). Commit:
+
+```bash
+git add eslint.config.mjs package.json
+git commit -m "$(cat <<'EOF'
+chore: restore lint — flat ESLint config for Next 16 (next lint was removed)
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+EOF
+)"
+```
+
 - [ ] **Step 1: Desktop review at 1440×900**
 
 With `npm run dev` running, use the chrome-devtools MCP:

@@ -636,9 +636,9 @@ EOF
   export const TIER_SETTINGS: Record<Tier, TierSettings>;
   export interface QualityEnv { isMobile: boolean; reducedMotion: boolean; webgl: boolean; }
   export function selectTier(env: QualityEnv): Tier;
-  export function probeDemote(tier: Tier, fps: number): Tier;      // < 45 → one tier down
-  export function detectEnv(): QualityEnv;                          // browser only
-  export function runFpsProbe(durationMs?: number): Promise<number>; // browser only
+  export function probeDemote(tier: Tier, fps: number | null): Tier; // < 45 → one tier down; null/NaN → unchanged
+  export function detectEnv(): QualityEnv;                          // server → { isMobile:false, reducedMotion:true, webgl:false }
+  export function runFpsProbe(durationMs?: number): Promise<number | null>; // null = inconclusive (tab hidden / no document)
   export function logClient(event: LogEvent, data?: Record<string, unknown>): void; // clientLog.ts
   export type LogEvent = "quality.tier" | "quality.probe" | "scene.context_lost";
   ```
@@ -842,10 +842,10 @@ export async function POST(request: NextRequest) {
 
 - [ ] **Step 7: Ignore the logs directory**
 
-Append to `.gitignore`:
+Append to `.gitignore` (root-anchored — an unanchored `logs/` would also ignore `src/app/api/logs/`):
 ```
 # runtime logs
-logs/
+/logs/
 ```
 
 - [ ] **Step 8: Run tests to verify they pass**
@@ -2650,8 +2650,9 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
     let cancelled = false;
     runFpsProbe(1000).then((fps) => {
       if (cancelled) return;
+      // fps === null means the probe was inconclusive (tab hidden) — keep the tier.
       const next = probeDemote(tier, fps);
-      logClient("quality.probe", { fps: Math.round(fps), from: tier, to: next });
+      logClient("quality.probe", { fps: fps === null ? null : Math.round(fps), from: tier, to: next });
       if (next !== tier) setTier(next);
     });
     return () => { cancelled = true; };

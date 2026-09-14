@@ -594,6 +594,12 @@ EOF
 
 ---
 
+> **Post-review amendments to Task 2 (2026-09-14, applied in the branch):**
+> - `published` is a **real field**: `export function effectiveFields(def)` injects `{ published: { type: "toggle", label: "Published", default: false } }` when `def.publishable` and the def doesn't declare it; `buildSchema`, `validate`, `toDto` and `emptyFor` all use the effective fields (schema path `published` is `Boolean default false index true`). Consequence: `validate({ published: true }, "update")` succeeds for publishable defs, so the admin Publish button's `PUT { published }` passes validation. Field names `itemId`/`order` are rejected at `defineCollection` time.
+> - `create` assigns `order = max(existing order) + 1` (not `countDocuments()`, which duplicates after a delete); `list` sorts `{ order: 1, createdAt: 1 }` when orderable.
+> - One `defaultFor(spec)` helper keeps schema defaults and DTO empties in agreement; `createdAt` fallback is the epoch ISO string; `reorder([])` on an empty collection is a no-op `true`.
+> - Contract: `create(value, internal)` / `update(id, value)` expect `validate()` output — the validator is the trust boundary; `internal` is server-set fields that bypass it (inquiries: `status`, `ipHash`, `notifyFailed`).
+
 ### Task 3: Generic route handlers
 
 **Files:**

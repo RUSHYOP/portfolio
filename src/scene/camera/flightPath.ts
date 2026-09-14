@@ -34,9 +34,10 @@ export const CONTENT_CHAPTERS: readonly Chapter[] = CHAPTERS.filter((c) => !c.mi
 /** Total scroll track height in vh. Each chapter's section height = (end - start) * this. */
 export const VOYAGE_SCROLL_VH = 1100;
 
-// Non-finite input (a 0/0 scroll ratio before layout) collapses to 0 rather than
-// propagating NaN into three's getPoint, which throws on the per-frame render path.
-const clamp01 = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0);
+// NaN (a 0/0 scroll ratio before layout) maps to 0 rather than propagating into
+// three's getPoint, which throws on the per-frame render path. ±Infinity saturates
+// normally, so +Infinity pins to the end of the voyage and -Infinity to the start.
+const clamp01 = (v: number) => (Number.isNaN(v) ? 0 : Math.min(1, Math.max(0, v)));
 
 export function chapterAt(progress: number): { chapter: Chapter; chapterProgress: number } {
   const p = clamp01(progress);

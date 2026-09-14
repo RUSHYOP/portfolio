@@ -131,4 +131,11 @@ describe("non-finite input", () => {
     expect(fovForVelocity(NaN)).toBe(FOV_MIN);
     expect(progressToCurveT(NaN)).toBe(0);
   });
+
+  it("saturates +Infinity to the far end and -Infinity to the start", () => {
+    expect(chapterAt(Infinity).chapter.id).toBe("surface");
+    expect(fovForVelocity(Infinity)).toBe(FOV_MAX);
+    expect(distanceAU(Infinity)).toBe(0);
+    expect(chapterAt(-Infinity).chapter.id).toBe("launch");
+  });
 });

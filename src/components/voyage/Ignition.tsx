@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export const IGNITION_STORAGE_KEY = "voyage-ignition-played";
@@ -24,9 +24,14 @@ export default function Ignition({ enabled, onComplete, onLetterbox }: IgnitionP
   const doneRef = useRef(false);
   // Latest-ref: callbacks read through refs so an unstable parent cannot restart the sequence.
   const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
   const onLetterboxRef = useRef(onLetterbox);
-  onLetterboxRef.current = onLetterbox;
+  // Written in a layout effect, not in render: refs must not be mutated during render
+  // (react-hooks/refs). No dep array, so it re-syncs on every commit; both refs are only
+  // ever read from timers/handlers/effects, which all run after this.
+  useLayoutEffect(() => {
+    onCompleteRef.current = onComplete;
+    onLetterboxRef.current = onLetterbox;
+  });
   // Holds the live keydown handler so `finish` can detach it (the effect cleanup also does).
   const onKeyRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 
@@ -50,6 +55,10 @@ export default function Ignition({ enabled, onComplete, onLetterbox }: IgnitionP
     let played = false;
     try { played = sessionStorage.getItem(IGNITION_STORAGE_KEY) === "1"; } catch { /* ignore */ }
     if (!enabled || played) {
+      // Mount-only skip path: `played` comes from sessionStorage, which cannot be read during
+      // render without a hydration mismatch. It must settle synchronously here or the overlay
+      // paints for a frame on a repeat visit. `finish` is idempotent and guarded by doneRef.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       finish();
       return;
     }

@@ -38,6 +38,11 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
   useEffect(() => {
     const env = detectEnv();
     const t = selectTier(env);
+    // Mount-only: the tier comes from browser env (UA, deviceMemory, DPR), which cannot be read
+    // during render without a hydration mismatch — the server has no window and renders the
+    // `tier === null` branch. `tier` is real state (also written by the FPS probe and by
+    // context-lost), so a lazy initializer or useSyncExternalStore does not apply here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTier(t);
     logClient("quality.tier", { tier: t, ...env, dpr: window.devicePixelRatio });
   }, []);

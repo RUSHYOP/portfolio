@@ -46,6 +46,9 @@ export default function Dock({ visible }: DockProps) {
   // Escape closes the mobile sheet; listener only exists while it is open.
   useEffect(() => {
     if (!open) return;
+    // Captured up front: the menu button is rendered unconditionally (outside AnimatePresence),
+    // so this is the same node the cleanup would read — and it silences exhaustive-deps.
+    const menu = menuRef.current;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
@@ -57,7 +60,7 @@ export default function Dock({ visible }: DockProps) {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("keydown", onKeyDown);
-      menuRef.current?.focus();
+      menu?.focus();
     };
   }, [open]);
 

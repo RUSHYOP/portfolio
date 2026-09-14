@@ -1,16 +1,22 @@
 /** `still`-tier fallback: a deterministic SVG starfield over a black-to-charcoal gradient. No WebGL, no motion. */
-export default function StillSky() {
+// Built once at module scope, not per render: the seed is a literal, so the field is a
+// constant — and a render-phase `let` reassignment trips react-hooks/immutability.
+const STARS = (() => {
   let seed = 7;
   const rand = () => {
     seed = (seed * 16807) % 2147483647;
     return seed / 2147483647;
   };
-  const stars = Array.from({ length: 160 }, () => ({
+  return Array.from({ length: 160 }, () => ({
     cx: (rand() * 100).toFixed(2),
     cy: (rand() * 100).toFixed(2),
     r: (0.05 + rand() * 0.18).toFixed(3),
     o: (0.35 + rand() * 0.65).toFixed(2),
   }));
+})();
+
+export default function StillSky() {
+  const stars = STARS;
   return (
     <div className="voyage-scene voyage-still" aria-hidden="true">
       <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" className="voyage-still__svg">

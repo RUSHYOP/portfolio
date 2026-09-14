@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { getAudioEngine } from "@/lib/audio/AudioEngine";
 import { getCameraPose, fovForVelocity, type CameraPose } from "@/scene/camera/flightPath";
@@ -25,7 +25,11 @@ const POSE_LERP = 0.08;
 export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const igniteRef = useRef(ignite);
-  igniteRef.current = ignite;
+  // Layout effect, not a render-phase write (react-hooks/refs). No dep array so it re-syncs
+  // every commit; the RAF loop reads igniteRef.current, always after the commit has landed.
+  useLayoutEffect(() => {
+    igniteRef.current = ignite;
+  });
 
   useEffect(() => {
     const host = hostRef.current;

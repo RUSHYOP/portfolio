@@ -8,6 +8,41 @@
   position: relative; background: #000; color: var(--white);
 }
 .voyage-root--booting { min-height: 100vh; }
+
+/* Belt and braces for the shared chrome: VoyageRoot pins data-theme="dark", but a toggle
+   while the voyage is mounted would otherwise repaint these surfaces light. Each selector
+   out-specifies its [data-theme="light"] counterpart in globals.css, so source order cannot
+   decide it. Only the properties the light rules override are restated. */
+[data-theme="light"] .voyage-root .floating-controls {
+  background: rgba(20, 20, 20, 0.65);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme="light"] .voyage-root .floating-controls:hover {
+  background: rgba(20, 20, 20, 0.8);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+[data-theme="light"] .voyage-root .fc-btn {
+  color: rgba(255, 255, 255, 0.75);
+}
+[data-theme="light"] .voyage-root .fc-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+[data-theme="light"] .voyage-root .fc-divider {
+  background: rgba(255, 255, 255, 0.15);
+}
+/* GlobalOverlays renders the grain and vignette outside .voyage-root, hence body:has(). */
+[data-theme="light"] body:has(.voyage-root) .film-grain {
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+}
+[data-theme="light"] body:has(.voyage-root) .vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
 .voyage-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 .voyage-scene canvas { display: block; width: 100%; height: 100%; }
 .voyage-still { background: radial-gradient(ellipse at 70% 65%, #141210 0%, #000 60%); }
@@ -43,6 +78,8 @@
   font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
   font-size: clamp(3.5rem, 8vw, 8rem); font-weight: 500;
   letter-spacing: -0.02em; line-height: 0.95; margin: 0 0 1.5rem;
+  /* Keeps the fallback font from orphaning the last word when Styrene A is unavailable. */
+  text-wrap: balance;
 }
 .launch__sub {
   font-weight: 300; font-size: clamp(1.05rem, 1.4vw, 1.35rem); line-height: 1.7;

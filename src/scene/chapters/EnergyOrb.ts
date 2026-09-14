@@ -8,6 +8,11 @@ export const AMBER = 0xf2b35c;
 /** Sprite scale of the additive glow, in orb radii. Shared by build() and update(). */
 const GLOW_SCALE = 4.2;
 
+/** Floor for the glow in *world* units: at launch the orb is 0.25 radii at 140 units away,
+ *  so a purely proportional halo is invisible — the destination must read as a warm point
+ *  with a halo from frame one. */
+const GLOW_MIN = 3.5;
+
 /** AMBER as sRGB "r,g,b" bytes for canvas gradient stops. Unpacked from the hex rather than
  *  read off THREE.Color: ColorManagement is on by default in three >= r152, so Color.r/g/b
  *  hold linear-sRGB and would shift 242,179,92 to 226,115,27 in an sRGB canvas. */
@@ -138,12 +143,17 @@ export class EnergyOrb implements SetPiece {
     // SceneRoot may tick before the build lands.
     if (!this.group) return;
     const s = starScale(ctx.voyage.progress) * ctx.ignite;
-    this.group.scale.setScalar(Math.max(0.001, s));
+    const sc = Math.max(0.001, s);
+    this.group.scale.setScalar(sc);
     this.material.uniforms.uTime.value = ctx.t;
     this.material.uniforms.uGlare.value = this.glare;
     if (this.glow) {
+      // The sprite is a child of the scaled group, so its scale is in orb radii: divide the
+      // world-space target back out by `sc`. The GLOW_MIN floor fades in with ignite so the
+      // halo does not pop in at full size behind the ignition curtain.
       // A Sprite is a billboarded quad; z stays 1 so only its width/height breathe.
-      const g = GLOW_SCALE * (1 + ctx.audioEnergy * 0.4) * (1 + this.glare * 2);
+      const world = Math.max(GLOW_MIN * ctx.ignite, GLOW_SCALE * sc);
+      const g = (world / sc) * (1 + ctx.audioEnergy * 0.4) * (1 + this.glare * 2);
       this.glow.scale.set(g, g, 1);
     }
   }

@@ -53,7 +53,7 @@ export const STAR_POSITION = new THREE.Vector3(6, -3, -140);
 
 /** Launch framing: the camera looks up-left of the star, which projects the star
  *  low-right of frame instead of dead-centre behind the headline. */
-export const LAUNCH_LOOK_OFFSET = new THREE.Vector3(-3, 2, 0);
+export const LAUNCH_LOOK_OFFSET = new THREE.Vector3(-16, 10, 0);
 
 /**
  * Camera waypoints: one per chapter start, plus a final end point (12 points for

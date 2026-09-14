@@ -73,6 +73,13 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [ignited, tier]);
 
+  // The voyage is dark-only; the theme toggle is removed in slice 8. Keyed on `tier` because
+  // FloatingControls (which writes the stored/OS theme on mount) only mounts once `tier` is
+  // resolved — so this effect must re-run in that same commit to win over it.
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+  }, [tier]);
+
   const onContextLost = useCallback(() => {
     logClient("scene.context_lost", {});
     setTier("still");

@@ -52,8 +52,11 @@ export function chapterAt(progress: number): { chapter: Chapter; chapterProgress
 export const STAR_POSITION = new THREE.Vector3(6, -3, -140);
 
 /** Launch framing: the camera looks up-left of the star, which projects the star
- *  low-right of frame instead of dead-centre behind the headline. */
-export const LAUNCH_LOOK_OFFSET = new THREE.Vector3(-16, 10, 0);
+ *  low-right of frame instead of dead-centre behind the headline.
+ *  (-28, 18) at the ~140-unit launch distance is roughly 11° right / 7° down — enough to
+ *  clear the hero copy on desktop, while staying inside a portrait viewport's ~15°
+ *  horizontal half-FOV so the star is still on-screen on mobile. */
+export const LAUNCH_LOOK_OFFSET = new THREE.Vector3(-28, 18, 0);
 
 /**
  * Camera waypoints: one per chapter start, plus a final end point (12 points for

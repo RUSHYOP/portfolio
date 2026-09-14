@@ -678,7 +678,7 @@ describe("listAndCreate", () => {
     const res = await listAndCreate(col).GET(req("GET", undefined, "http://localhost/api/ts?all=1"));
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
-    expect(col.list).toHaveBeenLastCalledWith({ publishedOnly: false });
+    expect(col.list).toHaveBeenLastCalledWith({ publishedOnly: false, includeInternal: true });
   });
   it("GET requires auth when publicList is false", async () => {
     const col = fakeCol({ def: { ...def, publicList: false } });
@@ -793,7 +793,7 @@ export function listAndCreate(col: Collection) {
       if (all || !col.def.publicList) {
         if (!(await verifyRequest(request))) return unauthorized();
         try {
-          return NextResponse.json(await col.list({ publishedOnly: false }), { headers: { "Cache-Control": "no-store" } });
+          return NextResponse.json(await col.list({ publishedOnly: false, includeInternal: true }), { headers: { "Cache-Control": "no-store" } });
         } catch {
           return NextResponse.json({ error: `Failed to load ${col.def.collection}` }, { status: 500 });
         }
@@ -1689,7 +1689,7 @@ EOF
 ### Task 8: Inquiry routes (public POST, admin GET/PUT/DELETE)
 
 **Files:**
-- Create: `src/app/api/inquiries/route.ts`, `src/app/api/inquiries/[id]/route.ts`
+- Create: `src/lib/inquiryLimiter.ts`, `src/app/api/inquiries/route.ts`, `src/app/api/inquiries/[id]/route.ts`
 - Test: `src/app/api/inquiries/route.test.ts`
 
 **Interfaces:**
@@ -1720,14 +1720,15 @@ import { inquiries } from "@/lib/collections";
 import { sendInquiryEmails } from "@/lib/mail";
 import { validate } from "@/lib/collections/fieldSpec";
 import { inquiriesDef } from "@/lib/collections/specs/inquiries";
-import { POST, __resetRateLimiterForTests } from "./route";
+import { POST } from "./route";
+import { resetInquiryLimiter } from "@/lib/inquiryLimiter";
 
 const good = { name: "Ada", email: "ada@example.com", building: "Console", budget: "lt5k", timeline: "asap" };
 const post = (body: unknown, ip = "1.2.3.4") =>
   POST(new NextRequest("http://localhost/api/inquiries", { method: "POST", body: typeof body === "string" ? body : JSON.stringify(body), headers: { "content-type": "application/json", "x-forwarded-for": ip } }));
 
 beforeEach(() => {
-  __resetRateLimiterForTests();
+  resetInquiryLimiter();
   vi.mocked(inquiries.validate).mockImplementation((b, m) => validate(inquiriesDef.fields, b, m));
   vi.mocked(inquiries.create).mockClear();
   vi.mocked(sendInquiryEmails).mockClear().mockResolvedValue({ sent: true });
@@ -1774,25 +1775,37 @@ describe("POST /api/inquiries", () => {
 Run: `npm test -- src/app/api/inquiries/route.test.ts`
 Expected: FAIL — `Cannot find module './route'`
 
-- [ ] **Step 3: Implement `src/app/api/inquiries/route.ts`**
+- [ ] **Step 3: Implement `src/lib/inquiryLimiter.ts` and `src/app/api/inquiries/route.ts`**
 
+`src/lib/inquiryLimiter.ts` (Next route files may export only handlers, so the limiter and its test reset live here):
+```ts
+import { createRateLimiter } from "@/lib/rateLimit";
+
+const make = () => createRateLimiter({ max: 5, windowMs: 60 * 60 * 1000 });
+let limiter = make();
+
+export function checkInquiryLimit(key: string) {
+  return limiter.check(key);
+}
+
+/** Test-only: start a fresh window. */
+export function resetInquiryLimiter() {
+  limiter = make();
+}
+```
+
+`src/app/api/inquiries/route.ts`:
 ```ts
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { inquiries } from "@/lib/collections";
 import { listAndCreate } from "@/lib/collections/routeHandlers";
-import { createRateLimiter } from "@/lib/rateLimit";
+import { checkInquiryLimit } from "@/lib/inquiryLimiter";
 import { sendInquiryEmails } from "@/lib/mail";
 import { appendLog } from "@/lib/log";
 
 const MAX_BODY_BYTES = 4096;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-let limiter = createRateLimiter({ max: 5, windowMs: 60 * 60 * 1000 });
-/** Test hook: fresh window per test. */
-export function __resetRateLimiterForTests() {
-  limiter = createRateLimiter({ max: 5, windowMs: 60 * 60 * 1000 });
-}
 
 let saltWarned = false;
 function ipHash(request: NextRequest): string {
@@ -1840,7 +1853,7 @@ export async function POST(request: NextRequest) {
   }
 
   const hash = ipHash(request);
-  const rl = limiter.check(hash);
+  const rl = checkInquiryLimit(hash);
   if (!rl.allowed) {
     return NextResponse.json({ error: "Too many inquiries, please try again later" }, { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } });
   }
@@ -1866,7 +1879,7 @@ export async function POST(request: NextRequest) {
   }
 }
 ```
-Note: `inquiries.list` in the generic `GET` uses `sort: newest` automatically because the def is not orderable, and the admin path passes `includeInternal` — extend Task 3's `listAndCreate.GET` authenticated branch to call `col.list({ publishedOnly: false, includeInternal: true })` and update its test expectation accordingly (`toHaveBeenLastCalledWith({ publishedOnly: false, includeInternal: true })`).
+Note: `inquiries.list` in the generic `GET` sorts newest-first automatically because the def is not orderable, and the authenticated branch already passes `includeInternal: true` (Task 3), so the Inbox sees `status`/`notifyFailed`.
 
 `src/app/api/inquiries/[id]/route.ts`:
 ```ts
@@ -1907,7 +1920,7 @@ Expected: PASS. Full `npm test` green; `npm run typecheck` → 0.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app/api/inquiries src/lib/collections/routeHandlers.ts src/lib/collections/routeHandlers.test.ts
+git add src/lib/inquiryLimiter.ts src/app/api/inquiries
 git commit -m "$(cat <<'EOF'
 feat(inquiries): public POST with honeypot, validation, IP-hash rate limit and non-blocking email; admin routes
 

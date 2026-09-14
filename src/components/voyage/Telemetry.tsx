@@ -1,7 +1,7 @@
 "use client";
 
 import { useVoyage } from "@/scene/scroll/useVoyage";
-import { formatTelemetry } from "./telemetry";
+import { formatTelemetry } from "./telemetryFormat";
 
 /** Mono HUD, top-left. Hidden under 768px via CSS. */
 export default function Telemetry() {

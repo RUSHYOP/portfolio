@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatTelemetry } from "./telemetry";
+import { formatTelemetry } from "./telemetryFormat";
 import { CHAPTERS, type ChapterId } from "@/scene/camera/flightPath";
 
 // ChapterId (not string) so a typo'd id is a compile error, not a runtime non-null assertion.

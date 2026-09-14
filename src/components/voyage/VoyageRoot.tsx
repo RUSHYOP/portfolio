@@ -20,6 +20,10 @@ import Launch from "./Launch";
 
 const SceneRoot = dynamic(() => import("@/scene/SceneRoot"), { ssr: false });
 
+/** Settle window before the FPS probe samples. On a repeat visit Ignition finishes at
+ *  mount, so a shorter delay would sample the warm-up frames it means to exclude. */
+const PROBE_DELAY_MS = 900;
+
 interface VoyageRootProps {
   settings: Settings;
 }
@@ -49,9 +53,9 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
   }, [engine, state.muted]);
 
   // FPS probe after ignition; demote one tier if it can't hold 45fps.
-  // Once per page load, 600ms after ignition: a demotion changes `tier`, which rebuilds
-  // SceneRoot's GL context — so the probe must measure steady state, never a rebuild or
-  // the ignite fade / shader warm-up, and must never cascade high → mid → still.
+  // The probe starts after a short settle so first-visit shader compilation and the ignite
+  // fade are mostly excluded; armed once per page load so a demotion can never cascade
+  // (a demotion changes `tier`, which rebuilds SceneRoot's GL context).
   useEffect(() => {
     if (!ignited || !tier || tier === "still") return;
     if (probedRef.current) return;
@@ -65,7 +69,7 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
         logClient("quality.probe", { fps: fps === null ? null : Math.round(fps), from: tier, to: next });
         if (next !== tier) setTier(next);
       });
-    }, 600);
+    }, PROBE_DELAY_MS);
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [ignited, tier]);
 
@@ -101,7 +105,6 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
             id={c.id}
             className={`chapter chapter--placeholder${c.micro ? " chapter--micro" : ""}`}
             style={{ height: `${(c.end - c.start) * VOYAGE_SCROLL_VH}vh` }}
-            aria-label={c.label}
           >
             {!c.micro && (
               <div className="chapter__pin">

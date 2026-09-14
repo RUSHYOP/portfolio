@@ -1,5 +1,12 @@
 /* ====== Voyage: root & scene ====== */
-.voyage-root { position: relative; background: #000; color: var(--white); }
+/* The voyage is dark-only. globals.css inverts these tokens under [data-theme="light"],
+   so pin the dark values locally — the light theme must not bleed into the flight. */
+.voyage-root {
+  --primary: #000000; --secondary: #0a0a0a; --tertiary: #1a1a1a; --accent: #333333;
+  --white: #ffffff; --gray-light: #d4d4d4; --gray-mid: #a3a3a3; --gray-dark: #6b6b6b; --border: #222222;
+  --bg: var(--primary); --text: var(--white); --text-muted: var(--gray-mid); --text-subtle: var(--gray-dark); --border-color: var(--border);
+  position: relative; background: #000; color: var(--white);
+}
 .voyage-root--booting { min-height: 100vh; }
 .voyage-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 .voyage-scene canvas { display: block; width: 100%; height: 100%; }
@@ -63,7 +70,6 @@
 .cta--ghost:hover { border-color: rgba(255, 255, 255, 0.6); }
 .cta__arrow { display: inline-block; transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
 .cta:hover .cta__arrow { transform: translateX(4px); }
-body:has(.cursor-dot) .cta:hover ~ .cursor-ring { border-color: #f2b35c; }
 
 /* ====== Dock ====== */
 .dock { position: fixed; top: 20px; left: 0; right: 0; z-index: 9400; display: flex; justify-content: center; pointer-events: none; }

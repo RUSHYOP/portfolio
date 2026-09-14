@@ -67,7 +67,8 @@ export const voyageStore = {
   },
 
   tick(dtMs: number): void {
-    if (dtMs <= 0) return;
+    // NaN/Infinity deltas (a stalled or mis-timed interval) would poison elapsedMs permanently.
+    if (!Number.isFinite(dtMs) || dtMs <= 0) return;
     state = { ...state, elapsedMs: state.elapsedMs + dtMs };
     emit();
   },

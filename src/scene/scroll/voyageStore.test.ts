@@ -67,6 +67,16 @@ describe("voyageStore", () => {
     expect(voyageStore.getState().elapsedMs).toBe(500);
   });
 
+  // Guards the elapsed clock against a non-advancing or non-finite dt (a stalled
+  // interval or a NaN frame delta must not poison the T+ readout).
+  it("tick ignores non-finite and non-positive deltas", () => {
+    voyageStore.tick(250);
+    voyageStore.tick(NaN);
+    voyageStore.tick(-1);
+    voyageStore.tick(0);
+    expect(voyageStore.getState().elapsedMs).toBe(250);
+  });
+
   it("scrollTo forwards to the registered scroller with clamped progress", () => {
     const scroller = vi.fn();
     voyageStore.registerScroller(scroller);

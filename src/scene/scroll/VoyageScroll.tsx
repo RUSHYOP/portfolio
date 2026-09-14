@@ -39,6 +39,7 @@ export default function VoyageScroll({ smooth }: VoyageScrollProps) {
       voyageStore.registerScroller((p) => lenis.scrollTo(p * maxScroll(), { duration: 1.4 }));
       return () => {
         clearInterval(tick);
+        voyageStore.unregisterScroller();
         lenis.destroy();
       };
     }
@@ -64,6 +65,7 @@ export default function VoyageScroll({ smooth }: VoyageScrollProps) {
     onScroll();
     return () => {
       clearInterval(tick);
+      voyageStore.unregisterScroller();
       window.removeEventListener("scroll", onScroll);
     };
   }, [smooth]);

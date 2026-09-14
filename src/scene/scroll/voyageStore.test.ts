@@ -89,6 +89,16 @@ describe("voyageStore", () => {
   it("scrollTo is a no-op without a scroller", () => {
     expect(() => voyageStore.scrollTo(0.3)).not.toThrow();
   });
+
+  // The bridge unregisters on unmount; a later scrollTo must not reach a destroyed
+  // Lenis instance or a stale native handler.
+  it("unregisterScroller detaches the scroller", () => {
+    const scroller = vi.fn();
+    voyageStore.registerScroller(scroller);
+    voyageStore.unregisterScroller();
+    voyageStore.scrollTo(0.5);
+    expect(scroller).not.toHaveBeenCalled();
+  });
 });
 
 describe("normalizeVelocity", () => {

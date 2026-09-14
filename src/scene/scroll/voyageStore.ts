@@ -15,8 +15,11 @@ export interface VoyageState {
 
 type Listener = (state: VoyageState) => void;
 
-// NaN (a 0/0 scroll ratio reported before layout) maps to 0; ±Infinity saturates
-// normally, so a runaway ratio pins to the end of the voyage rather than the start.
+// One story with flightPath.ts: Lenis reports `progress === 1` when `limit <= 0` (an
+// unscrollable page), which VoyageScroll guards at the source — but NaN can still arrive
+// from other callers, and mapping it to 0 keeps the HUD at the start rather than poisoning
+// the state. ±Infinity saturates normally, so a runaway ratio pins to the end of the
+// voyage rather than the start.
 const clamp01 = (v: number) => (Number.isNaN(v) ? 0 : Math.min(1, Math.max(0, v)));
 
 /** Scroll speed in px/frame that maps to velocity 1.0. */
@@ -77,10 +80,17 @@ export const voyageStore = {
     scroller = fn;
   },
 
+  /** Drops the registered scroller. The bridge calls this on unmount so a destroyed
+   *  Lenis instance (or a stale native handler) can never be driven by a later scrollTo. */
+  unregisterScroller(): void {
+    scroller = null;
+  },
+
   scrollTo(progress: number): void {
     scroller?.(clamp01(progress));
   },
 
+  /** Test-only: clears listeners as well as state. */
   reset(): void {
     state = initialState();
     listeners.clear();

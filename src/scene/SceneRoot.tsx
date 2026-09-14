@@ -86,6 +86,10 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
       resizeTimer = setTimeout(() => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
+        // Re-apply the cap: devicePixelRatio changes when the window moves between
+        // displays. Before setSize, which setPixelRatio would otherwise re-run at the
+        // stale size.
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.dpr));
         renderer.setSize(window.innerWidth, window.innerHeight);
       }, 150);
     };
@@ -95,8 +99,12 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
       visible = !document.hidden;
     };
 
+    // A context that is already lost has no live WEBGL_lose_context to call, so
+    // forceContextLoss() in cleanup would only log three's "extension not supported" warning.
+    let lost = false;
     const onLost = (e: Event) => {
       e.preventDefault();
+      lost = true;
       onContextLost();
     };
     canvas.addEventListener("webglcontextlost", onLost, false);
@@ -117,7 +125,9 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       if (!visible) { last = now; return; }
-      const dt = Math.min(0.1, (now - last) / 1000);
+      // Floored at 0: a RAF timestamp can step backwards (clock adjustment, tab resume),
+      // and a negative dt would rewind igniteT and the set pieces' eased state.
+      const dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
       last = now;
 
       if (igniteRef.current && igniteT < 1) igniteT = Math.min(1, igniteT + dt / IGNITE_SECONDS);
@@ -166,8 +176,9 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
       document.removeEventListener("visibilitychange", onVisibility);
       for (const p of pieces) p.dispose();
       // Release the GL context eagerly so a StrictMode double-mount in dev does
-      // not accumulate live contexts (browsers cap them at ~16).
-      renderer.forceContextLoss();
+      // not accumulate live contexts (browsers cap them at ~16). Skipped after a real
+      // loss — the context is already gone and three would just warn.
+      if (!lost) renderer.forceContextLoss();
       renderer.dispose();
       if (host.contains(canvas)) host.removeChild(canvas);
     };

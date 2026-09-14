@@ -144,7 +144,8 @@ describe("curves", () => {
   });
 });
 
-// A scroll store computing scrollY / (scrollHeight - innerHeight) before layout yields 0/0 = NaN.
+// VoyageScroll guards Lenis's `limit <= 0` report at the source, but NaN can still reach
+// these helpers from another caller — and getPoint throws on it, on the render path.
 describe("non-finite input", () => {
   it("treats NaN as progress 0 everywhere and never throws", () => {
     expect(chapterAt(NaN).chapter.id).toBe("launch");

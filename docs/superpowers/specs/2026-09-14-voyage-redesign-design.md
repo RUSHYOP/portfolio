@@ -86,7 +86,7 @@ Standalone `QuoteSection` is retired with the typewriter; quotes may live on as 
 
 ## 4. Dock, CTAs, rail
 
-**Dock.** Centered glass capsule, `top: 20px`, ~640px wide desktop: amber monogram `P` · Services · Process · Work · About · **[Book a call]**. Wraps ThreeUI's `AnimatedTopDock` React component used verbatim (the one intentional second Three copy in approach C), **lazy-loaded after ignition** so it never affects first paint. Past the hero: shrinks ~15%, blur strengthens, active chapter link glows. Mobile (<768px): monogram · **Book a call** · `≡` opening a full-screen glass sheet with links and the rail.
+**Dock.** Centered glass capsule, `top: 20px`, ~640px wide desktop: amber monogram `P` · Services · Process · Work · About · **[Book a call]**. *Planning finding (2026-09-14):* ThreeUI's `AnimatedTopDock` hardcodes demo items with no link/props API, so it cannot serve as a real nav verbatim. Its MIT `topDockController` (proximity spring, framework-agnostic) is **ported** into `src/components/dock/dockController.ts` with attribution instead; `@designcodeio/threeui` is not a dependency. Result: the site runs a single Three.js copy. Mounted after ignition so it never affects first paint. Past the hero: shrinks ~15%, blur strengthens, active chapter link glows. Mobile (<768px): monogram · **Book a call** · `≡` opening a full-screen glass sheet with links and the rail.
 
 **CTA.** One component `<CallToAction>` used in Launch, every case panel, Landing. Amber fill, black text, 999px radius, mono label, arrow slides on hover, magnetic pull via existing `MagneticButton`. Anywhere except Landing, click smooth-scrolls to Landing (whoosh SFX) — the camera descent *is* the transition.
 

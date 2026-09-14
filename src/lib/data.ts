@@ -229,7 +229,11 @@ function docToSettings(doc: Record<string, unknown>): Settings {
     showHeroButton: (doc.showHeroButton as boolean) ?? true,
     showNavbar: (doc.showNavbar as boolean) ?? true,
     navLinks: (doc.navLinks as NavLink[]) ?? defaultNavLinks,
-    footerSections: ((doc.footerSections as Record<string, unknown>[] | undefined) ?? defaultFooterSections).map(
+    // Give the fallback the same element type so `.map` has one callback signature.
+    footerSections: (
+      (doc.footerSections as Record<string, unknown>[] | undefined) ??
+      (defaultFooterSections as unknown as Record<string, unknown>[])
+    ).map(
       (s: Record<string, unknown>) => ({
         title: s.title as string,
         links: ((s.links as Record<string, unknown>[]) || []).map((l) => ({

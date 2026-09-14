@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { selectTier, probeDemote, TIER_SETTINGS } from "./quality";
+import { selectTier, probeDemote, detectEnv, runFpsProbe, TIER_SETTINGS } from "./quality";
 
 describe("selectTier", () => {
   it("returns still when reduced motion is requested", () => {
@@ -24,6 +24,23 @@ describe("probeDemote", () => {
   it("keeps the tier at or above 45 fps", () => {
     expect(probeDemote("high", 45)).toBe("high");
     expect(probeDemote("mid", 60)).toBe("mid");
+  });
+  it("keeps the tier when the probe is inconclusive", () => {
+    expect(probeDemote("high", null)).toBe("high");
+    expect(probeDemote("mid", NaN)).toBe("mid");
+  });
+});
+
+describe("detectEnv", () => {
+  it("falls back to the still tier when there is no window (server)", () => {
+    expect(detectEnv()).toEqual({ isMobile: false, reducedMotion: true, webgl: false });
+    expect(selectTier(detectEnv())).toBe("still");
+  });
+});
+
+describe("runFpsProbe", () => {
+  it("resolves null when there is no document (server)", async () => {
+    await expect(runFpsProbe()).resolves.toBeNull();
   });
 });
 

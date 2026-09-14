@@ -1,28 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { appendLog } from "@/lib/log";
+import { LOG_EVENTS } from "@/lib/clientLog";
 
-const ALLOWED_EVENTS = new Set(["quality.tier", "quality.probe", "scene.context_lost"]);
+// Single source of truth: the same list the client can emit.
+const ALLOWED_EVENTS = new Set<string>(LOG_EVENTS);
 const MAX_BODY_BYTES = 2048;
 
 export async function POST(request: NextRequest) {
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) {
+  // Cheap pre-check: reject an oversized declared length without reading the body.
+  // A missing or malformed header just falls through to the measured check below.
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
     return NextResponse.json({ error: "Payload too large" }, { status: 413 });
   }
-  let body: Record<string, unknown>;
+  const raw = await request.text();
+  // Measure bytes, not UTF-16 code units, so the constant means what it says.
+  if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
+  let body: unknown;
   try {
     body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
   // JSON.parse("null") yields null, which would throw on the property read below.
-  if (body === null || typeof body !== "object" || Array.isArray(body)) {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return NextResponse.json({ error: "Body must be a JSON object" }, { status: 400 });
   }
-  const event = body.event;
+  const record = body as Record<string, unknown>;
+  const event = record.event;
   if (typeof event !== "string" || !ALLOWED_EVENTS.has(event)) {
     return NextResponse.json({ error: "Unknown event" }, { status: 400 });
   }
-  await appendLog("client", body);
+  await appendLog("client", record);
   return new NextResponse(null, { status: 204 });
 }

@@ -34,7 +34,9 @@ export const CONTENT_CHAPTERS: readonly Chapter[] = CHAPTERS.filter((c) => !c.mi
 /** Total scroll track height in vh. Each chapter's section height = (end - start) * this. */
 export const VOYAGE_SCROLL_VH = 1100;
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+// Non-finite input (a 0/0 scroll ratio before layout) collapses to 0 rather than
+// propagating NaN into three's getPoint, which throws on the per-frame render path.
+const clamp01 = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0);
 
 export function chapterAt(progress: number): { chapter: Chapter; chapterProgress: number } {
   const p = clamp01(progress);
@@ -70,8 +72,9 @@ const POSITION_POINTS: THREE.Vector3[] = [
   new THREE.Vector3(6.0, -7.0, -152.0),   // end
 ];
 
-/** The position waypoints, exposed for tests. Same array the curve is built from. */
-export const CAMERA_WAYPOINTS: readonly THREE.Vector3[] = POSITION_POINTS;
+/** The position waypoints, exposed for tests. Defensive clones: the live curve reads
+ *  POSITION_POINTS every frame, so a caller mutating an exported Vector3 would corrupt the path. */
+export const CAMERA_WAYPOINTS: readonly THREE.Vector3[] = POSITION_POINTS.map((v) => v.clone());
 
 /** LookAt targets, one per chapter start plus a final end point (aligned the same way). */
 const LOOKAT_POINTS: THREE.Vector3[] = [

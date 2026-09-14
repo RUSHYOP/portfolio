@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import * as THREE from "three";
 import {
   CHAPTERS, CONTENT_CHAPTERS, chapterAt, getCameraPose, distanceAU, starScale,
   fovForVelocity, FOV_MIN, FOV_MAX, STAR_POSITION,
@@ -33,6 +34,11 @@ describe("chapters", () => {
     expect(chapterAt(-1).chapter.id).toBe("launch");
     expect(chapterAt(2).chapter.id).toBe("surface");
   });
+  // An exact boundary belongs to the chapter that starts there, not the one that ends.
+  it("treats an exact interior boundary as the start of the next chapter", () => {
+    expect(chapterAt(0.08).chapter.id).toBe("approach");
+    expect(chapterAt(0.08).chapterProgress).toBe(0);
+  });
 });
 
 describe("camera path", () => {
@@ -51,6 +57,13 @@ describe("camera path", () => {
     const pose = getCameraPose(0);
     expect(pose.position.length()).toBeLessThan(1e-6);
     expect(pose.lookAt.distanceTo(STAR_POSITION)).toBeLessThan(1e-6);
+  });
+  // Per-frame path: the caller-supplied pose must be mutated in place, not replaced.
+  it("reuses the caller's out object without allocating", () => {
+    const out = { position: new THREE.Vector3(), lookAt: new THREE.Vector3() };
+    const result = getCameraPose(0.5, out);
+    expect(result).toBe(out);
+    expect(result.position.z).toBeLessThan(0);
   });
 });
 
@@ -103,5 +116,19 @@ describe("curves", () => {
     expect(fovForVelocity(9)).toBe(FOV_MAX);
     expect(fovForVelocity(0.5)).toBeGreaterThan(FOV_MIN);
     expect(fovForVelocity(0.5)).toBeLessThan(FOV_MAX);
+  });
+});
+
+// A scroll store computing scrollY / (scrollHeight - innerHeight) before layout yields 0/0 = NaN.
+describe("non-finite input", () => {
+  it("treats NaN as progress 0 everywhere and never throws", () => {
+    expect(chapterAt(NaN).chapter.id).toBe("launch");
+    expect(chapterAt(NaN).chapterProgress).toBe(0);
+    expect(() => getCameraPose(NaN)).not.toThrow();
+    expect(getCameraPose(NaN).position.length()).toBeLessThan(1e-6);
+    expect(distanceAU(NaN)).toBeCloseTo(9.4, 5);
+    expect(starScale(NaN)).toBeCloseTo(0.25, 5);
+    expect(fovForVelocity(NaN)).toBe(FOV_MIN);
+    expect(progressToCurveT(NaN)).toBe(0);
   });
 });

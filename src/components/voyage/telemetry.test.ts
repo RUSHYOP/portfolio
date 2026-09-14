@@ -1,13 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { formatTelemetry } from "./telemetry";
-import { CHAPTERS } from "@/scene/camera/flightPath";
+import { CHAPTERS, type ChapterId } from "@/scene/camera/flightPath";
 
-const ch = (id: string) => CHAPTERS.find((c) => c.id === id)!;
+// ChapterId (not string) so a typo'd id is a compile error, not a runtime non-null assertion.
+const ch = (id: ChapterId) => CHAPTERS.find((c) => c.id === id)!;
 
 describe("formatTelemetry", () => {
   it("formats T+ as mm:ss", () => {
     expect(formatTelemetry({ elapsedMs: 0, velocity: 0, distanceAU: 9.4, chapter: ch("launch") }).time).toBe("T+ 00:00");
     expect(formatTelemetry({ elapsedMs: 65_000, velocity: 0, distanceAU: 9.4, chapter: ch("launch") }).time).toBe("T+ 01:05");
+    // 59:30 is well inside the pre-cap range, so a cap that fired early would show 59:59 here.
+    expect(formatTelemetry({ elapsedMs: 3_570_000, velocity: 0, distanceAU: 9.4, chapter: ch("launch") }).time).toBe("T+ 59:30");
     // 3_599_999ms is the last tick before the 3600s cap: real mm:ss, not the saturated branch.
     expect(formatTelemetry({ elapsedMs: 3_599_999, velocity: 0, distanceAU: 9.4, chapter: ch("launch") }).time).toBe("T+ 59:59");
     expect(formatTelemetry({ elapsedMs: 3_600_000, velocity: 0, distanceAU: 9.4, chapter: ch("launch") }).time).toBe("T+ 59:59");

@@ -49,7 +49,9 @@ export function chapterAt(progress: number): { chapter: Chapter; chapterProgress
 export const STAR_POSITION = new THREE.Vector3(6, -3, -140);
 
 /**
- * Camera waypoints, one per chapter boundary (12 points for 11 chapters).
+ * Camera waypoints: one per chapter start, plus a final end point (12 points for
+ * 11 chapters). `progressToCurveT` aligns chapter starts to waypoints, so waypoint
+ * `i` is reached exactly at `CHAPTERS[i].start`.
  * z is non-increasing so the camera never travels backward; the lookAt targets
  * always sit further down -z than the camera so it never turns around.
  */
@@ -68,6 +70,10 @@ const POSITION_POINTS: THREE.Vector3[] = [
   new THREE.Vector3(6.0, -7.0, -152.0),   // end
 ];
 
+/** The position waypoints, exposed for tests. Same array the curve is built from. */
+export const CAMERA_WAYPOINTS: readonly THREE.Vector3[] = POSITION_POINTS;
+
+/** LookAt targets, one per chapter start plus a final end point (aligned the same way). */
 const LOOKAT_POINTS: THREE.Vector3[] = [
   STAR_POSITION.clone(),                    // launch: eyes on the destination
   STAR_POSITION.clone(),
@@ -91,8 +97,20 @@ export interface CameraPose {
   lookAt: THREE.Vector3;
 }
 
+/**
+ * Maps voyage progress (0..1, unequal chapter spans) to the curve parameter
+ * (0..1, one uniform segment per chapter). CatmullRomCurve3 parameterizes
+ * uniformly over its control points, so waypoint `i` sits at `i / CHAPTERS.length`.
+ */
+export function progressToCurveT(progress: number): number {
+  const { chapter, chapterProgress } = chapterAt(progress);
+  const i = CHAPTERS.indexOf(chapter);
+  return (i + chapterProgress) / CHAPTERS.length;
+}
+
 export function getCameraPose(progress: number, out?: CameraPose): CameraPose {
-  const p = clamp01(progress);
+  // Remap through the chapter table so chapter starts land on their waypoints.
+  const p = progressToCurveT(progress);
   const pose = out ?? { position: new THREE.Vector3(), lookAt: new THREE.Vector3() };
   positionCurve.getPoint(p, pose.position);
   lookAtCurve.getPoint(p, pose.lookAt);

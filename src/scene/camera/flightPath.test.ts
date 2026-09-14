@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   CHAPTERS, CONTENT_CHAPTERS, chapterAt, getCameraPose, distanceAU, starScale,
   fovForVelocity, FOV_MIN, FOV_MAX, STAR_POSITION,
+  CAMERA_WAYPOINTS, progressToCurveT,
 } from "./flightPath";
 
 const STEPS = 400;
@@ -50,6 +51,25 @@ describe("camera path", () => {
     const pose = getCameraPose(0);
     expect(pose.position.length()).toBeLessThan(1e-6);
     expect(pose.lookAt.distanceTo(STAR_POSITION)).toBeLessThan(1e-6);
+  });
+});
+
+describe("chapter alignment", () => {
+  it("reaches each chapter's waypoint exactly at that chapter's start", () => {
+    CHAPTERS.forEach((c, i) => {
+      const pose = getCameraPose(c.start);
+      expect(pose.position.distanceTo(CAMERA_WAYPOINTS[i])).toBeLessThan(1e-6);
+    });
+  });
+  it("progressToCurveT is monotonic and hits i/11 at chapter starts", () => {
+    let prev = -1;
+    for (let k = 0; k <= 400; k++) {
+      const t = progressToCurveT(k / 400);
+      expect(t).toBeGreaterThanOrEqual(prev - 1e-12);
+      prev = t;
+    }
+    CHAPTERS.forEach((c, i) => expect(progressToCurveT(c.start)).toBeCloseTo(i / CHAPTERS.length, 10));
+    expect(progressToCurveT(1)).toBeCloseTo(1, 10);
   });
 });
 

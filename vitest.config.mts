@@ -3,7 +3,8 @@ import path from "node:path";
 
 export default defineConfig({
   resolve: {
-    alias: { "@": path.resolve(__dirname, "src") },
+    // import.meta.dirname (Node >= 20.11) — this file is loaded as ESM (.mts).
+    alias: { "@": path.resolve(import.meta.dirname, "src") },
   },
   test: {
     environment: "node",

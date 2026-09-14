@@ -2981,6 +2981,8 @@ With `npm run dev` running, use the chrome-devtools MCP:
 
 Checklist to judge against the spec: star is a small amber point low-right at launch and visibly grows by 50%; streaks lengthen while scrolling and relax on stop; telemetry distance counts down; rail dot tracks; dock compacts after the hero; H1 is legible over the scene; no layout shift when Ignition lifts.
 
+Then a **mid-page hard reload**: scroll to ~50%, `navigate_page` type `reload`, wait 1s without scrolling, capture `desktop-reload-p50.png`. The telemetry, rail dot, and dock active-link must already reflect ~50% (chapter "worlds"), not "launch" — this verifies the Lenis-branch store seed from Task 7.
+
 - [ ] **Step 2: Mobile review at 390×844**
 
 `resize_page` 390×844 → reload → capture `mobile-01-launch.png`, `mobile-p50.png`; open the dock sheet (`click` the menu button) → `mobile-dock-sheet.png`. Confirm telemetry and rail are hidden, CTAs wrap, tier is `mid`.

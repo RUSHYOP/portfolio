@@ -36,6 +36,7 @@ export function createDockController(root: HTMLElement, getOptions: () => DockOp
   let pointerActive = false;
   let dirty = false;
   let frame = 0;
+  let focusFrame = 0; // focusout's deferred activeElement check, cancellable by the disposer
   let released = false;
 
   const canAnimate = () => !reducedQuery.matches && root.clientWidth > 0 && window.innerWidth > 600 && precisionQuery.matches;
@@ -59,6 +60,14 @@ export function createDockController(root: HTMLElement, getOptions: () => DockOp
     root.dataset.dockState = enabled ? "idle" : "static";
   };
 
+  /**
+   * Park/re-arm the spring loop: `draw` only reschedules while something is moving,
+   * and every mutator that sets `dirty` calls this to wake it. Rescheduling
+   * unconditionally would cost a RAF per frame for the dock's whole lifetime even on
+   * reduced-motion / coarse-pointer devices, where the loop can never do any work.
+   */
+  const schedule = () => { if (!frame && !released) frame = requestAnimationFrame(draw); };
+
   const setTargets = (clientX: number) => {
     if (!enabled) return;
     const { proximity } = getOptions();
@@ -73,6 +82,7 @@ export function createDockController(root: HTMLElement, getOptions: () => DockOp
     pointerActive = true;
     dirty = true;
     root.dataset.dockState = "active";
+    schedule(); // wake the parked loop
   };
 
   const focusItem = (item: HTMLElement) => {
@@ -86,6 +96,7 @@ export function createDockController(root: HTMLElement, getOptions: () => DockOp
     pointerActive = false;
     dirty = true;
     root.dataset.dockState = "focus";
+    schedule(); // wake the parked loop
   };
 
   const reset = () => {
@@ -95,6 +106,7 @@ export function createDockController(root: HTMLElement, getOptions: () => DockOp
       s.target = 0;
       s.element.dataset.dockNear = "false";
     }
+    schedule(); // wake the parked loop
   };
 
   const applyLayout = () => {
@@ -109,6 +121,10 @@ export function createDockController(root: HTMLElement, getOptions: () => DockOp
   };
 
   const draw = () => {
+    frame = 0;
+    // reset() sets dirty unguarded (it is the pointerleave/click handler), so a disabled
+    // dock would otherwise re-arm itself forever on every tap. Drop the work instead.
+    if (!enabled) dirty = false;
     if (enabled && dirty) {
       const o = getOptions();
       let moving = false;
@@ -128,7 +144,7 @@ export function createDockController(root: HTMLElement, getOptions: () => DockOp
         if (items.every((s) => s.target === 0)) root.dataset.dockState = "idle";
       }
     }
-    frame = requestAnimationFrame(draw);
+    if (dirty) schedule(); // keep animating only while something is moving
   };
 
   const onPointerMove = (e: PointerEvent) => setTargets(e.clientX);
@@ -142,7 +158,15 @@ export function createDockController(root: HTMLElement, getOptions: () => DockOp
     const item = (e.target as HTMLElement | null)?.closest<HTMLElement>("[data-dock-item]");
     if (item) focusItem(item);
   };
-  const onFocusOut = () => requestAnimationFrame(() => { if (!root.contains(document.activeElement)) reset(); });
+  // Defer to the next frame so the incoming focus target has settled; keep the handle
+  // so the disposer can cancel it (and so rapid focus churn coalesces to one check).
+  const onFocusOut = () => {
+    cancelAnimationFrame(focusFrame);
+    focusFrame = requestAnimationFrame(() => {
+      focusFrame = 0;
+      if (!released && !root.contains(document.activeElement)) reset();
+    });
+  };
   const onClick = () => reset();
 
   const remeasure = () => { if (!released) measure(); };
@@ -158,11 +182,13 @@ export function createDockController(root: HTMLElement, getOptions: () => DockOp
   reducedQuery.addEventListener("change", remeasure);
   precisionQuery.addEventListener("change", remeasure);
   measure();
-  frame = requestAnimationFrame(draw);
+  schedule();
 
   return () => {
     released = true;
     cancelAnimationFrame(frame);
+    cancelAnimationFrame(focusFrame);
+    frame = 0;
     ro.disconnect();
     root.removeEventListener("pointermove", onPointerMove);
     root.removeEventListener("pointerleave", reset);

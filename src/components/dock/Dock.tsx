@@ -40,6 +40,16 @@ export default function Dock({ visible }: DockProps) {
     return createDockController(root, () => DOCK_OPTIONS);
   }, [visible]);
 
+  // Escape closes the mobile sheet; listener only exists while it is open.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   const go = (id: ChapterId) => {
     getAudioEngine().click({ volume: 0.05 });
     voyageStore.scrollTo(startOf(id));
@@ -82,7 +92,7 @@ export default function Dock({ visible }: DockProps) {
         <div className="dock__cta">
           <CallToAction label="Book a call" onClick={book} />
         </div>
-        <button type="button" className="dock__menu" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={open ? "Close menu" : "Open menu"}>
+        <button type="button" className="dock__menu" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="dock-sheet" aria-label={open ? "Close menu" : "Open menu"}>
           <span /><span />
         </button>
       </div>
@@ -91,6 +101,10 @@ export default function Dock({ visible }: DockProps) {
         {open && (
           <motion.div
             className="dock__sheet"
+            id="dock-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

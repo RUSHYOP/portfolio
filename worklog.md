@@ -19,6 +19,16 @@
 - Browser review at 1440×900 (tier `high`, probe ~121 fps) and 390×844 (tier `mid`): tuned star framing/scale/tone, fixed light-theme leaks (token pin + forced `data-theme="dark"` + attribute-rule shields), removed the legacy scroll hairline on `/voyage`, fixed the mobile hint/audio-pill collision, balanced the H1.
 - Repo hygiene surfaced along the way: pre-existing `data.ts` type error fixed; `next lint` (removed in Next 16) replaced with a flat ESLint config; `Telemetry.tsx`/`telemetry.ts` case collision renamed.
 
+### Slices 1–2 merged
+- Whole-branch review clean → merged `feat/voyage` into `master` (b1f2606), production build verified, pushed. Pacing tightened to `VOYAGE_SCROLL_VH = 1250` (ea5944e) at the user's request.
+
+### Sub-project 2 — consulting content model + CMS (branch `feat/consulting-cms`, in progress)
+- Spec `docs/superpowers/specs/2026-09-14-consulting-content-model-design.md`; plan `docs/superpowers/plans/2026-09-14-consulting-content-model.md` (14 tasks). Approach B: schema-driven `defineCollection` factory + one generic admin `CollectionTab`. Resend for inquiry mail (key in `.env.local` + Vercel prod only; no dashboard templates exist, so plain-text bodies live in code).
+- Task 1 `fieldSpec.ts` — pure validator. Review fix: own-property lookup (prototype-chain keys were silently accepted), exhaustive `never` switch.
+- Task 2 `defineCollection.ts` — Mongoose model/DTO/CRUD/reorder. Review fixes: `published` became a real injected toggle field (`effectiveFields`), `order = max+1` with stable sort (was `countDocuments`, which collided after deletes), `DuplicateSlugError` on E11000.
+- Task 3 `routeHandlers.ts` — `listAndCreate` / `byId` / `reorderRoute` / `revalidateAll`. Review fixes: `console.error` → structured `appendLog("api", …)`, one logged error boundary per handler (incl. `byId.GET`), discriminating auth-before-body tests (failed auth + malformed body → 401), real 401 cases for every guarded handler. Suite 145/145.
+- Deferred minors live in `.superpowers/sdd/progress.md` for the whole-branch review.
+
 ### Next
-- Merge `feat/voyage` after the whole-branch review; then plan slice 3 (Approach Vector + Jump) carrying forward the tuned constants (`STAR_SCALE_MAX = 2.4`, `LAUNCH_LOOK_OFFSET = (-28, 18, 0)`, `GLOW_MIN = 3.5`).
-- Sub-project 2 (content model + CMS tabs) unblocks Services / Process / Case studies.
+- Sub-project 2 Tasks 4–14 (specs → routes → markdown → mail → inquiries → admin tabs → `/work/[slug]` → seed/docs), then whole-branch review and merge.
+- Plan slice 3 (Approach Vector + Jump) carrying forward the tuned constants (`STAR_SCALE_MAX = 2.4`, `LAUNCH_LOOK_OFFSET = (-28, 18, 0)`, `GLOW_MIN = 3.5`); slice 3 wires `getVoyageContent()` into `VoyageRoot`.

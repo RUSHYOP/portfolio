@@ -171,7 +171,25 @@ export function createDockController(root: HTMLElement, getOptions: () => DockOp
 
   const remeasure = () => { if (!released) measure(); };
   document.fonts?.ready.then(remeasure);
-  const ro = new ResizeObserver(remeasure);
+  /**
+   * Width-only remeasure. ThreeUI warns against observing a frame the rail can resize, and
+   * that is exactly our case: the observed [data-dock-frame] header's *height* follows the
+   * capsule, so applyLayout grows the items → the header resizes → the observer fires →
+   * measure() wipes every style and zeroes value/velocity/target. The spring was being
+   * cancelled on the frame after it started and never visibly animated. Only a width change
+   * can invalidate the measurements the spring depends on (baseWidth, and canAnimate's
+   * clientWidth / innerWidth > 600 gates), so height churn is ignored. The first observation
+   * only records the baseline — measure() already ran synchronously below.
+   */
+  let frameWidth: number | null = null;
+  const ro = new ResizeObserver((entries) => {
+    const w = entries[entries.length - 1]?.contentRect.width;
+    if (w === undefined) return;
+    if (frameWidth !== null && Math.abs(w - frameWidth) < 0.5) return;
+    const first = frameWidth === null;
+    frameWidth = w;
+    if (!first) remeasure();
+  });
   ro.observe(root.closest<HTMLElement>("[data-dock-frame]") ?? root.parentElement ?? root);
   root.addEventListener("pointermove", onPointerMove);
   root.addEventListener("pointerleave", reset);

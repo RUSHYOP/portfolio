@@ -20,7 +20,7 @@
 - DOM motion: fade-up 12px, 0.5s, ease `[0.2, 0.7, 0.2, 1]`. Nothing bounces.
 - FOV **60° → 70°** with scroll velocity. Camera **never reverses**: position `z` is non-increasing along the path and the forward vector always has negative `z`.
 - `distanceAU` is monotonically non-increasing with progress and is `0` from chapter `pilot` onward.
-- Scroll geometry: `VOYAGE_SCROLL_VH = 1300` is the scrollable range, and the final section carries an extra `VOYAGE_TAIL_VH = 100` so the track is 1400vh and `scrollHeight - innerHeight === VOYAGE_SCROLL_VH`. That identity is required: the store's progress is `scrollY / (scrollHeight - innerHeight)`, so sharing one denominator with the section offsets is what makes chapter `c` begin at document offset `c.start * VOYAGE_SCROLL_VH` and `scrollTo(c.start)` land on the section it names. 1300 also guarantees the smallest content span (0.08) clears the 100vh `.chapter__pin`, which cannot stick inside a shorter parent. Section heights come from `sectionHeightVh(chapter)`, never from an inline `(end - start) * VOYAGE_SCROLL_VH`.
+- Scroll geometry: `VOYAGE_SCROLL_VH = 1250` is the scrollable range, and the final section carries an extra `VOYAGE_TAIL_VH = 100` so the track is 1350vh and `scrollHeight - innerHeight === VOYAGE_SCROLL_VH`. That identity is required: the store's progress is `scrollY / (scrollHeight - innerHeight)`, so sharing one denominator with the section offsets is what makes chapter `c` begin at document offset `c.start * VOYAGE_SCROLL_VH` and `scrollTo(c.start)` land on the section it names. 1250 is the minimum that still lets the smallest content span (0.08) clear the 100vh `.chapter__pin`, which cannot stick inside a shorter parent — total travel is 12.5 viewports + 1 tail. Section heights come from `sectionHeightVh(chapter)`, never from an inline `(end - start) * VOYAGE_SCROLL_VH`.
 - `prefers-reduced-motion`: tier `still`, no Lenis, no camera motion, Ignition skipped, Letterbox never shown.
 - Ignition ≤ 1.2s, skippable (click / Escape / Enter / Space), plays once per session (`sessionStorage["voyage-ignition-played"]`).
 - No `TypewriterText`, no keystroke sounds anywhere in new code.
@@ -79,7 +79,7 @@
   export interface Chapter { id: ChapterId; label: string; index: string; start: number; end: number; micro: boolean; }
   export const CHAPTERS: readonly Chapter[];
   export const CONTENT_CHAPTERS: readonly Chapter[];          // micro === false
-  export const VOYAGE_SCROLL_VH = 1300;                        // scrollable range in vh
+  export const VOYAGE_SCROLL_VH = 1250;                        // scrollable range in vh
   export const VOYAGE_TAIL_VH = 100;                           // extra viewport on the final section
   export function sectionHeightVh(chapter: Chapter): number;   // DOM height of a chapter's section
   export function chapterAt(progress: number): { chapter: Chapter; chapterProgress: number };
@@ -257,7 +257,7 @@ export const CHAPTERS: readonly Chapter[] = [
 export const CONTENT_CHAPTERS: readonly Chapter[] = CHAPTERS.filter((c) => !c.micro);
 
 /** Total scroll track height in vh. Each chapter's section height = (end - start) * this. */
-export const VOYAGE_SCROLL_VH = 1300;
+export const VOYAGE_SCROLL_VH = 1250;
 export const VOYAGE_TAIL_VH = 100;
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));

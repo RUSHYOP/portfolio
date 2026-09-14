@@ -50,9 +50,12 @@ describe("scroll geometry", () => {
   });
 
   // `.chapter__pin` is a 100vh sticky child; a section shorter than that never pins.
+  // At VOYAGE_SCROLL_VH = 1250 the smallest span (0.08) is exactly 100vh in real
+  // arithmetic, but IEEE-754 gives 99.99999999999994 for belt (0.60 - 0.52), so the
+  // bound carries a 1e-9 epsilon — far below the sub-pixel threshold CSS resolves.
   it("every content chapter is at least one viewport tall", () => {
     for (const c of CONTENT_CHAPTERS) {
-      expect(sectionHeightVh(c)).toBeGreaterThanOrEqual(100);
+      expect(sectionHeightVh(c)).toBeGreaterThanOrEqual(100 - 1e-9);
     }
   });
 

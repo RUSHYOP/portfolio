@@ -32,9 +32,9 @@ export const CHAPTERS: readonly Chapter[] = [
 export const CONTENT_CHAPTERS: readonly Chapter[] = CHAPTERS.filter((c) => !c.micro);
 
 /** Scrollable range of the voyage in vh — the denominator the store's progress divides by.
- *  1300 (not 1100) so the smallest content span, 0.08, still buys 104vh ≥ the 100vh
- *  `.chapter__pin` sticky child; a pin taller than its section can never pin. */
-export const VOYAGE_SCROLL_VH = 1300;
+ *  1250 is the minimum at which every content chapter (smallest span 0.08) still clears
+ *  the 100vh sticky pin; total travel = 12.5 viewports + 1 tail. */
+export const VOYAGE_SCROLL_VH = 1250;
 
 /** The last section carries one extra viewport beyond its chapter span, so the track is
  *  `VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH` tall and `scrollHeight - innerHeight === VOYAGE_SCROLL_VH`.

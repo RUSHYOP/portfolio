@@ -52,7 +52,7 @@ Content sits on **glass panels**, never flat cards: 1px border `rgba(255,255,255
 ## 3. The voyage — chapter script
 
 ### Narrative frame
-**The visitor is the traveler; the amber star is Purav's practice.** Every chapter brings the visitor closer to working with him. The star grows steadily from a distant point (Launch) to filling the frame (The Pilot) — a visual clock for progress. The camera **never reverses direction**; the journey is a single approach, orbit, and arrival. Proof (Orbit, Worlds, Belt, Constellation) comes before the person (The Pilot) and the ask (Landing).
+**The visitor is the traveler; the amber star is Purav's practice.** Every chapter brings the visitor closer to working with him. The star grows steadily from a distant point (Launch) toward The Pilot — a visual clock for progress. *Tuning (2026-09-14 browser review):* the camera approach already magnifies the star ~6×, so the intrinsic `starScale` curve tops out at **2.4** (not 6); The Pilot's glare/dolly delivers the "fills the frame" beat. At Launch the camera looks slightly up-left of the star (`LAUNCH_LOOK_OFFSET`) so it projects **low-right**. The camera **never reverses direction**; the journey is a single approach, orbit, and arrival. Proof (Orbit, Worlds, Belt, Constellation) comes before the person (The Pilot) and the ask (Landing).
 
 Three acts: **I. Departure** (00–02), **II. The Journey** (03–08), **III. Arrival** (09–11).
 

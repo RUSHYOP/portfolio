@@ -83,7 +83,7 @@
   export interface CameraPose { position: THREE.Vector3; lookAt: THREE.Vector3; }
   export function getCameraPose(progress: number, out?: CameraPose): CameraPose;
   export const STAR_POSITION: THREE.Vector3;                  // (6, -3, -140)
-  export function starScale(progress: number): number;        // 0.25 → 6, holds from pilot
+  export function starScale(progress: number): number;        // 0.25 → 2.4 (tuned from 6 in browser review), holds from pilot
   export function distanceAU(progress: number): number;       // 9.4 → 0, 0 from pilot
   export const FOV_MIN = 60; export const FOV_MAX = 70;
   export function fovForVelocity(velocity01: number): number;

@@ -4,6 +4,10 @@ import {
   Skill as SkillModel,
   Settings as SettingsModel,
 } from "./models";
+// Voyage content readers (sub-project 2): collection singletons + Item type,
+// imported here (not inline below) so ESLint's import/first rule stays satisfied.
+import { services, processSteps, caseStudies, testimonials } from "@/lib/collections";
+import type { Item } from "@/lib/collections/defineCollection";
 
 export interface Project {
   id: string;
@@ -42,6 +46,8 @@ export interface Settings {
   // Hero copy (Task 11); the hero reads these from settings instead of hardcoding.
   heroHeadline: string;
   heroSubheadline: string;
+  // Voyage manifesto line (sub-project 2).
+  manifesto: string;
   aboutHeading: string;
   aboutText: string;
   quote1: string;
@@ -225,6 +231,8 @@ function docToSettings(doc: Record<string, unknown>): Settings {
     heroSubheadline:
       (doc.heroSubheadline as string) ??
       "Full-stack builds and system architecture for founders and teams who want it shipped, not just scoped.",
+    // Same fallback as the schema default, for docs written before this field existed.
+    manifesto: (doc.manifesto as string) ?? "Most software fails at the seams. I design the seams.",
     aboutHeading: (doc.aboutHeading as string) ?? "Building Efficient Systems",
     aboutText: (doc.aboutText as string) ?? "",
     quote1: (doc.quote1 as string) ?? "",
@@ -270,4 +278,36 @@ export async function updateSettings(updates: Partial<Settings>): Promise<Settin
     { new: true, upsert: true, lean: true }
   );
   return docToSettings(doc as unknown as Record<string, unknown>);
+}
+
+// ── Voyage content (sub-project 2) ──
+
+export interface VoyageContent {
+  services: Item[];
+  process: Item[];
+  caseStudies: Item[];
+  testimonials: Item[];
+  settings: Settings;
+}
+
+/** Everything /voyage renders, published items only, one call. */
+export async function getVoyageContent(): Promise<VoyageContent> {
+  const [svc, steps, cases, quotes, settings] = await Promise.all([
+    services.list(),
+    processSteps.list(),
+    caseStudies.list({ publishedOnly: true }),
+    testimonials.list({ publishedOnly: true }),
+    getSettings(),
+  ]);
+  return { services: svc, process: steps, caseStudies: cases, testimonials: quotes, settings };
+}
+
+/** Published case study by slug, or null (unpublished counts as missing). */
+export function getCaseStudyBySlug(slug: string): Promise<Item | null> {
+  return caseStudies.getBySlug(slug, { publishedOnly: true });
+}
+
+export async function getPublishedCaseStudySlugs(): Promise<string[]> {
+  const items = await caseStudies.list({ publishedOnly: true });
+  return items.map((c) => String(c.slug));
 }

@@ -7,6 +7,8 @@ export interface Settings {
   profileImage: string; audioFile: string;
   // Hero copy (Task 11); editing inputs land in sub-project 2.
   heroHeadline: string; heroSubheadline: string;
+  // Voyage manifesto line (sub-project 2).
+  manifesto: string;
   aboutHeading: string; aboutText: string;
   quote1: string; quote2: string; projectsTitle: string;
   contactHeading: string; contactText: string; contactEmail: string; contactLocation: string;
@@ -22,6 +24,8 @@ export const DEFAULT_SETTINGS: Settings = {
   // Same consulting defaults as the schema / DTO fallbacks.
   heroHeadline: "I build AI-powered products, end to end.",
   heroSubheadline: "Full-stack builds and system architecture for founders and teams who want it shipped, not just scoped.",
+  // Same consulting default as the schema / DTO fallback.
+  manifesto: "Most software fails at the seams. I design the seams.",
   aboutHeading: "", aboutText: "",
   quote1: "", quote2: "", projectsTitle: "SOME OF THE THINGS I'VE BUILT",
   contactHeading: "", contactText: "", contactEmail: "", contactLocation: "",

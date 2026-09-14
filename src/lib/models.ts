@@ -58,6 +58,8 @@ export interface ISettings extends Document {
   // Hero copy (Task 11); admin inputs arrive in sub-project 2.
   heroHeadline: string;
   heroSubheadline: string;
+  // Voyage manifesto line (sub-project 2).
+  manifesto: string;
   aboutHeading: string;
   aboutText: string;
   quote1: string;
@@ -105,6 +107,8 @@ const SettingsSchema = new Schema<ISettings>(
     // Hero copy defaults carry the consulting positioning until an admin edits them.
     heroHeadline: { type: String, default: "I build AI-powered products, end to end.", trim: true },
     heroSubheadline: { type: String, default: "Full-stack builds and system architecture for founders and teams who want it shipped, not just scoped.", trim: true },
+    // Voyage manifesto line (sub-project 2).
+    manifesto: { type: String, default: "Most software fails at the seams. I design the seams.", trim: true },
     aboutHeading: { type: String, default: "Building Efficient Systems", trim: true },
     aboutText: { type: String, default: "I'm a Software Developer. Currently speed running through my final year in B.E Computer Science and Engineering.\nMy skills include literally anything full stack and machine learning integration, but that is not all. I enjoy writing code and building stuff that brings out the best in me.\nWhen I'm not coding, you can find me gaming, travelling, or just doing something dumb.", trim: true },
     quote1: { type: String, default: "" },

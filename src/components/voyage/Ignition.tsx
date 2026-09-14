@@ -22,22 +22,30 @@ export default function Ignition({ enabled, onComplete, onLetterbox }: IgnitionP
   const [phase, setPhase] = useState<Phase>("resolve");
   const [visible, setVisible] = useState(true);
   const doneRef = useRef(false);
+  // Latest-ref: callbacks read through refs so an unstable parent cannot restart the sequence.
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const onLetterboxRef = useRef(onLetterbox);
+  onLetterboxRef.current = onLetterbox;
+  // Holds the live keydown handler so `finish` can detach it (the effect cleanup also does).
+  const onKeyRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 
   // Idempotent: timers, keydown and click all race to end the sequence.
   const finish = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
+    // Detach immediately so the listener never outlives the sequence.
+    if (onKeyRef.current) window.removeEventListener("keydown", onKeyRef.current);
     try { sessionStorage.setItem(IGNITION_STORAGE_KEY, "1"); } catch { /* private mode */ }
     setPhase("done");
     setVisible(false);
-    onLetterbox(false);
-    onComplete();
-  }, [onComplete, onLetterbox]);
+    onLetterboxRef.current(false);
+    onCompleteRef.current();
+  }, []);
 
   useEffect(() => {
-    // Once finished, never re-arm. Unstable parent callbacks (or a sessionStorage
-    // write that threw in private mode) would otherwise re-enter and re-raise the
-    // letterbox with no `finish` left to lower it.
+    // Once finished, never re-arm: re-entry would re-raise the letterbox with no
+    // `finish` left to lower it.
     if (doneRef.current) return;
     let played = false;
     try { played = sessionStorage.getItem(IGNITION_STORAGE_KEY) === "1"; } catch { /* ignore */ }
@@ -45,21 +53,25 @@ export default function Ignition({ enabled, onComplete, onLetterbox }: IgnitionP
       finish();
       return;
     }
-    onLetterbox(true);
+    onLetterboxRef.current(true);
     const timers = [
       setTimeout(() => setPhase("fill"), 500),
       setTimeout(() => setPhase("ignite"), 900),
       setTimeout(finish, 1200),
     ];
     const onKey = (e: KeyboardEvent) => {
+      // Gated: once done a lingering listener must not swallow Space from the page.
+      if (doneRef.current) return;
+      if (e.key === " ") e.preventDefault();
       if (e.key === "Escape" || e.key === "Enter" || e.key === " ") finish();
     };
+    onKeyRef.current = onKey;
     window.addEventListener("keydown", onKey);
     return () => {
       timers.forEach(clearTimeout);
       window.removeEventListener("keydown", onKey);
     };
-  }, [enabled, finish, onLetterbox]);
+  }, [enabled, finish]);
 
   return (
     <AnimatePresence>

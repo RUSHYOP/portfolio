@@ -55,6 +55,13 @@
   color: var(--white); animation: hintPulse 2.4s ease-in-out infinite; transition: opacity 0.3s;
 }
 @keyframes hintPulse { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 6px); } }
+/* On mobile the centred hint collides with .floating-controls (fixed bottom-right),
+   so pin it bottom-left and clear the control pill. Its own keyframe drops the
+   translateX(-50%) that the centred variant re-applies on every frame. */
+@media (max-width: 767px) {
+  .launch__hint { bottom: 6.5rem; left: 1.5rem; transform: none; animation-name: hintPulseMobile; }
+}
+@keyframes hintPulseMobile { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
 
 /* ====== CTA ====== */
 .cta {

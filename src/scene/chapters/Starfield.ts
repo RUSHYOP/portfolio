@@ -11,7 +11,8 @@ const BASE_OPACITY = 0.85;
 /** Seeded PRNG so a given tier always renders the same sky (stable screenshots). */
 function mulberry32(seed: number) {
   return () => {
-    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
     let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
@@ -24,7 +25,8 @@ function mulberry32(seed: number) {
  */
 export class Starfield implements SetPiece {
   private points: THREE.Points | null = null;
-  private geometry = new THREE.BufferGeometry();
+  // Allocated per build() so a rebuild never reuses a disposed geometry.
+  private geometry: THREE.BufferGeometry | null = null;
   readonly material = new THREE.PointsMaterial({
     size: BASE_SIZE,
     color: 0xffffff,
@@ -33,27 +35,40 @@ export class Starfield implements SetPiece {
     sizeAttenuation: true,
     depthWrite: false,
   });
-  positions: Float32Array = new Float32Array(0);
+  private _positions: Float32Array = new Float32Array(0);
   private soften = 0;
   private fade = 0;
   private scene: THREE.Scene | null = null;
 
+  /** Read-only view of the packed xyz buffer (callers must not reassign it). */
+  get positions(): Float32Array {
+    return this._positions;
+  }
+
+  /** The scene object, exposed read-only for tests and debug overlays. */
+  get object(): THREE.Points | null {
+    return this.points;
+  }
+
   get count(): number {
-    return this.positions.length / 3;
+    return this._positions.length / 3;
   }
 
   build(scene: THREE.Scene, tier: Tier): void {
+    // An unpaired second build() would leak the previous Points into the scene.
+    if (this.points) this.dispose();
     const n = TIER_SETTINGS[tier].starCount;
     const rand = mulberry32(1337);
-    this.positions = new Float32Array(n * 3);
+    this._positions = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       const r = CORRIDOR_RADIUS * Math.sqrt(rand());
       const a = rand() * Math.PI * 2;
-      this.positions[i * 3 + 0] = Math.cos(a) * r;
-      this.positions[i * 3 + 1] = Math.sin(a) * r;
-      this.positions[i * 3 + 2] = CORRIDOR_Z_NEAR + (CORRIDOR_Z_FAR - CORRIDOR_Z_NEAR) * rand();
+      this._positions[i * 3 + 0] = Math.cos(a) * r;
+      this._positions[i * 3 + 1] = Math.sin(a) * r;
+      this._positions[i * 3 + 2] = CORRIDOR_Z_NEAR + (CORRIDOR_Z_FAR - CORRIDOR_Z_NEAR) * rand();
     }
-    this.geometry.setAttribute("position", new THREE.BufferAttribute(this.positions, 3));
+    this.geometry = new THREE.BufferGeometry();
+    this.geometry.setAttribute("position", new THREE.BufferAttribute(this._positions, 3));
     this.points = new THREE.Points(this.geometry, this.material);
     this.points.frustumCulled = false;
     this.scene = scene;
@@ -85,7 +100,8 @@ export class Starfield implements SetPiece {
 
   dispose(): void {
     if (this.points && this.scene) this.scene.remove(this.points);
-    this.geometry.dispose();
+    this.geometry?.dispose();
+    this.geometry = null;
     this.material.dispose();
     this.points = null;
     this.scene = null;

@@ -9,7 +9,7 @@ const fields: FieldSpecs = {
   kind: { type: "select", label: "Kind", options: [{ value: "a", label: "A" }, { value: "b", label: "B" }], default: "a" },
   live: { type: "toggle", label: "Live", default: false },
   count: { type: "number", label: "Count", max: 5 },
-  secret: { type: "text", label: "Secret", internal: true },
+  secret: { type: "text", label: "Secret", internal: true, default: "s" },
 };
 
 describe("validate create", () => {
@@ -28,6 +28,7 @@ describe("validate create", () => {
     expect(validate(fields, { title: "t", slug: "a", tags: ["a", "b", "c"] }, "create")).toEqual({ ok: false, error: "tags must have at most 2 items" });
     expect(validate(fields, { title: "t", slug: "a", tags: ["toolong"] }, "create")).toEqual({ ok: false, error: "tags items must be at most 5 characters" });
     expect(validate(fields, { title: "t", slug: "a", tags: "x" }, "create")).toEqual({ ok: false, error: "tags must be an array of strings" });
+    expect(validate(fields, { title: "t", slug: "a", tags: ["a", 1] }, "create")).toEqual({ ok: false, error: "tags must be an array of strings" });
     expect(validate(fields, { title: "t", slug: "a", tags: ["", "ok"] }, "create")).toEqual({ ok: true, value: expect.objectContaining({ tags: ["ok"] }) });
   });
   it("validates slug pattern", () => {
@@ -41,15 +42,35 @@ describe("validate create", () => {
     expect(validate(fields, { title: "t", slug: "a", live: "yes" }, "create")).toEqual({ ok: false, error: "live must be a boolean" });
     expect(validate(fields, { title: "t", slug: "a", count: 9 }, "create")).toEqual({ ok: false, error: "count must be at most 5" });
     expect(validate(fields, { title: "t", slug: "a", count: Number.NaN }, "create")).toEqual({ ok: false, error: "count must be a number" });
+    expect(validate(fields, { title: "t", slug: "a", count: "5" }, "create")).toEqual({ ok: false, error: "count must be a number" });
+    expect(validate(fields, { title: "t", slug: "a", count: Number.POSITIVE_INFINITY }, "create")).toEqual({ ok: false, error: "count must be a number" });
   });
   it("rejects unknown, reserved and internal keys from a body", () => {
     expect(validate(fields, { title: "t", slug: "a", nope: 1 }, "create")).toEqual({ ok: false, error: "unknown field: nope" });
     expect(validate(fields, { title: "t", slug: "a", order: 3 }, "create")).toEqual({ ok: false, error: "order cannot be set" });
     expect(validate(fields, { title: "t", slug: "a", secret: "x" }, "create")).toEqual({ ok: false, error: "secret cannot be set" });
   });
+  it("rejects prototype-chain keys as unknown fields", () => {
+    // Must be built with JSON.parse: an object literal `{ __proto__: {} }` sets the prototype instead of an own key.
+    const proto = JSON.parse('{"title":"t","slug":"a","__proto__":{}}');
+    expect(validate(fields, proto, "create")).toEqual({ ok: false, error: "unknown field: __proto__" });
+    expect(validate(fields, { title: "t", slug: "a", constructor: "x" }, "create")).toEqual({ ok: false, error: "unknown field: constructor" });
+    expect(validate(fields, { title: "t", slug: "a", toString: "x" }, "create")).toEqual({ ok: false, error: "unknown field: toString" });
+  });
   it("rejects non-object bodies", () => {
     expect(validate(fields, null, "create")).toEqual({ ok: false, error: "Body must be a JSON object" });
     expect(validate(fields, [], "create")).toEqual({ ok: false, error: "Body must be a JSON object" });
+    expect(validate(fields, "str", "create")).toEqual({ ok: false, error: "Body must be a JSON object" });
+    expect(validate(fields, 42, "create")).toEqual({ ok: false, error: "Body must be a JSON object" });
+  });
+  it("never applies the default of an internal field", () => {
+    const r = validate(fields, { title: "t", slug: "a" }, "create");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).not.toHaveProperty("secret");
+  });
+  it("never satisfies a required field with its default", () => {
+    const withDefault: FieldSpecs = { x: { type: "text", label: "X", required: true, default: "d" } };
+    expect(validate(withDefault, {}, "create")).toEqual({ ok: false, error: "x is required" });
   });
 });
 

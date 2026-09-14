@@ -72,7 +72,9 @@ function checkField(key: string, spec: FieldSpec, raw: unknown): { value?: Field
       if (!Array.isArray(raw) || !raw.every((t) => typeof t === "string")) return { error: `${key} must be an array of strings` };
       const items = (raw as string[]).map((t) => t.trim()).filter((t) => t.length > 0);
       if (spec.maxItems !== undefined && items.length > spec.maxItems) return { error: `${key} must have at most ${spec.maxItems} items` };
-      if (spec.max !== undefined && items.some((t) => t.length > spec.max!)) return { error: `${key} items must be at most ${spec.max} characters` };
+      // Hoisted so the closure keeps the narrowing — avoids a non-null assertion on spec.max.
+      const max = spec.max;
+      if (max !== undefined && items.some((t) => t.length > max)) return { error: `${key} items must be at most ${max} characters` };
       if (spec.required && items.length === 0) return { error: `${key} is required` };
       return { value: items };
     }
@@ -89,6 +91,13 @@ function checkField(key: string, spec: FieldSpec, raw: unknown): { value?: Field
       if (typeof raw !== "number" || !Number.isFinite(raw)) return { error: `${key} must be a number` };
       if (spec.max !== undefined && raw > spec.max) return { error: `${key} must be at most ${spec.max}` };
       return { value: raw };
+    // Exhaustiveness is enforced here rather than by tsconfig: all nine literals are handled,
+    // so spec.type is `never` below; adding a FieldType without a case breaks the build.
+    default: {
+      const _exhaustive: never = spec.type;
+      void _exhaustive;
+      return { error: `${key} has unsupported type` };
+    }
   }
 }
 
@@ -97,13 +106,16 @@ function checkField(key: string, spec: FieldSpec, raw: unknown): { value?: Field
  * create: enforces required, applies defaults for absent fields.
  * update: validates only present keys.
  * Reserved and internal keys are always rejected.
+ * A `required` field is never satisfied by its `default`; defaults apply only to optional fields.
  */
 export function validate(fields: FieldSpecs, body: unknown, mode: "create" | "update"): ValidationResult {
   if (!isPlainObject(body)) return { ok: false, error: "Body must be a JSON object" };
 
   for (const key of Object.keys(body)) {
     if ((RESERVED_KEYS as readonly string[]).includes(key)) return { ok: false, error: `${key} cannot be set` };
-    const spec = fields[key];
+    // Own-property lookup only: `fields[key]` would resolve prototype-chain keys
+    // (__proto__, constructor, toString), letting them pass as "known" and be silently dropped.
+    const spec = Object.prototype.hasOwnProperty.call(fields, key) ? fields[key] : undefined;
     if (!spec) return { ok: false, error: `unknown field: ${key}` };
     if (spec.internal) return { ok: false, error: `${key} cannot be set` };
   }

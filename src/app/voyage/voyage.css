@@ -1,0 +1,181 @@
+/* ====== Voyage: root & scene ====== */
+.voyage-root { position: relative; background: #000; color: var(--white); }
+.voyage-root--booting { min-height: 100vh; }
+.voyage-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.voyage-scene canvas { display: block; width: 100%; height: 100%; }
+.voyage-still { background: radial-gradient(ellipse at 70% 65%, #141210 0%, #000 60%); }
+.voyage-still__svg { width: 100%; height: 100%; }
+
+/* ====== Track & chapters ====== */
+.voyage-track { position: relative; z-index: 1; }
+.chapter { position: relative; }
+.chapter__pin {
+  position: sticky; top: 0; height: 100vh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 0 clamp(1.5rem, 6vw, 6rem);
+}
+.chapter__label {
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--gray-mid); margin-bottom: 1.5rem;
+}
+.chapter__label--placeholder { opacity: 0.35; }
+
+/* ====== Glass panel (shared) ====== */
+.glass {
+  position: relative; border-radius: 20px;
+  background: rgba(10, 10, 10, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ====== Launch ====== */
+.launch { max-width: 62rem; }
+.launch__title {
+  font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
+  font-size: clamp(3.5rem, 8vw, 8rem); font-weight: 500;
+  letter-spacing: -0.02em; line-height: 0.95; margin: 0 0 1.5rem;
+}
+.launch__sub {
+  font-weight: 300; font-size: clamp(1.05rem, 1.4vw, 1.35rem); line-height: 1.7;
+  color: var(--gray-light); max-width: 62ch; margin: 0 0 2.5rem;
+}
+.launch__ctas { display: flex; gap: 1rem; flex-wrap: wrap; }
+.launch__hint {
+  position: absolute; left: 50%; bottom: 2rem; transform: translateX(-50%);
+  font-family: var(--font-jetbrains-mono), monospace; font-size: 0.7rem; letter-spacing: 0.2em;
+  color: var(--white); animation: hintPulse 2.4s ease-in-out infinite; transition: opacity 0.3s;
+}
+@keyframes hintPulse { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 6px); } }
+
+/* ====== CTA ====== */
+.cta {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  padding: 0.95rem 1.5rem; border-radius: 999px; cursor: pointer;
+  font-family: var(--font-jetbrains-mono), monospace; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+  transition: background 0.3s, color 0.3s, border-color 0.3s;
+}
+.cta--primary { background: #f2b35c; color: #000; border: 1px solid #f2b35c; }
+.cta--primary:hover { background: #ffc46f; border-color: #ffc46f; }
+.cta--ghost { background: transparent; color: var(--white); border: 1px solid rgba(255, 255, 255, 0.22); }
+.cta--ghost:hover { border-color: rgba(255, 255, 255, 0.6); }
+.cta__arrow { display: inline-block; transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.cta:hover .cta__arrow { transform: translateX(4px); }
+body:has(.cursor-dot) .cta:hover ~ .cursor-ring { border-color: #f2b35c; }
+
+/* ====== Dock ====== */
+.dock { position: fixed; top: 20px; left: 0; right: 0; z-index: 9400; display: flex; justify-content: center; pointer-events: none; }
+.dock__capsule {
+  pointer-events: auto; display: flex; align-items: center; gap: 0.25rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.5rem; border-radius: 999px;
+  background: rgba(10, 10, 10, 0.55); border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 40px rgba(0, 0, 0, 0.45);
+  transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1), background 0.4s;
+}
+.dock[data-compact="true"] .dock__capsule { transform: scale(0.88); background: rgba(10, 10, 10, 0.72); }
+.dock__mono {
+  width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer;
+  background: #f2b35c; color: #000; font-weight: 700; font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
+  display: grid; place-items: center;
+}
+.dock__links { display: flex; align-items: center; }
+.dock__link {
+  background: transparent; border: 0; color: var(--gray-light); cursor: pointer;
+  padding: 0.55rem 0.85rem; border-radius: 999px;
+  font-family: var(--font-jetbrains-mono), monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+  transition: color 0.25s, background 0.25s; white-space: nowrap;
+}
+.dock__link[data-dock-near="true"], .dock__link:hover { color: var(--white); background: rgba(255, 255, 255, 0.06); }
+.dock__link.is-active { color: var(--white); text-shadow: 0 0 12px rgba(255, 255, 255, 0.35); }
+.dock__cta .cta { padding: 0.6rem 1.1rem; font-size: 0.68rem; }
+.dock__menu { display: none; }
+.dock__sheet {
+  position: fixed; inset: 0; z-index: 9399; pointer-events: auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem;
+  background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+}
+.dock__sheet-link {
+  background: transparent; border: 0; color: var(--white); cursor: pointer;
+  font-family: "Styrene A", var(--font-space-grotesk), sans-serif; font-size: 2rem; font-weight: 500; letter-spacing: -0.02em;
+}
+/* In-dialog close control: 44x44 touch target, hairline ring like .dock__menu.
+   Absolute against the fixed .dock__sheet, so it stays pinned to its top-right. */
+.dock__sheet-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  background: transparent; border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--white); font-size: 1.5rem; line-height: 1;
+}
+@media (max-width: 767px) {
+  .dock__links, .dock__cta { display: none; }
+  .dock__menu {
+    display: grid; gap: 5px; place-content: center; width: 36px; height: 36px; border-radius: 50%;
+    background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); cursor: pointer;
+  }
+  .dock__menu span { display: block; width: 14px; height: 1px; background: var(--white); }
+}
+
+/* ====== Telemetry ====== */
+.telemetry {
+  position: fixed; top: 22px; left: 24px; z-index: 9300; display: flex; gap: 1.25rem; pointer-events: none;
+  font-family: var(--font-jetbrains-mono), monospace; font-size: 0.66rem; letter-spacing: 0.14em; color: var(--white); opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+.telemetry__lost { color: #f2b35c; }
+@media (max-width: 767px) { .telemetry { display: none; } }
+
+/* ====== Letterbox ====== */
+.letterbox { position: fixed; inset: 0; z-index: 9600; pointer-events: none; overflow: hidden; }
+.letterbox__bar { position: absolute; left: 0; right: 0; height: 8vh; background: #000; }
+.letterbox__bar--top { top: 0; }
+.letterbox__bar--bottom { bottom: 0; }
+
+/* ====== Flight rail ====== */
+.rail { position: fixed; top: 12vh; bottom: 12vh; right: 22px; width: 1px; z-index: 9300; }
+.rail__line { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.14); }
+.rail__dot {
+  position: absolute; left: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%;
+  background: #f2b35c; box-shadow: 0 0 12px rgba(242, 179, 92, 0.8); transition: top 0.12s linear;
+}
+.rail__tick {
+  position: absolute; left: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px;
+  background: transparent; border: 0; cursor: pointer; padding: 0;
+}
+.rail__tick::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 1px; margin-left: -4.5px;
+  background: rgba(255, 255, 255, 0.5); transition: width 0.2s, background 0.2s;
+}
+.rail__tick.is-active::before, .rail__tick:hover::before { width: 14px; margin-left: -7px; background: var(--white); }
+.rail__label {
+  position: absolute; right: 22px; top: 50%; transform: translateY(-50%);
+  font-family: var(--font-jetbrains-mono), monospace; font-size: 0.62rem; letter-spacing: 0.14em; white-space: nowrap;
+  color: var(--white); opacity: 0; transition: opacity 0.2s; pointer-events: none;
+}
+.rail__tick:hover .rail__label, .rail__tick:focus-visible .rail__label { opacity: 0.8; }
+@media (max-width: 1023px) { .rail { display: none; } }
+
+/* ====== Ignition ====== */
+.ignition {
+  position: fixed; inset: 0; z-index: 10000; background: #000; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+}
+.ignition__title {
+  font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
+  font-size: clamp(1.4rem, 3.2vw, 2.6rem); font-weight: 500; color: #fff; margin: 0;
+}
+.ignition__sub { font-family: var(--font-jetbrains-mono), monospace; font-size: 0.7rem; letter-spacing: 0.28em; color: #fff; margin: 0; }
+.ignition__rule { width: clamp(140px, 18vw, 260px); height: 1px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+.ignition__rule-fill { width: 100%; height: 100%; background: #f2b35c; transform-origin: left center; }
+.ignition__skip {
+  position: absolute; bottom: 2rem; font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.6rem; letter-spacing: 0.2em; color: rgba(255, 255, 255, 0.35);
+}
+
+/* ====== Reduced motion ====== */
+@media (prefers-reduced-motion: reduce) {
+  .launch__hint { animation: none; }
+  .rail__dot { transition: none; }
+}

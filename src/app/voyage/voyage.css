@@ -54,10 +54,11 @@
   display: inline-flex; align-items: center; gap: 0.6rem;
   padding: 0.95rem 1.5rem; border-radius: 999px; cursor: pointer;
   font-family: var(--font-jetbrains-mono), monospace; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
-  transition: background 0.3s, color 0.3s, border-color 0.3s;
+  transition: background 0.3s, color 0.3s, border-color 0.3s, filter 0.3s;
 }
 .cta--primary { background: #f2b35c; color: #000; border: 1px solid #f2b35c; }
-.cta--primary:hover { background: #ffc46f; border-color: #ffc46f; }
+/* Brightness lift instead of a second amber hex — #f2b35c stays the only amber literal. */
+.cta--primary:hover { filter: brightness(1.08); }
 .cta--ghost { background: transparent; color: var(--white); border: 1px solid rgba(255, 255, 255, 0.22); }
 .cta--ghost:hover { border-color: rgba(255, 255, 255, 0.6); }
 .cta__arrow { display: inline-block; transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }

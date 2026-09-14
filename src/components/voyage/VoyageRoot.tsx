@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Settings } from "@/lib/data";
 import { CHAPTERS, VOYAGE_SCROLL_VH } from "@/scene/camera/flightPath";
@@ -28,6 +28,7 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
   const [tier, setTier] = useState<Tier | null>(null);
   const [ignited, setIgnited] = useState(false);
   const [letterbox, setLetterbox] = useState(false);
+  const probedRef = useRef(false);
   const { engine, state, toggleMuted } = useAudio();
 
   useEffect(() => {
@@ -48,17 +49,24 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
   }, [engine, state.muted]);
 
   // FPS probe after ignition; demote one tier if it can't hold 45fps.
+  // Once per page load, 600ms after ignition: a demotion changes `tier`, which rebuilds
+  // SceneRoot's GL context — so the probe must measure steady state, never a rebuild or
+  // the ignite fade / shader warm-up, and must never cascade high → mid → still.
   useEffect(() => {
     if (!ignited || !tier || tier === "still") return;
+    if (probedRef.current) return;
+    probedRef.current = true;
     let cancelled = false;
-    runFpsProbe(1000).then((fps) => {
-      if (cancelled) return;
-      // fps === null means the probe was inconclusive (tab hidden) — keep the tier.
-      const next = probeDemote(tier, fps);
-      logClient("quality.probe", { fps: fps === null ? null : Math.round(fps), from: tier, to: next });
-      if (next !== tier) setTier(next);
-    });
-    return () => { cancelled = true; };
+    const timer = window.setTimeout(() => {
+      runFpsProbe(1000).then((fps) => {
+        if (cancelled) return;
+        // fps === null means the probe was inconclusive (tab hidden) — keep the tier.
+        const next = probeDemote(tier, fps);
+        logClient("quality.probe", { fps: fps === null ? null : Math.round(fps), from: tier, to: next });
+        if (next !== tier) setTier(next);
+      });
+    }, 600);
+    return () => { cancelled = true; window.clearTimeout(timer); };
   }, [ignited, tier]);
 
   const onContextLost = useCallback(() => {

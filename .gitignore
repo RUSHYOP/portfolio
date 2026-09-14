@@ -38,3 +38,7 @@ next-env.d.ts
 
 # runtime logs (root-anchored: an unanchored `logs/` would also ignore src/app/api/logs)
 /logs/
+
+# downloaded credential exports — never commit
+api-keys*.csv
+*.pem

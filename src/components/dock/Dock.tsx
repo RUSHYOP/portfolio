@@ -30,6 +30,9 @@ interface DockProps {
 /** Floating glass capsule nav. Compacts after the hero; collapses to a sheet under 768px. */
 export default function Dock({ visible }: DockProps) {
   const capsuleRef = useRef<HTMLDivElement>(null);
+  // Focus moves to the sheet's close button on open and back to the menu button on close.
+  const menuRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const s = useVoyage();
   const compact = s.progress > 0.05;
@@ -47,7 +50,15 @@ export default function Dock({ visible }: DockProps) {
       if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    // RAF so the close button exists after AnimatePresence has mounted the sheet.
+    const raf = requestAnimationFrame(() => closeRef.current?.focus());
+    // Cleanup runs only on open→false (or unmount), never on first mount, so
+    // focus is returned to the trigger without stealing it on page load.
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("keydown", onKeyDown);
+      menuRef.current?.focus();
+    };
   }, [open]);
 
   const go = (id: ChapterId) => {
@@ -92,7 +103,7 @@ export default function Dock({ visible }: DockProps) {
         <div className="dock__cta">
           <CallToAction label="Book a call" onClick={book} />
         </div>
-        <button type="button" className="dock__menu" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="dock-sheet" aria-label={open ? "Close menu" : "Open menu"}>
+        <button ref={menuRef} type="button" className="dock__menu" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="dock-sheet" aria-label={open ? "Close menu" : "Open menu"}>
           <span /><span />
         </button>
       </div>
@@ -110,6 +121,10 @@ export default function Dock({ visible }: DockProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
           >
+            {/* In-dialog close control: keeps aria-modal honest and receives focus on open. */}
+            <button ref={closeRef} type="button" className="dock__sheet-close" aria-label="Close menu" onClick={() => setOpen(false)}>
+              ×
+            </button>
             {DOCK_LINKS.map((l) => (
               <button key={l.chapter} type="button" className="dock__sheet-link" onClick={() => go(l.chapter)}>
                 {l.label}

@@ -12,6 +12,30 @@ const BASE_SIZE = 0.14;
 const BASE_OPACITY = 0.85;
 
 /**
+ * A soft round sprite for the point material — the default PointsMaterial draws squares.
+ * Browser-only: returns null outside a document (SSR and the node test env) so the
+ * starfield silently falls back to untextured points there.
+ */
+function makeDiscTexture(): THREE.CanvasTexture | null {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  // Gradient radius 32px == 0.5 of the sprite; the stop at 0.7 of it == r 0.35.
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.7, "rgba(255,255,255,1)");  // solid core out to r = 0.35
+  g.addColorStop(1, "rgba(255,255,255,0)");    // soft edge, transparent by r = 0.5
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/**
  * Monochrome point field filling a long corridor along -z that the camera flies through.
  * Controls: soften (focus pull behind pinned panels) and fade (Dark Passage).
  */
@@ -27,6 +51,8 @@ export class Starfield implements SetPiece {
     sizeAttenuation: true,
     depthWrite: false,
   });
+  // Owned by this instance: created in build(), released in dispose().
+  private disc: THREE.CanvasTexture | null = null;
   private _positions: Float32Array = new Float32Array(0);
   private soften = 0;
   private fade = 0;
@@ -49,6 +75,13 @@ export class Starfield implements SetPiece {
   build(scene: THREE.Scene, tier: Tier): void {
     // An unpaired second build() would leak the previous Points into the scene.
     if (this.points) this.dispose();
+    // Round sprites instead of the default squares (no-op where there is no document).
+    this.disc = makeDiscTexture();
+    if (this.disc) {
+      this.material.map = this.disc;
+      this.material.alphaTest = 0.02;
+      this.material.needsUpdate = true;
+    }
     const n = TIER_SETTINGS[tier].starCount;
     const rand = mulberry32(1337);
     this._positions = new Float32Array(n * 3);
@@ -94,6 +127,10 @@ export class Starfield implements SetPiece {
     if (this.points && this.scene) this.scene.remove(this.points);
     this.geometry?.dispose();
     this.geometry = null;
+    // Clear the map before disposing it so a rebuild never points at a dead texture.
+    this.material.map = null;
+    this.disc?.dispose();
+    this.disc = null;
     this.material.dispose();
     this.points = null;
     this.scene = null;

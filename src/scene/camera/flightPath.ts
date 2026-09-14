@@ -51,6 +51,10 @@ export function chapterAt(progress: number): { chapter: Chapter; chapterProgress
 /** The star is fixed in world space; the whole voyage approaches it. */
 export const STAR_POSITION = new THREE.Vector3(6, -3, -140);
 
+/** Launch framing: the camera looks up-left of the star, which projects the star
+ *  low-right of frame instead of dead-centre behind the headline. */
+export const LAUNCH_LOOK_OFFSET = new THREE.Vector3(-3, 2, 0);
+
 /**
  * Camera waypoints: one per chapter start, plus a final end point (12 points for
  * 11 chapters). `progressToCurveT` aligns chapter starts to waypoints, so waypoint
@@ -79,9 +83,9 @@ export const CAMERA_WAYPOINTS: readonly THREE.Vector3[] = POSITION_POINTS.map((v
 
 /** LookAt targets, one per chapter start plus a final end point (aligned the same way). */
 const LOOKAT_POINTS: THREE.Vector3[] = [
-  STAR_POSITION.clone(),                    // launch: eyes on the destination
-  STAR_POSITION.clone(),
-  STAR_POSITION.clone(),
+  STAR_POSITION.clone().add(LAUNCH_LOOK_OFFSET),  // launch: star sits low-right of frame
+  STAR_POSITION.clone().add(LAUNCH_LOOK_OFFSET),
+  STAR_POSITION.clone().add(LAUNCH_LOOK_OFFSET),
   new THREE.Vector3(6, -3, -150),           // orbit: past the star, banked
   new THREE.Vector3(0, -2, -160),           // worlds: ahead-left for the fly-by
   new THREE.Vector3(6, -2.5, -170),
@@ -127,10 +131,14 @@ const PILOT_START = CHAPTERS.find((c) => c.id === "pilot")!.start;
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
-/** 0.25 (a distant point) → 6 (fills the frame) by the start of The Pilot, then holds. */
+/** The camera approach already magnifies the star ~6x, and The Pilot's glare does the
+ *  "fills the frame" beat — so the geometric scale only needs to reach 2.4. */
+const STAR_SCALE_MAX = 2.4;
+
+/** 0.25 (a distant point) → 2.4 by the start of The Pilot, then holds. */
 export function starScale(progress: number): number {
   const t = clamp01(progress / PILOT_START);
-  return 0.25 + (6 - 0.25) * smooth(t);
+  return 0.25 + (STAR_SCALE_MAX - 0.25) * smooth(t);
 }
 
 /** 9.4 AU at launch → 0.0 at The Pilot ("ARRIVED"), then 0. */

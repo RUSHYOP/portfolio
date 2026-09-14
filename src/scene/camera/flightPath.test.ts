@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import {
   CHAPTERS, CONTENT_CHAPTERS, chapterAt, getCameraPose, distanceAU, starScale,
-  fovForVelocity, FOV_MIN, FOV_MAX, STAR_POSITION,
+  fovForVelocity, FOV_MIN, FOV_MAX, STAR_POSITION, LAUNCH_LOOK_OFFSET,
   CAMERA_WAYPOINTS, progressToCurveT,
 } from "./flightPath";
 
@@ -53,10 +53,10 @@ describe("camera path", () => {
       expect(fz).toBeLessThan(0);
     }
   });
-  it("starts at the origin looking at the star", () => {
+  it("starts at the origin looking up-left of the star", () => {
     const pose = getCameraPose(0);
     expect(pose.position.length()).toBeLessThan(1e-6);
-    expect(pose.lookAt.distanceTo(STAR_POSITION)).toBeLessThan(1e-6);
+    expect(pose.lookAt.distanceTo(STAR_POSITION.clone().add(LAUNCH_LOOK_OFFSET))).toBeLessThan(1e-6);
   });
   // Per-frame path: the caller-supplied pose must be mutated in place, not replaced.
   it("reuses the caller's out object without allocating", () => {
@@ -107,7 +107,7 @@ describe("curves", () => {
       prev = s;
     }
     expect(starScale(0)).toBeCloseTo(0.25, 5);
-    expect(starScale(1)).toBeCloseTo(6, 5);
+    expect(starScale(1)).toBeCloseTo(2.4, 5);
   });
   it("fov stays within 60–70 and rises with velocity", () => {
     expect(fovForVelocity(0)).toBe(FOV_MIN);

@@ -54,9 +54,9 @@ const FRAG = /* glsl */ `
     float n = fbm(p * 2.5 + vec3(0.0, uTime * 0.05, uTime * 0.03));
     n = n * 0.6 + fbm(p * 6.0 - uTime * 0.08) * 0.4;
     float fresnel = pow(1.0 - max(dot(vNormal, vView), 0.0), 2.2);
-    vec3 body = mix(uColor * 0.55, uColor * 1.35, n);
+    vec3 body = mix(uColor * 0.5, uColor * 1.1, n);
     // Glare blows out toward white but keeps uColor as the only chroma in the orb.
-    vec3 col = body + fresnel * uColor * 1.6 + uGlare * mix(vec3(1.0), uColor, 0.35);
+    vec3 col = body + fresnel * uColor * 1.0 + uGlare * mix(vec3(1.0), uColor, 0.35);
     gl_FragColor = vec4(col, 1.0);
   }
 `;

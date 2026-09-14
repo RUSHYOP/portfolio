@@ -13,6 +13,10 @@ export function streakOpacity(velocity01: number): number {
   return 0.12 + (0.65 - 0.12) * clamp01(velocity01);
 }
 
+/** Fixed PRNG seed: the at-rest frame must be identical on every load (screenshot baseline)
+ *  and after a rebuild, so build() and the field initializer must not drift apart. */
+const STREAK_SEED = 4242;
+
 const RADIUS = 30;
 const AHEAD = 150;   // streaks live from camera.z - 5 down to camera.z - AHEAD
 const BEHIND = 5;
@@ -38,9 +42,8 @@ export class WarpStreaks implements SetPiece {
   private positions: Float32Array = new Float32Array(0);
   private scene: THREE.Scene | null = null;
   private length = streakLength(0);
-  // Seeded so the at-rest frame is identical on every load (screenshot baseline), and
-  // re-created in build() so a rebuild reproduces exactly the same layout.
-  private rand: () => number = mulberry32(4242);
+  // Re-created in build() so a rebuild reproduces exactly the same layout.
+  private rand: () => number = mulberry32(STREAK_SEED);
 
   /** The live geometry. Reading it before build() is a programming error, not a null case. */
   get geometry(): THREE.BufferGeometry {
@@ -64,7 +67,7 @@ export class WarpStreaks implements SetPiece {
     this.heads = new Float32Array(n * 3);
     this.positions = new Float32Array(n * 6);
     this.length = streakLength(0);
-    this.rand = mulberry32(4242);
+    this.rand = mulberry32(STREAK_SEED);
     // Heads are placed in the corridor ahead of the origin: the flight starts at
     // CAMERA_WAYPOINTS[0] (0,0,0), and update() recycles camera-relative from there on.
     for (let i = 0; i < n; i++) {

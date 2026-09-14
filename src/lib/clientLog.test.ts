@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { logClient } from "./clientLog";
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("logClient", () => {
   it("never throws on unserializable data", () => {
@@ -20,6 +23,5 @@ describe("logClient", () => {
     const line = info.mock.calls[0][0] as string;
     expect(JSON.parse(line)).toEqual({ event: "quality.probe", fps: 60 });
     expect(fetchMock).toHaveBeenCalledWith("/api/logs", expect.objectContaining({ method: "POST", keepalive: true, body: line }));
-    vi.unstubAllGlobals();
   });
 });

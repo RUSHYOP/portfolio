@@ -12,7 +12,9 @@ interface IgnitionProps {
   onLetterbox: (active: boolean) => void;
 }
 
-type Phase = "resolve" | "fill" | "ignite" | "done";
+// "fill" and "done" are the only phases the JSX distinguishes from "resolve"; the hairline
+// fills from 500ms and `finish` lands at 1200ms, so there is no beat in between to name.
+type Phase = "resolve" | "fill" | "done";
 
 /**
  * Chapter 00. ≤1.2s: title resolves blur→sharp, hairline fills, then hands off to the scene's ignite fade.
@@ -65,7 +67,6 @@ export default function Ignition({ enabled, onComplete, onLetterbox }: IgnitionP
     onLetterboxRef.current(true);
     const timers = [
       setTimeout(() => setPhase("fill"), 500),
-      setTimeout(() => setPhase("ignite"), 900),
       setTimeout(finish, 1200),
     ];
     const onKey = (e: KeyboardEvent) => {

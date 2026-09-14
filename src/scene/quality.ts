@@ -4,14 +4,14 @@ export interface TierSettings {
   dpr: number;
   starCount: number;
   streakCount: number;
-  bloom: boolean;
-  animate: boolean;
 }
 
+// "still" never reaches the GL path at all — VoyageRoot renders StillSky instead of
+// SceneRoot — so its zeroed counts are documentation, not a branch anything reads.
 export const TIER_SETTINGS: Record<Tier, TierSettings> = {
-  high:  { dpr: 1.5, starCount: 2400, streakCount: 260, bloom: true,  animate: true },
-  mid:   { dpr: 1,   starCount: 1200, streakCount: 120, bloom: false, animate: true },
-  still: { dpr: 1,   starCount: 0,    streakCount: 0,   bloom: false, animate: false },
+  high:  { dpr: 1.5, starCount: 2400, streakCount: 260 },
+  mid:   { dpr: 1,   starCount: 1200, streakCount: 120 },
+  still: { dpr: 1,   starCount: 0,    streakCount: 0   },
 };
 
 export interface QualityEnv {

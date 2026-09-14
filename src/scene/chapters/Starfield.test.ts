@@ -2,21 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { Starfield } from "./Starfield";
 import { TIER_SETTINGS } from "@/scene/quality";
-import { voyageStore } from "@/scene/scroll/voyageStore";
-import type { FrameContext } from "./types";
-
-/** Minimal one-frame context; per-test overrides go through the partial. */
-function frame(over: Partial<FrameContext> = {}): FrameContext {
-  return {
-    t: 1,
-    dt: 1 / 60,
-    voyage: voyageStore.getState(),
-    camera: new THREE.PerspectiveCamera(),
-    audioEnergy: 0,
-    ignite: 1,
-    ...over,
-  };
-}
+import { makeFrame } from "./testUtils";
 
 describe("Starfield", () => {
   it("builds the tier's star count spread along the flight corridor", () => {
@@ -64,11 +50,11 @@ describe("Starfield", () => {
   it("update() drives opacity and drift, and is a no-op before build()", () => {
     const field = new Starfield();
     // update() before build() must not throw — SceneRoot may tick before the build lands.
-    expect(() => field.update(frame())).not.toThrow();
+    expect(() => field.update(makeFrame())).not.toThrow();
 
     const scene = new THREE.Scene();
     field.build(scene, "mid");
-    field.update(frame());
+    field.update(makeFrame());
     expect(field.material.opacity).toBeGreaterThan(0);
     expect(field.object?.rotation.z).toBeGreaterThan(0);
   });
@@ -79,6 +65,9 @@ describe("Starfield", () => {
     a.build(new THREE.Scene(), "high");
     b.build(new THREE.Scene(), "high");
     expect(a.positions).toEqual(b.positions);
+    // Locks the seed-1337 sequence itself, so swapping mulberry32 to the shared module
+    // (or re-ordering the rand() draws) cannot silently move every star.
+    expect(a.positions[0]).toBeCloseTo(7.11501407623291, 6);
   });
 
   it("builds an empty but valid field on the still tier", () => {
@@ -87,7 +76,7 @@ describe("Starfield", () => {
     field.build(scene, "still");
     expect(field.count).toBe(0);
     expect(scene.children).toHaveLength(1);
-    expect(() => field.update(frame())).not.toThrow();
+    expect(() => field.update(makeFrame())).not.toThrow();
   });
 
   it("replaces the previous field when build() is called twice", () => {

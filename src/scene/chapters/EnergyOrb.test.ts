@@ -3,20 +3,7 @@ import * as THREE from "three";
 import { EnergyOrb } from "./EnergyOrb";
 import { STAR_POSITION, starScale } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
-import type { FrameContext } from "./types";
-
-/** Minimal one-frame context; per-test overrides go through the partial. */
-function frame(over: Partial<FrameContext> = {}): FrameContext {
-  return {
-    t: 1,
-    dt: 1 / 60,
-    voyage: voyageStore.getState(),
-    camera: new THREE.PerspectiveCamera(),
-    audioEnergy: 0,
-    ignite: 1,
-    ...over,
-  };
-}
+import { makeFrame } from "./testUtils";
 
 // The store is module-global; reset so scroll state cannot leak between tests.
 beforeEach(() => voyageStore.reset());
@@ -37,11 +24,11 @@ describe("EnergyOrb", () => {
   it("update() scales the group by starScale(progress) and is a no-op before build()", () => {
     const orb = new EnergyOrb();
     // update() before build() must not throw — SceneRoot may tick before the build lands.
-    expect(() => orb.update(frame())).not.toThrow();
+    expect(() => orb.update(makeFrame())).not.toThrow();
 
     const scene = new THREE.Scene();
     orb.build(scene, "mid");
-    orb.update(frame());
+    orb.update(makeFrame());
     expect(starScale(0)).toBeCloseTo(0.25, 5);
     expect(orb.object?.scale.x).toBeCloseTo(starScale(0), 5);
     expect(orb.material.uniforms.uTime.value).toBe(1);
@@ -52,10 +39,10 @@ describe("EnergyOrb", () => {
     const orb = new EnergyOrb();
     orb.build(scene, "mid");
     orb.setGlare(2);
-    orb.update(frame());
+    orb.update(makeFrame());
     expect(orb.material.uniforms.uGlare.value).toBe(1);
     orb.setGlare(-1);
-    orb.update(frame());
+    orb.update(makeFrame());
     expect(orb.material.uniforms.uGlare.value).toBe(0);
   });
 
@@ -63,13 +50,21 @@ describe("EnergyOrb", () => {
     const scene = new THREE.Scene();
     const orb = new EnergyOrb();
     orb.build(scene, "mid");
+    // build() disposes the previous geometry, so the rebuilt mesh must hold a different one.
+    const firstGeometry = (orb.object!.children[0] as THREE.Mesh).geometry;
     orb.build(scene, "mid");
     expect(scene.children).toHaveLength(1);
     expect(orb.object?.children).toHaveLength(1);
-    // A rebuild after an explicit dispose must allocate a fresh geometry, not reuse a disposed one.
+    const secondMesh = orb.object!.children[0];
+    expect(secondMesh).toBeInstanceOf(THREE.Mesh);
+    expect((secondMesh as THREE.Mesh).geometry).not.toBe(firstGeometry);
+    // A rebuild after an explicit dispose must also allocate a fresh geometry, not reuse a disposed one.
     orb.dispose();
     orb.build(scene, "mid");
     expect(scene.children).toHaveLength(1);
+    expect((orb.object!.children[0] as THREE.Mesh).geometry).not.toBe(
+      (secondMesh as THREE.Mesh).geometry,
+    );
     expect(() => orb.dispose()).not.toThrow();
     expect(() => orb.dispose()).not.toThrow();
   });

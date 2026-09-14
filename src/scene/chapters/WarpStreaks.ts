@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { TIER_SETTINGS, type Tier } from "@/scene/quality";
+import { mulberry32 } from "@/scene/prng";
 import type { FrameContext, SetPiece } from "./types";
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -37,6 +38,9 @@ export class WarpStreaks implements SetPiece {
   private positions: Float32Array = new Float32Array(0);
   private scene: THREE.Scene | null = null;
   private length = streakLength(0);
+  // Seeded so the at-rest frame is identical on every load (screenshot baseline), and
+  // re-created in build() so a rebuild reproduces exactly the same layout.
+  private rand: () => number = mulberry32(4242);
 
   /** The live geometry. Reading it before build() is a programming error, not a null case. */
   get geometry(): THREE.BufferGeometry {
@@ -60,12 +64,15 @@ export class WarpStreaks implements SetPiece {
     this.heads = new Float32Array(n * 3);
     this.positions = new Float32Array(n * 6);
     this.length = streakLength(0);
+    this.rand = mulberry32(4242);
+    // Heads are placed in the corridor ahead of the origin: the flight starts at
+    // CAMERA_WAYPOINTS[0] (0,0,0), and update() recycles camera-relative from there on.
     for (let i = 0; i < n; i++) {
-      const r = RADIUS * (0.25 + 0.75 * Math.sqrt(Math.random()));
-      const a = Math.random() * Math.PI * 2;
+      const r = RADIUS * (0.25 + 0.75 * Math.sqrt(this.rand()));
+      const a = this.rand() * Math.PI * 2;
       this.heads[i * 3 + 0] = Math.cos(a) * r;
       this.heads[i * 3 + 1] = Math.sin(a) * r;
-      this.heads[i * 3 + 2] = -Math.random() * AHEAD;
+      this.heads[i * 3 + 2] = -this.rand() * AHEAD;
     }
     this.writePositions();
     this._geometry = new THREE.BufferGeometry();
@@ -95,8 +102,8 @@ export class WarpStreaks implements SetPiece {
     const n = this.count;
     for (let i = 0; i < n; i++) {
       const zi = i * 3 + 2;
-      if (this.heads[zi] > camZ + BEHIND) this.heads[zi] = camZ - AHEAD + Math.random() * 10;
-      if (this.heads[zi] < camZ - AHEAD - 20) this.heads[zi] = camZ - Math.random() * AHEAD;
+      if (this.heads[zi] > camZ + BEHIND) this.heads[zi] = camZ - AHEAD + this.rand() * 10;
+      if (this.heads[zi] < camZ - AHEAD - 20) this.heads[zi] = camZ - this.rand() * AHEAD;
     }
     this.writePositions();
     (this._geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;

@@ -3,20 +3,7 @@ import * as THREE from "three";
 import { WarpStreaks, streakLength, streakOpacity } from "./WarpStreaks";
 import { TIER_SETTINGS } from "@/scene/quality";
 import { voyageStore } from "@/scene/scroll/voyageStore";
-import type { FrameContext } from "./types";
-
-/** Minimal one-frame context; per-test overrides go through the partial. */
-function frame(over: Partial<FrameContext> = {}): FrameContext {
-  return {
-    t: 1,
-    dt: 1 / 60,
-    voyage: voyageStore.getState(),
-    camera: new THREE.PerspectiveCamera(),
-    audioEnergy: 0,
-    ignite: 1,
-    ...over,
-  };
-}
+import { makeFrame } from "./testUtils";
 
 // The store is module-global; reset so scroll state cannot leak between tests.
 beforeEach(() => voyageStore.reset());
@@ -63,12 +50,12 @@ describe("WarpStreaks", () => {
   it("update() drives opacity from velocity and eases the streak length up", () => {
     const streaks = new WarpStreaks();
     // update() before build() must not throw — SceneRoot may tick before the build lands.
-    expect(() => streaks.update(frame())).not.toThrow();
+    expect(() => streaks.update(makeFrame())).not.toThrow();
 
     const scene = new THREE.Scene();
     streaks.build(scene, "mid");
     voyageStore.setScroll(0.1, 1);
-    streaks.update(frame({ voyage: voyageStore.getState() }));
+    streaks.update(makeFrame({ voyage: voyageStore.getState() }));
 
     expect(streaks.material.opacity).toBeCloseTo(streakOpacity(1), 5);
     const pos = streaks.geometry.getAttribute("position") as THREE.BufferAttribute;
@@ -85,7 +72,29 @@ describe("WarpStreaks", () => {
     streaks.build(scene, "still");
     expect(streaks.count).toBe(0);
     expect(scene.children).toHaveLength(1);
-    expect(() => streaks.update(frame())).not.toThrow();
+    expect(() => streaks.update(makeFrame())).not.toThrow();
+  });
+
+  it("is deterministic across instances for a given tier", () => {
+    // Seeded placement is what makes the at-rest frame a stable screenshot baseline.
+    const a = new WarpStreaks();
+    const b = new WarpStreaks();
+    a.build(new THREE.Scene(), "high");
+    b.build(new THREE.Scene(), "high");
+    expect(a.geometry.getAttribute("position").array).toEqual(
+      b.geometry.getAttribute("position").array,
+    );
+  });
+
+  it("reproduces the same layout when build() is called again", () => {
+    const scene = new THREE.Scene();
+    const streaks = new WarpStreaks();
+    streaks.build(scene, "high");
+    // Copy: the rebuild allocates a new Float32Array, but holding the old reference
+    // would compare the snapshot against itself if it ever did not.
+    const first = Float32Array.from(streaks.geometry.getAttribute("position").array);
+    streaks.build(scene, "high");
+    expect(streaks.geometry.getAttribute("position").array).toEqual(first);
   });
 
   it("throws a descriptive error when geometry is read before build()", () => {

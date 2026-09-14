@@ -5,6 +5,14 @@ import type { FrameContext, SetPiece } from "./types";
 
 export const AMBER = 0xf2b35c;
 
+/** Sprite scale of the additive glow, in orb radii. Shared by build() and update(). */
+const GLOW_SCALE = 4.2;
+
+/** AMBER as sRGB "r,g,b" bytes for canvas gradient stops. Unpacked from the hex rather than
+ *  read off THREE.Color: ColorManagement is on by default in three >= r152, so Color.r/g/b
+ *  hold linear-sRGB and would shift 242,179,92 to 226,115,27 in an sRGB canvas. */
+const AMBER_RGB = `${(AMBER >> 16) & 255},${(AMBER >> 8) & 255},${AMBER & 255}`;
+
 const VERT = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vPos;
@@ -47,7 +55,8 @@ const FRAG = /* glsl */ `
     n = n * 0.6 + fbm(p * 6.0 - uTime * 0.08) * 0.4;
     float fresnel = pow(1.0 - max(dot(vNormal, vView), 0.0), 2.2);
     vec3 body = mix(uColor * 0.55, uColor * 1.35, n);
-    vec3 col = body + fresnel * uColor * 1.6 + uGlare * vec3(1.0, 0.92, 0.8);
+    // Glare blows out toward white but keeps uColor as the only chroma in the orb.
+    vec3 col = body + fresnel * uColor * 1.6 + uGlare * mix(vec3(1.0), uColor, 0.35);
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -58,9 +67,9 @@ function makeGlowTexture(): THREE.Texture {
   canvas.width = size; canvas.height = size;
   const g = canvas.getContext("2d")!;
   const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  grad.addColorStop(0, "rgba(242,179,92,0.9)");
-  grad.addColorStop(0.35, "rgba(242,179,92,0.35)");
-  grad.addColorStop(1, "rgba(242,179,92,0)");
+  grad.addColorStop(0, `rgba(${AMBER_RGB},0.9)`);
+  grad.addColorStop(0.35, `rgba(${AMBER_RGB},0.35)`);
+  grad.addColorStop(1, `rgba(${AMBER_RGB},0)`);
   g.fillStyle = grad;
   g.fillRect(0, 0, size, size);
   const tex = new THREE.CanvasTexture(canvas);
@@ -113,7 +122,7 @@ export class EnergyOrb implements SetPiece {
         blending: THREE.AdditiveBlending,
       });
       this.glow = new THREE.Sprite(this.glowMaterial);
-      this.glow.scale.set(4.2, 4.2, 1);
+      this.glow.scale.set(GLOW_SCALE, GLOW_SCALE, 1);
       this.group.add(this.glow);
     }
     this.group.position.copy(STAR_POSITION);
@@ -132,7 +141,11 @@ export class EnergyOrb implements SetPiece {
     this.group.scale.setScalar(Math.max(0.001, s));
     this.material.uniforms.uTime.value = ctx.t;
     this.material.uniforms.uGlare.value = this.glare;
-    if (this.glow) this.glow.scale.setScalar(4.2 * (1 + ctx.audioEnergy * 0.4) * (1 + this.glare * 2));
+    if (this.glow) {
+      // A Sprite is a billboarded quad; z stays 1 so only its width/height breathe.
+      const g = GLOW_SCALE * (1 + ctx.audioEnergy * 0.4) * (1 + this.glare * 2);
+      this.glow.scale.set(g, g, 1);
+    }
   }
 
   dispose(): void {

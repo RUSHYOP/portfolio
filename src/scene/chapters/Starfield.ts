@@ -1,5 +1,8 @@
 import * as THREE from "three";
 import { TIER_SETTINGS, type Tier } from "@/scene/quality";
+// Seeded PRNG so a given tier always renders the same sky (stable screenshots).
+// Shared with WarpStreaks so both fields are reproducible from one implementation.
+import { mulberry32 } from "@/scene/prng";
 import type { FrameContext, SetPiece } from "./types";
 
 const CORRIDOR_Z_NEAR = 20;
@@ -7,17 +10,6 @@ const CORRIDOR_Z_FAR = -220;
 const CORRIDOR_RADIUS = 45;
 const BASE_SIZE = 0.14;
 const BASE_OPACITY = 0.85;
-
-/** Seeded PRNG so a given tier always renders the same sky (stable screenshots). */
-function mulberry32(seed: number) {
-  return () => {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 /**
  * Monochrome point field filling a long corridor along -z that the camera flies through.

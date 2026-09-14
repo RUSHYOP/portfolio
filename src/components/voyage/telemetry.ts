@@ -1,3 +1,4 @@
+import type { ChapterId } from "@/scene/camera/flightPath";
 import type { VoyageState } from "@/scene/scroll/voyageStore";
 
 export interface TelemetryReadout {
@@ -6,7 +7,8 @@ export interface TelemetryReadout {
   dist: string;
 }
 
-const ARRIVED_FROM = new Set(["pilot", "landing", "surface"]);
+// Typed as ChapterId so a typo in a member is a compile error, not a silently dead branch.
+const ARRIVED_FROM = new Set<ChapterId>(["pilot", "landing", "surface"]);
 
 /** Pure HUD formatter: T+ saturates at 59:59, velocity01 reads up to 0.98c, distance
  *  becomes SIGNAL LOST in the dark passage and ARRIVED from The Pilot on. */

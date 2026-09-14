@@ -3,7 +3,7 @@ import * as THREE from "three";
 import {
   CHAPTERS, CONTENT_CHAPTERS, chapterAt, getCameraPose, distanceAU, starScale,
   fovForVelocity, FOV_MIN, FOV_MAX, STAR_POSITION, LAUNCH_LOOK_OFFSET,
-  CAMERA_WAYPOINTS, progressToCurveT,
+  CAMERA_WAYPOINTS, progressToCurveT, sectionHeightVh, VOYAGE_SCROLL_VH, VOYAGE_TAIL_VH,
 } from "./flightPath";
 
 const STEPS = 400;
@@ -38,6 +38,31 @@ describe("chapters", () => {
   it("treats an exact interior boundary as the start of the next chapter", () => {
     expect(chapterAt(0.08).chapter.id).toBe("approach");
     expect(chapterAt(0.08).chapterProgress).toBe(0);
+  });
+});
+
+// The DOM track and the scroll store must share one denominator, or `scrollTo(c.start)`
+// lands somewhere other than the section it names.
+describe("scroll geometry", () => {
+  it("the sections sum to the full track height", () => {
+    const total = CHAPTERS.reduce((sum, c) => sum + sectionHeightVh(c), 0);
+    expect(total).toBeCloseTo(VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH, 6);
+  });
+
+  // `.chapter__pin` is a 100vh sticky child; a section shorter than that never pins.
+  it("every content chapter is at least one viewport tall", () => {
+    for (const c of CONTENT_CHAPTERS) {
+      expect(sectionHeightVh(c)).toBeGreaterThanOrEqual(100);
+    }
+  });
+
+  // The identity that makes progress `p` and document offset `p * VOYAGE_SCROLL_VH` the same place.
+  it("each chapter's cumulative DOM offset equals start * VOYAGE_SCROLL_VH", () => {
+    let offset = 0;
+    for (const c of CHAPTERS) {
+      expect(offset).toBeCloseTo(c.start * VOYAGE_SCROLL_VH, 6);
+      offset += sectionHeightVh(c);
+    }
   });
 });
 

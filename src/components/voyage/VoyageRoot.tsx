@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Settings } from "@/lib/data";
-import { CHAPTERS, VOYAGE_SCROLL_VH } from "@/scene/camera/flightPath";
+import { CHAPTERS, VOYAGE_SCROLL_VH, VOYAGE_TAIL_VH, sectionHeightVh } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import VoyageScroll from "@/scene/scroll/VoyageScroll";
 import { detectEnv, selectTier, probeDemote, runFpsProbe, type Tier } from "@/scene/quality";
@@ -109,14 +109,16 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
 
       <Ignition enabled={animated} onComplete={onIgnitionComplete} onLetterbox={setLetterbox} />
 
-      <main className="voyage-track" style={{ minHeight: `${VOYAGE_SCROLL_VH}vh` }}>
+      {/* Track height = scrollable range + the final section's tail viewport, so that
+          `scrollHeight - innerHeight` equals VOYAGE_SCROLL_VH — the store's denominator. */}
+      <main className="voyage-track" style={{ minHeight: `${VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH}vh` }}>
         <Launch headline={settings.heroHeadline} subheadline={settings.heroSubheadline} ready={ignited} />
         {placeholders.map((c) => (
           <section
             key={c.id}
             id={c.id}
             className={`chapter chapter--placeholder${c.micro ? " chapter--micro" : ""}`}
-            style={{ height: `${(c.end - c.start) * VOYAGE_SCROLL_VH}vh` }}
+            style={{ height: `${sectionHeightVh(c)}vh` }}
           >
             {!c.micro && (
               <div className="chapter__pin">

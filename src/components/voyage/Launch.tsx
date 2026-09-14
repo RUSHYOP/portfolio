@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CHAPTERS, VOYAGE_SCROLL_VH } from "@/scene/camera/flightPath";
+import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
 import { useVoyage } from "@/scene/scroll/useVoyage";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { getAudioEngine } from "@/lib/audio/AudioEngine";
@@ -41,7 +41,7 @@ export default function Launch({ headline, subheadline, ready }: LaunchProps) {
     <section
       id="launch"
       className="chapter chapter--launch"
-      style={{ height: `${(chapter.end - chapter.start) * VOYAGE_SCROLL_VH}vh` }}
+      style={{ height: `${sectionHeightVh(chapter)}vh` }}
       aria-label="Launch"
     >
       <div className="chapter__pin">

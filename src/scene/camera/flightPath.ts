@@ -31,12 +31,28 @@ export const CHAPTERS: readonly Chapter[] = [
 
 export const CONTENT_CHAPTERS: readonly Chapter[] = CHAPTERS.filter((c) => !c.micro);
 
-/** Total scroll track height in vh. Each chapter's section height = (end - start) * this. */
-export const VOYAGE_SCROLL_VH = 1100;
+/** Scrollable range of the voyage in vh — the denominator the store's progress divides by.
+ *  1300 (not 1100) so the smallest content span, 0.08, still buys 104vh ≥ the 100vh
+ *  `.chapter__pin` sticky child; a pin taller than its section can never pin. */
+export const VOYAGE_SCROLL_VH = 1300;
 
-// NaN (a 0/0 scroll ratio before layout) maps to 0 rather than propagating into
-// three's getPoint, which throws on the per-frame render path. ±Infinity saturates
-// normally, so +Infinity pins to the end of the voyage and -Infinity to the start.
+/** The last section carries one extra viewport beyond its chapter span, so the track is
+ *  `VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH` tall and `scrollHeight - innerHeight === VOYAGE_SCROLL_VH`.
+ *  That identity is the point: store progress (`scrollY / (scrollHeight - innerHeight)`) and
+ *  section offsets then share one denominator, so chapter `c` begins at document offset
+ *  `c.start * VOYAGE_SCROLL_VH` exactly — `scrollTo(c.start)` lands on the section it names. */
+export const VOYAGE_TAIL_VH = 100;
+
+/** DOM height of a chapter's section, in vh. The tail rides on the final chapter. */
+export function sectionHeightVh(chapter: Chapter): number {
+  return (chapter.end - chapter.start) * VOYAGE_SCROLL_VH + (chapter.id === "surface" ? VOYAGE_TAIL_VH : 0);
+}
+
+// One story with voyageStore.ts: Lenis reports `progress === 1` when `limit <= 0` (an
+// unscrollable page), which VoyageScroll guards at the source — but NaN can still arrive
+// from other callers, and mapping it to 0 keeps it out of three's getPoint, which throws
+// on the per-frame render path. ±Infinity saturates normally, so +Infinity pins to the
+// end of the voyage and -Infinity to the start.
 const clamp01 = (v: number) => (Number.isNaN(v) ? 0 : Math.min(1, Math.max(0, v)));
 
 export function chapterAt(progress: number): { chapter: Chapter; chapterProgress: number } {

@@ -602,6 +602,8 @@ EOF
 
 ### Task 3: Generic route handlers
 
+> **Post-review amendments (2026-09-14):** errors are logged with `appendLog("api", …)` from `@/lib/log`, not `console.error` (CLAUDE.md structured-logging rule); `listAndCreate.GET` uses one try/catch and logs list failures; `byId.GET` has the same JSON 500 boundary as the other handlers; all 500 messages use `col.def.name`; tests include auth-before-body (malformed body + failed auth → 401) and explicit 401 cases for `byId.*` and `reorderRoute`. Code in the steps below is superseded where it conflicts.
+
 **Files:**
 - Create: `src/lib/collections/routeHandlers.ts`
 - Test: `src/lib/collections/routeHandlers.test.ts`

@@ -7,6 +7,9 @@ export const LOG_EVENTS = [
   "scene.context_lost",
   "admin.upload_failed",
   "admin.save_failed",
+  // A failed *read* is not a failed save: the dashboard reports them separately so a
+  // stale tab can be told apart from a rejected mutation.
+  "admin.load_failed",
 ] as const;
 
 export type LogEvent = (typeof LOG_EVENTS)[number];

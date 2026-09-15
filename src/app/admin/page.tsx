@@ -45,6 +45,8 @@ export default function AdminPage() {
   const [inquiriesItems, setInquiriesItems] = useState<CollectionItem[]>([]);
   // First-load flag only: later loadData() calls after a mutation must not flash "Loading...".
   const [loaded, setLoaded] = useState(false);
+  // True only once /api/settings has actually answered; guards the whole-form PUT below.
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const [uploading, setUploading] = useState(false);
   const [toasts, setToasts] = useState<{ id: number; msg: string; error?: boolean; undo?: () => void }[]>([]);
@@ -129,10 +131,14 @@ export default function AdminPage() {
     if (!authenticated) return;
     /**
      * One rejected fetch (or one unparseable body) must not take the whole dashboard down:
-     * `Promise.allSettled` plus a per-list apply means a failed list stays empty, is logged,
-     * and every other tab still renders. `setLoaded(true)` lives in `finally` so no tab can
-     * be pinned on "Loading…" by a failure.
+     * `Promise.allSettled` plus a per-list apply means a failed list keeps whatever it last
+     * had (empty on first load), is logged, and every other tab still renders.
+     * `setLoaded(true)` lives in `finally` so no tab can be pinned on "Loading…" by a failure.
+     * Failures are collected and surfaced once, after the batch: silence here is what let a
+     * failed settings load arm a full-form overwrite with defaults.
      */
+    let sawUnauthorized = false;
+    const failed: string[] = [];
     const load = async <T,>(
       url: string,
       collection: string,
@@ -141,31 +147,39 @@ export default function AdminPage() {
       try {
         const res = await fetch(url);
         if (!res.ok) {
-          logClient("admin.save_failed", { collection, verb: "load", status: res.status });
+          // 401 means the session died mid-session: re-auth, don't nag with a toast.
+          if (res.status === 401) sawUnauthorized = true;
+          else failed.push(collection);
+          logClient("admin.load_failed", { collection, verb: "load", status: res.status });
           return;
         }
         apply((await res.json()) as T);
       } catch (e) {
-        logClient("admin.save_failed", { collection, verb: "load", message: String(e) });
+        failed.push(collection);
+        logClient("admin.load_failed", { collection, verb: "load", message: String(e) });
       }
     };
     try {
       // ?all=1 on every collection: the admin needs drafts and internal fields, and the
-      // authed branch answers `no-store` where the public list is CDN-cached for an hour.
+      // authed branch returns published *and* unpublished items.
       await Promise.allSettled([
         load<Project[]>("/api/projects", "projects", setProjects),
         load<Skill[]>("/api/skills", "skills", setSkills),
-        load<Settings>("/api/settings", "settings", setSettings),
+        // settingsLoaded gates Save All: the form must never PUT defaults it never loaded.
+        load<Settings>("/api/settings", "settings", (s) => { setSettings(s); setSettingsLoaded(true); }),
         load<CollectionItem[]>("/api/services?all=1", "services", setServices),
         load<CollectionItem[]>("/api/process?all=1", "process", setProcessSteps),
         load<CollectionItem[]>("/api/case-studies?all=1", "case-studies", setCaseStudiesItems),
         load<CollectionItem[]>("/api/testimonials?all=1", "testimonials", setTestimonialsItems),
         load<CollectionItem[]>("/api/inquiries?all=1", "inquiries", setInquiriesItems),
       ]);
+      // One aggregated report per batch, not one toast per list.
+      if (sawUnauthorized) setAuthenticated(false);
+      else if (failed.length) toast(`Could not load: ${failed.join(", ")}. Some tabs may be incomplete.`, true);
     } finally {
       setLoaded(true);
     }
-  }, [authenticated]);
+  }, [authenticated, toast]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -220,6 +234,12 @@ export default function AdminPage() {
   };
 
   const saveSettings = async (updates: Partial<Settings>) => {
+    // ContentTab/NavigationTab PUT their entire form, so saving from a form seeded with
+    // DEFAULT_SETTINGS would overwrite the live copy with defaults.
+    if (!settingsLoaded) {
+      toast("Settings never loaded — reload before saving.", true);
+      return;
+    }
     const res = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

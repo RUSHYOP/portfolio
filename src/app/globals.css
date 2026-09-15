@@ -1329,7 +1329,13 @@ body {
 .admin-field input[type="email"],
 .admin-field input[type="password"],
 .admin-field input[type="url"],
+/* CollectionTab's search box is type="search" so it exposes the searchbox role; without
+   this it would fall through to the UA's light default box on the dark admin palette. */
+.admin-field input[type="search"],
 .admin-field textarea {
+  /* Safari ignores box styling on a search input unless its native appearance is dropped. */
+  appearance: none;
+  -webkit-appearance: none;
   width: 100%;
   background: var(--primary);
   border: 1px solid var(--border);

@@ -4,8 +4,8 @@ import { verifyRequest } from "@/lib/auth";
 import { appendLog } from "@/lib/log";
 import { DuplicateSlugError, type Collection } from "./defineCollection";
 
-// frozen shape: shared across every public GET, so it must not be mutable by a caller
-export const PUBLIC_CACHE_HEADERS = { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } as const satisfies Record<string, string>;
+// Cache-Control for every /api/* response is set once in next.config.js; route handlers
+// must not set their own or they will be silently overridden on the wire.
 
 type IdCtx = { params: Promise<{ id: string }> };
 
@@ -61,7 +61,7 @@ export function listAndCreate(col: Collection) {
           if (!(await verifyRequest(request))) return unauthorized();
           return NextResponse.json(await col.list({ publishedOnly: false, includeInternal: true }), { headers: { "Cache-Control": "no-store" } });
         }
-        return NextResponse.json(await col.list({ publishedOnly: true }), { headers: PUBLIC_CACHE_HEADERS });
+        return NextResponse.json(await col.list({ publishedOnly: true }));
       } catch (e) {
         return serverError(e, "load", col);
       }

@@ -2,14 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyRequest } from "@/lib/auth";
 import { getSettings, updateSettings } from "@/lib/data";
 
-const CACHE_HEADERS = {
-  "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
-};
-
 export async function GET() {
   try {
     const settings = await getSettings();
-    return NextResponse.json(settings, { headers: CACHE_HEADERS });
+    // No Cache-Control here: next.config.js sets it for every /api/* response.
+    return NextResponse.json(settings);
   } catch {
     return NextResponse.json({ error: "Failed to load settings" }, { status: 500 });
   }

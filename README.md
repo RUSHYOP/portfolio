@@ -38,7 +38,7 @@ The consulting side of the site is schema-driven: one definition per collection 
 | Testimonials | `/api/testimonials` | Published only | Ordered |
 | Inquiries | `/api/inquiries` | POST only | Contact-form submissions; reads are admin-only |
 
-Each collection route also exposes `/[id]` (GET/PUT/DELETE) and `/reorder`. Public GETs return published items only; the admin reads the same routes with `?all=1` plus the auth cookie to see drafts and internal fields.
+Each collection route also exposes `/[id]` (GET/PUT/DELETE); the four orderable collections (services, process, case studies, testimonials) additionally expose `/reorder`. Public GETs return published items only; the admin reads the same routes with `?all=1` plus the auth cookie to see drafts and internal fields.
 
 **Admin tabs** (`/admin`, ⌘1–9): Content, Projects, Skills, Navigation, Media, Consulting, Case studies, Testimonials, Inbox.
 

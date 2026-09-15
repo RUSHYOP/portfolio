@@ -54,11 +54,13 @@ beforeEach(() => {
 });
 
 describe("listAndCreate", () => {
-  it("GET is public, cached, and returns published only", async () => {
+  it("GET is public, returns published only, and sets no Cache-Control of its own", async () => {
     const col = fakeCol();
     const res = await listAndCreate(col).GET(req("GET"));
     expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toContain("s-maxage=3600");
+    // next.config.js sets Cache-Control for every /api/* response; a header here would be
+    // silently overridden on the wire, so the handler must not pretend to set one.
+    expect(res.headers.get("cache-control")).toBeNull();
     expect(col.list).toHaveBeenCalledWith({ publishedOnly: true });
   });
   it("GET ?all=1 requires auth and returns everything", async () => {

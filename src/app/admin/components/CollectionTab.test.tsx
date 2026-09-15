@@ -59,7 +59,12 @@ afterEach(() => vi.unstubAllGlobals());
 
 type Def = typeof caseStudiesDef;
 
-function setup(items: CollectionItem[], def: Def = caseStudiesDef, extra: { loading?: boolean } = {}) {
+function setup(
+  items: CollectionItem[],
+  def: Def = caseStudiesDef,
+  // `singular` is overridable so the fallback (derived from `title`) can be exercised too.
+  extra: { loading?: boolean; title?: string; singular?: string } = {},
+) {
   const toast = vi.fn();
   const loadData = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   const uploadFile = vi.fn<(f: File, t: UploadType) => Promise<string | null>>().mockResolvedValue(null);
@@ -69,6 +74,7 @@ function setup(items: CollectionItem[], def: Def = caseStudiesDef, extra: { load
       def={def}
       apiBase="/api/case-studies"
       title="Case studies"
+      singular="case study"
       items={items}
       toast={toast}
       loadData={loadData}
@@ -180,7 +186,7 @@ describe("CollectionTab editor", () => {
     expect(url).toBe("/api/case-studies");
     expect(init.method).toBe("POST");
     expect(lastBody()).toMatchObject({ title: "New One", slug: "new-one", planetFeature: "none", stack: [] });
-    expect(toast).toHaveBeenCalledWith("Case studies created");
+    expect(toast).toHaveBeenCalledWith("Case study created");
     // The editor closes on success.
     expect(container.querySelector("#field-title")).toBeNull();
   });
@@ -210,6 +216,51 @@ describe("CollectionTab editor", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(container.querySelector("#field-title")).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Singular naming (Task 12 carry-forward)
+ * ------------------------------------------------------------------ */
+
+describe("CollectionTab singular naming", () => {
+  it("uses the `singular` prop in the editor headings", async () => {
+    const { user } = setup([item({ id: "a" })]);
+    await user.click(screen.getByRole("button", { name: "+ Add" }));
+    expect(screen.getByRole("heading", { name: "New case study" })).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByRole("heading", { name: "Edit case study" })).toBeDefined();
+  });
+
+  it("uses the `singular` prop, capitalized, in the save/delete/publish toasts", async () => {
+    const { user, container, toast } = setup([item({ id: "a", published: false })]);
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.type(container.querySelector<HTMLInputElement>("#field-client")!, "Acme");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(toast).toHaveBeenCalledWith("Case study saved"));
+
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+    await waitFor(() => expect(toast).toHaveBeenCalledWith("Case study published"));
+
+    await user.click(screen.getByRole("button", { name: /^delete/i }));
+    await user.click(screen.getByRole("button", { name: /confirm/i }));
+    await waitFor(() => expect(toast).toHaveBeenCalledWith("Case study deleted"));
+  });
+
+  it("falls back to the title minus a trailing s when no `singular` is given", async () => {
+    const { user, toast } = setup([], servicesDef, { title: "Services", singular: undefined });
+    await user.click(screen.getByRole("button", { name: "+ Add" }));
+    expect(screen.getByRole("heading", { name: "New service" })).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(toast).toHaveBeenCalledWith("Service created"));
+  });
+
+  it("leaves the plural list hints and the search label alone", async () => {
+    const { user } = setup([item({ id: "a" })]);
+    expect(screen.getByRole("searchbox", { name: /search case studies/i })).toBeDefined();
+    await user.type(screen.getByRole("searchbox", { name: /search case studies/i }), "zzz");
+    expect(screen.getByText(/no case studies match your search/i)).toBeDefined();
   });
 });
 

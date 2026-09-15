@@ -40,6 +40,7 @@ export default function ConsultingTab({ services, process, toast, loadData, uplo
         def={ALL_DEFS.services}
         apiBase="/api/services"
         title="Services"
+        singular="service"
         items={services}
         toast={toast}
         loadData={loadData}
@@ -53,6 +54,7 @@ export default function ConsultingTab({ services, process, toast, loadData, uplo
         def={ALL_DEFS.process}
         apiBase="/api/process"
         title="Process steps"
+        singular="process step"
         items={process}
         toast={toast}
         loadData={loadData}

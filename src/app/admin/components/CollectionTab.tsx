@@ -12,6 +12,12 @@ interface CollectionTabProps {
   /** e.g. "/api/case-studies" */
   apiBase: string;
   title: string;
+  /**
+   * Singular form of `title`, for the editor heading and the mutation toasts —
+   * "New service", not "New services". Falls back to `title` minus a trailing "s",
+   * which is right for the simple plurals but not for e.g. "Case studies".
+   */
+  singular?: string;
   items: CollectionItem[];
   toast: (msg: string, error?: boolean) => void;
   loadData: () => Promise<void>;
@@ -57,6 +63,7 @@ export default function CollectionTab({
   def,
   apiBase,
   title,
+  singular,
   items,
   toast,
   loadData,
@@ -85,6 +92,10 @@ export default function CollectionTab({
   const editable = useMemo(() => Object.entries(def.fields).filter(([, s]) => !s.internal), [def]);
   const primary = def.searchable[0] ?? Object.keys(def.fields)[0];
   const lower = title.toLowerCase();
+  // One singular noun drives the editor heading and every mutation toast.
+  const one = (singular ?? lower.replace(/s$/, "")).toLowerCase();
+  // Toasts are sentences, so they capitalize it; headings read "New <noun>".
+  const One = one.charAt(0).toUpperCase() + one.slice(1);
 
   const sorted = useMemo(
     () => [...items].sort((a, b) => (def.orderable ? a.order - b.order : b.createdAt.localeCompare(a.createdAt))),
@@ -207,7 +218,7 @@ export default function CollectionTab({
       ? await send(`${apiBase}/${editingId}`, "PUT", form, "update")
       : await send(apiBase, "POST", form, "create");
     if (r.ok) {
-      toast(`${title} ${editingId ? "saved" : "created"}`);
+      toast(`${One} ${editingId ? "saved" : "created"}`);
       closeEditor();
       await refresh();
     } else {
@@ -222,7 +233,7 @@ export default function CollectionTab({
     setListError(null);
     setSaving(true);
     const r = await send(`${apiBase}/${id}`, "DELETE", undefined, "delete");
-    if (r.ok) { toast(`${title} deleted`); await refresh(); }
+    if (r.ok) { toast(`${One} deleted`); await refresh(); }
     else { toast(r.message, true); setListError(r.message); }
     setSaving(false);
   };
@@ -232,7 +243,7 @@ export default function CollectionTab({
     setSaving(true);
     const next = !it.published;
     const r = await send(`${apiBase}/${it.id}`, "PUT", { published: next }, "publish");
-    if (r.ok) { toast(next ? `${title} published` : `${title} unpublished`); await refresh(); }
+    if (r.ok) { toast(next ? `${One} published` : `${One} unpublished`); await refresh(); }
     else { toast(r.message, true); setListError(r.message); }
     setSaving(false);
   };
@@ -271,7 +282,7 @@ export default function CollectionTab({
         closeEditor();
       }}
     >
-      <h3>{submitLabel === "Create" ? `New ${lower}` : `Edit ${lower}`}</h3>
+      <h3>{submitLabel === "Create" ? `New ${one}` : `Edit ${one}`}</h3>
       {formError && <div className="admin-field-error" role="alert">{formError}</div>}
       {editable.map(([k, s]) => (
         <FieldInput

@@ -1366,8 +1366,10 @@ body {
 /* Native <select> / number inputs are not covered by the typed-input rules above.
    Promoted from FieldInput's inline NATIVE_CONTROL_STYLE (Task 10). `outline` is
    deliberately never suppressed here, and :focus-visible draws an explicit ring. */
-.admin-field .admin-native-control {
-  width: 100%;
+/* Task 11: de-scoped from `.admin-field` so the Inbox status filter, which lives in a
+   section header rather than a field wrapper, gets the same dark treatment. Full-width
+   stays field-only — a header filter sizes to its content. */
+.admin-native-control {
   background: var(--primary);
   border: 1px solid var(--border);
   color: var(--white);
@@ -1378,7 +1380,11 @@ body {
   transition: border-color 0.3s ease;
 }
 
-.admin-field .admin-native-control:focus-visible {
+.admin-field .admin-native-control {
+  width: 100%;
+}
+
+.admin-native-control:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

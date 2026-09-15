@@ -2,15 +2,26 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { Settings, Project, Skill, Tab } from "./components/types";
+import type { Settings, Project, Skill, Tab, CollectionItem, UploadType } from "./components/types";
 import { DEFAULT_SETTINGS } from "./components/types";
+// Client-safe defs barrel — "@/lib/collections" would pull Mongoose into the browser bundle.
+import { ALL_DEFS } from "@/lib/collections/defs";
 import ContentTab from "./components/ContentTab";
 import ProjectsTab from "./components/ProjectsTab";
 import SkillsTab from "./components/SkillsTab";
 import NavigationTab from "./components/NavigationTab";
 import MediaTab from "./components/MediaTab";
+import CollectionTab from "./components/CollectionTab";
+import ConsultingTab from "./components/ConsultingTab";
+import InboxTab from "./components/InboxTab";
 
-const TABS: Tab[] = ["content", "projects", "skills", "navigation", "media"];
+const TABS: Tab[] = ["content", "projects", "skills", "navigation", "media", "consulting", "caseStudies", "testimonials", "inbox"];
+
+/** Display names: several tab ids are camelCase and do not title-case mechanically. */
+const TAB_LABELS: Record<Tab, string> = {
+  content: "Content", projects: "Projects", skills: "Skills", navigation: "Navigation", media: "Media",
+  consulting: "Consulting", caseStudies: "Case studies", testimonials: "Testimonials", inbox: "Inbox",
+};
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -24,6 +35,15 @@ export default function AdminPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  // Schema-driven collections (Task 11). `processSteps`, not `process`: the latter shadows
+  // the Node global inside this module.
+  const [services, setServices] = useState<CollectionItem[]>([]);
+  const [processSteps, setProcessSteps] = useState<CollectionItem[]>([]);
+  const [caseStudiesItems, setCaseStudiesItems] = useState<CollectionItem[]>([]);
+  const [testimonialsItems, setTestimonialsItems] = useState<CollectionItem[]>([]);
+  const [inquiriesItems, setInquiriesItems] = useState<CollectionItem[]>([]);
+  // First-load flag only: later loadData() calls after a mutation must not flash "Loading...".
+  const [loaded, setLoaded] = useState(false);
 
   const [uploading, setUploading] = useState(false);
   const [toasts, setToasts] = useState<{ id: number; msg: string; error?: boolean; undo?: () => void }[]>([]);
@@ -93,10 +113,27 @@ export default function AdminPage() {
 
   const loadData = useCallback(async () => {
     if (!authenticated) return;
-    const [pRes, sRes, setRes] = await Promise.all([fetch("/api/projects"), fetch("/api/skills"), fetch("/api/settings")]);
+    // ?all=1 on every collection: the admin needs drafts and internal fields, and the
+    // authed branch answers `no-store` where the public list is CDN-cached for an hour.
+    const [pRes, sRes, setRes, svcRes, prcRes, csRes, tsRes, inqRes] = await Promise.all([
+      fetch("/api/projects"),
+      fetch("/api/skills"),
+      fetch("/api/settings"),
+      fetch("/api/services?all=1"),
+      fetch("/api/process?all=1"),
+      fetch("/api/case-studies?all=1"),
+      fetch("/api/testimonials?all=1"),
+      fetch("/api/inquiries"),
+    ]);
     if (pRes.ok) setProjects(await pRes.json());
     if (sRes.ok) setSkills(await sRes.json());
     if (setRes.ok) { const s: Settings = await setRes.json(); setSettings(s); }
+    if (svcRes.ok) setServices(await svcRes.json());
+    if (prcRes.ok) setProcessSteps(await prcRes.json());
+    if (csRes.ok) setCaseStudiesItems(await csRes.json());
+    if (tsRes.ok) setTestimonialsItems(await tsRes.json());
+    if (inqRes.ok) setInquiriesItems(await inqRes.json());
+    setLoaded(true);
   }, [authenticated]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -128,7 +165,8 @@ export default function AdminPage() {
     setAuthenticated(false);
   };
 
-  const uploadFile = async (file: File, type: "profile" | "project_icon" | "skill_icon" | "audio"): Promise<string | null> => {
+  // UploadType (not the old 4-member literal union) — case-study diagrams are an upload kind too.
+  const uploadFile = async (file: File, type: UploadType): Promise<string | null> => {
     setUploading(true);
     try {
       const fd = new FormData();
@@ -290,7 +328,7 @@ export default function AdminPage() {
               aria-current={isActive ? "page" : undefined}
             >
               <span className="admin-tab-label">
-                {t.charAt(0).toUpperCase() + t.slice(1)}
+                {TAB_LABELS[t]}
                 {isDirty && (
                   <motion.span
                     className="admin-dirty-pulse"
@@ -313,7 +351,7 @@ export default function AdminPage() {
             </button>
           );
         })}
-        <span className="admin-shortcut-hint" aria-hidden="true">⌘1–5 to switch</span>
+        <span className="admin-shortcut-hint" aria-hidden="true">⌘1–9 to switch</span>
       </nav>
 
       <main className="admin-main">
@@ -331,6 +369,10 @@ export default function AdminPage() {
             {tab === "skills" && <SkillsTab skills={skills} uploading={uploading} toast={toast} loadData={loadData} uploadFile={uploadFile} onDirtyChange={(d) => setDirty("skills", d)} />}
             {tab === "navigation" && <NavigationTab settings={settings} onSave={saveSettings} onDirtyChange={(d) => setDirty("navigation", d)} />}
             {tab === "media" && <MediaTab settings={settings} uploading={uploading} toast={toast} uploadFile={uploadFile} onSave={saveSettings} />}
+            {tab === "consulting" && <ConsultingTab services={services} process={processSteps} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("consulting", d)} />}
+            {tab === "caseStudies" && <CollectionTab def={ALL_DEFS["case-studies"]} apiBase="/api/case-studies" title="Case studies" items={caseStudiesItems} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("caseStudies", d)} />}
+            {tab === "testimonials" && <CollectionTab def={ALL_DEFS.testimonials} apiBase="/api/testimonials" title="Testimonials" items={testimonialsItems} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("testimonials", d)} />}
+            {tab === "inbox" && <InboxTab inquiries={inquiriesItems} toast={toast} loadData={loadData} loading={!loaded} />}
           </motion.div>
         </AnimatePresence>
       </main>

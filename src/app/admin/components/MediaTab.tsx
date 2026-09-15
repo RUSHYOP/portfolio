@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
-import type { Settings, MediaFile } from "./types";
+import type { Settings, MediaFile, UploadType } from "./types";
 
 interface MediaTabProps {
   settings: Settings;
   uploading: boolean;
   toast: (msg: string, error?: boolean, undo?: () => void) => void;
-  uploadFile: (file: File, type: "profile" | "project_icon" | "skill_icon" | "audio") => Promise<string | null>;
+  // Widened to the shared UploadType union (Task 11) so the page-level uploadFile typechecks.
+  uploadFile: (file: File, type: UploadType) => Promise<string | null>;
   onSave: (updates: Partial<Settings>) => Promise<void>;
 }
 

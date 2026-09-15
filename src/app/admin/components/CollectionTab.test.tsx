@@ -343,3 +343,71 @@ describe("CollectionTab row actions", () => {
     expect(screen.queryByRole("button", { name: /move/i })).toBeNull();
   });
 });
+
+/* ------------------------------------------------------------------ *
+ * Task 11 carry-forwards: focus, long labels, in-flight disabling
+ * ------------------------------------------------------------------ */
+
+describe("CollectionTab editor affordances", () => {
+  it("focuses the first field when the editor opens", async () => {
+    const { user } = setup([]);
+    await user.click(screen.getByRole("button", { name: "+ Add" }));
+    // Case studies' first editable field is the slug.
+    expect(document.activeElement?.id).toBe("field-slug");
+  });
+
+  it("moves focus again when Edit opens a different row's editor", async () => {
+    const { user } = setup([item({ id: "a", title: "Alpha" }), item({ id: "b", title: "Beta", order: 1 })]);
+    await user.click(screen.getByRole("button", { name: "+ Add" }));
+    expect(document.activeElement?.id).toBe("field-slug");
+    // Blur, then open a row editor: the editor stays "open" throughout, so a naive
+    // open/closed effect would not refocus.
+    (document.activeElement as HTMLElement).blur();
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+    expect(document.activeElement?.id).toBe("field-slug");
+  });
+
+  it("does not close the editor on Escape from a focused select", async () => {
+    const { user } = setup([]);
+    await user.click(screen.getByRole("button", { name: "+ Add" }));
+    const select = document.querySelector<HTMLSelectElement>("#field-planetFeature")!;
+    select.focus();
+    await user.keyboard("{Escape}");
+    expect(document.querySelector("#field-slug")).not.toBeNull();
+    // …but Escape from a text field still closes it.
+    document.querySelector<HTMLInputElement>("#field-title")!.focus();
+    await user.keyboard("{Escape}");
+    expect(document.querySelector("#field-slug")).toBeNull();
+  });
+
+  it("truncates a long primary label in the row and in the move buttons", () => {
+    const quote = "Q".repeat(400);
+    setup(
+      [{ id: "t1", order: 0, createdAt: "2026-01-01T00:00:00.000Z", quote, name: "n", role: "", company: "", published: true } as CollectionItem],
+      testimonialsDef,
+    );
+    const label = document.querySelector<HTMLElement>(".admin-collection-name")!;
+    expect(label.textContent!.length).toBeLessThanOrEqual(60);
+    expect(label.textContent!.endsWith("…")).toBe(true);
+    // The untruncated value stays reachable as a tooltip.
+    expect(label.title).toBe(quote);
+    const up = screen.getByRole("button", { name: /move .* up/i });
+    expect(up.getAttribute("aria-label")!.length).toBeLessThan(80);
+  });
+
+  it("leaves a short primary label untouched", () => {
+    setup([item({ id: "a", title: "Alpha" })]);
+    const label = document.querySelector<HTMLElement>(".admin-collection-name")!;
+    expect(label.textContent).toBe("Alpha");
+  });
+
+  it("disables Add, Edit and Delete while a mutation is in flight", async () => {
+    // A publish that never resolves keeps `saving` true for the assertion.
+    fetchMock.mockImplementation(() => new Promise(() => {}));
+    const { user } = setup([item({ id: "a", title: "Alpha" })]);
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>("button", { name: "+ Add" }).disabled).toBe(true));
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Edit" }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Delete" }).disabled).toBe(true);
+  });
+});

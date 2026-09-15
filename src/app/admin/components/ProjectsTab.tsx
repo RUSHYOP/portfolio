@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { Project } from "./types";
+import type { Project, UploadType } from "./types";
 import { EMPTY_PROJECT } from "./types";
 
 interface ProjectsTabProps {
@@ -9,7 +9,8 @@ interface ProjectsTabProps {
   uploading: boolean;
   toast: (msg: string, error?: boolean, undo?: () => void) => void;
   loadData: () => Promise<void>;
-  uploadFile: (file: File, type: "profile" | "project_icon" | "skill_icon" | "audio") => Promise<string | null>;
+  // Widened to the shared UploadType union (Task 11) so the page-level uploadFile typechecks.
+  uploadFile: (file: File, type: UploadType) => Promise<string | null>;
   onDirtyChange?: (dirty: boolean) => void;
 }
 

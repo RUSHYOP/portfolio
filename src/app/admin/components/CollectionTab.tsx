@@ -43,6 +43,16 @@ function formFromItem(def: CollectionDef, it: CollectionItem): Form {
 
 type SendResult = { ok: true } | { ok: false; status: number; message: string };
 
+/**
+ * Row labels are user content and the primary field is not always short — a testimonial's
+ * is a 400-char quote. Clamp it so a row stays one line and a move button's accessible
+ * name stays speakable; the untruncated text remains in the row's `title`.
+ */
+const MAX_LABEL = 60;
+export function truncateLabel(s: string): string {
+  return s.length > MAX_LABEL ? `${s.slice(0, MAX_LABEL - 1).trimEnd()}…` : s;
+}
+
 export default function CollectionTab({
   def,
   apiBase,
@@ -67,6 +77,7 @@ export default function CollectionTab({
   const [formError, setFormError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
 
   // Spec-derived, not name-derived: the slug widget is identified by its type.
   const slugKey = useMemo(() => Object.entries(def.fields).find(([, s]) => s.type === "slug")?.[0], [def]);
@@ -89,6 +100,13 @@ export default function CollectionTab({
 
   const editorOpen = adding || editingId !== null;
   useEffect(() => { onDirtyChange?.(editorOpen); }, [editorOpen, onDirtyChange]);
+
+  // Opening the editor — or switching which row is open, which leaves `editorOpen` true —
+  // moves focus to its first control so the form is typeable without reaching for the mouse.
+  useEffect(() => {
+    if (!adding && editingId === null) return;
+    editorRef.current?.querySelector<HTMLElement>("input, textarea, select, button[role='switch']")?.focus();
+  }, [adding, editingId]);
 
   // The delete confirmation is a 5s window, not a modal; it also clears on unmount.
   useEffect(() => {
@@ -239,10 +257,19 @@ export default function CollectionTab({
   const editor = (submitLabel: string) => (
     <div
       className="admin-card admin-form-card"
+      ref={editorRef}
       style={{ marginBottom: "1.5rem" }}
       // Scoped to the editor rather than window: the admin page already owns a global
       // Escape handler (it dismisses toasts).
-      onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); closeEditor(); } }}
+      onKeyDown={(e) => {
+        if (e.key !== "Escape") return;
+        // An open native <select> popup swallows its own Escape, but the keydown still
+        // reaches us in some browsers — closing the editor out from under the picker.
+        // Escape from a focused select is therefore never a close.
+        if (e.target instanceof HTMLSelectElement) return;
+        e.stopPropagation();
+        closeEditor();
+      }}
     >
       <h3>{submitLabel === "Create" ? `New ${lower}` : `Edit ${lower}`}</h3>
       {formError && <div className="admin-field-error" role="alert">{formError}</div>}
@@ -273,7 +300,8 @@ export default function CollectionTab({
     <section>
       <div className="admin-section-header">
         <h2>{title}</h2>
-        <button className="admin-btn admin-btn-primary" onClick={startAdd}>+ Add</button>
+        {/* Disabled while a mutation is in flight — a refresh is about to replace the list. */}
+        <button className="admin-btn admin-btn-primary" disabled={saving} onClick={startAdd}>+ Add</button>
       </div>
 
       {items.length > 0 && (
@@ -306,7 +334,10 @@ export default function CollectionTab({
           ) : (
             <div key={it.id} className="admin-skill-row">
               <div className="admin-skill-info">
-                <span className="admin-collection-name">{String(it[primary] ?? it.id)}</span>
+                {/* Truncated for the row; the full value stays available as a tooltip. */}
+                <span className="admin-collection-name" title={String(it[primary] ?? it.id)}>
+                  {truncateLabel(String(it[primary] ?? it.id))}
+                </span>
                 {def.publishable && (
                   <span className="admin-tag" style={{ marginLeft: "0.5rem" }}>{it.published ? "Live" : "Draft"}</span>
                 )}
@@ -318,7 +349,7 @@ export default function CollectionTab({
                       className="admin-btn admin-btn-sm"
                       // Reordering is disabled while filtering: the visible index is not the stored one.
                       disabled={saving || index === 0 || query.length > 0}
-                      aria-label={`Move ${String(it[primary] ?? it.id)} up`}
+                      aria-label={`Move ${truncateLabel(String(it[primary] ?? it.id))} up`}
                       title="Move up"
                       onClick={() => move(it, -1)}
                     >
@@ -327,7 +358,7 @@ export default function CollectionTab({
                     <button
                       className="admin-btn admin-btn-sm"
                       disabled={saving || index === filtered.length - 1 || query.length > 0}
-                      aria-label={`Move ${String(it[primary] ?? it.id)} down`}
+                      aria-label={`Move ${truncateLabel(String(it[primary] ?? it.id))} down`}
                       title="Move down"
                       onClick={() => move(it, 1)}
                     >
@@ -340,7 +371,7 @@ export default function CollectionTab({
                     {it.published ? "Unpublish" : "Publish"}
                   </button>
                 )}
-                <button className="admin-btn admin-btn-sm" onClick={() => startEdit(it)}>Edit</button>
+                <button className="admin-btn admin-btn-sm" disabled={saving} onClick={() => startEdit(it)}>Edit</button>
                 {confirmDeleteId === it.id ? (
                   <>
                     <button className="admin-btn admin-btn-sm admin-btn-danger" disabled={saving} onClick={() => remove(it.id)}>
@@ -351,7 +382,7 @@ export default function CollectionTab({
                     </button>
                   </>
                 ) : (
-                  <button className="admin-btn admin-btn-sm admin-btn-danger" onClick={() => setConfirmDeleteId(it.id)}>
+                  <button className="admin-btn admin-btn-sm admin-btn-danger" disabled={saving} onClick={() => setConfirmDeleteId(it.id)}>
                     Delete
                   </button>
                 )}

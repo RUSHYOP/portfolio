@@ -90,6 +90,25 @@ describe("AdminPage load failures", () => {
     expect(calls.some((c) => c.url.startsWith("/api/settings") && c.method === "PUT")).toBe(false);
   });
 
+  it("reports two failed loads in a single toast", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        calls.push(url);
+        if (url.startsWith("/api/auth/verify")) return json({ ok: true });
+        if (url.startsWith("/api/settings") || url.startsWith("/api/projects")) return json({ error: "boom" }, 500);
+        return json([]);
+      })
+    );
+    render(<AdminPage />);
+
+    const toast = await screen.findByText(/Could not load:/);
+    expect(toast.textContent).toMatch(/Could not load: (settings, projects|projects, settings)\./);
+    expect(screen.getAllByText(/Could not load:/)).toHaveLength(1);
+  });
+
   it("falls back to the login form when a load 401s, with no error toast", async () => {
     mountWith(() => json({ error: "Unauthorized" }, 401));
 

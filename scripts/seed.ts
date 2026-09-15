@@ -98,7 +98,11 @@ async function seed() {
       engagement: "Retainer, 4–8 hours a week",
     },
   ]) {
-    await services.create(s);
+    // Route seeds through the same validator the API uses — a literal that drifts from
+    // the spec must fail the seed, not land unvalidated in the database.
+    const v = services.validate(s, "create");
+    if (!v.ok) throw new Error(`seed service invalid: ${v.error}`);
+    await services.create(v.value);
   }
   console.log("Seeded 3 services");
 
@@ -128,7 +132,9 @@ async function seed() {
       duration: "1 week",
     },
   ]) {
-    await processSteps.create(p);
+    const v = processSteps.validate(p, "create");
+    if (!v.ok) throw new Error(`seed process step invalid: ${v.error}`);
+    await processSteps.create(v.value);
   }
   console.log("Seeded 4 process steps");
 

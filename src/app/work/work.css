@@ -37,6 +37,8 @@ body:has(.work) { background: #0a0a0a; }
   text-decoration: none;
 }
 .work__back:hover { color: #fff; }
+/* Repeat of the same link after the last section: spacing flips to the top. */
+.work__back--end { margin: 3rem 0 0; }
 
 .work__eyebrow {
   font-family: var(--font-jetbrains-mono), monospace;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,14 +14,24 @@ export const revalidate = 300;
 // Studies published after the last build must still render, not 404.
 export const dynamicParams = true;
 
+// generateMetadata and the page body both need the same study; React's `cache` dedupes
+// them to one DB read per request.
+const getCase = cache(getCaseStudyBySlug);
+
 export async function generateStaticParams() {
-  const slugs = await getPublishedCaseStudySlugs();
-  return slugs.map((slug) => ({ slug }));
+  try {
+    const slugs = await getPublishedCaseStudySlugs();
+    return slugs.map((slug) => ({ slug }));
+  } catch {
+    // Build without DB reachability: prerender nothing and let ISR render on first
+    // request (dynamicParams is true), rather than failing the whole build.
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  return buildCaseStudyMetadata(await getCaseStudyBySlug(slug));
+  return buildCaseStudyMetadata(await getCase(slug));
 }
 
 // Fixed narrative order; each section is skipped when its markdown is empty.
@@ -33,7 +44,7 @@ const SECTIONS = [
 export default async function CaseStudyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   // Returns null for unknown *and* unpublished slugs — both are a 404 to the public.
-  const cs = await getCaseStudyBySlug(slug);
+  const cs = await getCase(slug);
   if (!cs) notFound();
 
   const stack = Array.isArray(cs.stack) ? cs.stack : [];
@@ -51,15 +62,16 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
         {cs.context ? <p className="work__context">{String(cs.context)}</p> : null}
         {metrics.length > 0 && (
           <ul className="work__metrics" aria-label="Key metrics">
-            {metrics.map((m) => (
-              <li key={m}>{m}</li>
+            {/* Index-prefixed keys: two metrics can legitimately carry the same text. */}
+            {metrics.map((m, i) => (
+              <li key={`${i}-${m}`}>{m}</li>
             ))}
           </ul>
         )}
         {stack.length > 0 && (
           <ul className="work__stack" aria-label="Stack">
-            {stack.map((s) => (
-              <li key={s}>{s}</li>
+            {stack.map((s, i) => (
+              <li key={`${i}-${s}`}>{s}</li>
             ))}
           </ul>
         )}
@@ -95,6 +107,10 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
           </section>
         );
       })}
+      {/* The header link is a long scroll away by the end of a study. */}
+      <Link href="/voyage#worlds" className="work__back work__back--end">
+        ← Back to the voyage
+      </Link>
     </main>
   );
 }

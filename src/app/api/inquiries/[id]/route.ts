@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { inquiries } from "@/lib/collections";
 import { byId, logApiError } from "@/lib/collections/routeHandlers";
 import { verifyRequest } from "@/lib/auth";
-import { appendLog } from "@/lib/log";
 import { STATUS_OPTIONS } from "@/lib/collections/specs/inquiries";
 
 // GET/DELETE reuse the generic admin handlers; PUT is custom below since inquiries

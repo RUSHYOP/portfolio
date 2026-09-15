@@ -13,6 +13,11 @@ vi.mock("next/image", () => ({
   default: (props: { src: string; alt: string }) => <img src={props.src} alt={props.alt} />,
 }));
 
+// FieldInput reports upload failures through the structured client logger, not console.
+// vi.hoisted so the spy exists before the hoisted vi.mock factory runs.
+const { logClient } = vi.hoisted(() => ({ logClient: vi.fn() }));
+vi.mock("@/lib/clientLog", () => ({ logClient, LOG_EVENTS: [] }));
+
 const { default: FieldInput } = await import("./FieldInput");
 
 // vitest.config.mts has no `globals: true`, so RTL's auto-cleanup hook never registers.
@@ -110,17 +115,16 @@ describe("FieldInput markup", () => {
     expect(markup({ type: "number", label: "N" }, 7)).toContain('type="number"');
   });
 
-  it("does not suppress the native focus ring on select or number, and keeps the dark color-scheme", () => {
-    // FieldInput cannot be mounted in the running app, so the focus ring is verified by
-    // asserting the inline style never sets `outline` (the UA ring survives) instead.
+  it("styles select and number through the shared admin class, with no inline style left", () => {
+    // Task 10 promoted the former inline NATIVE_CONTROL_STYLE into globals.css
+    // (`.admin-field .admin-native-control`, which owns color-scheme and :focus-visible).
     for (const html of [
       markup({ type: "select", label: "S", options: [{ value: "a", label: "Alpha" }] }, "a"),
       markup({ type: "number", label: "N" }, 1),
     ]) {
       const el = parse(html).querySelector("select, input[type=number]");
-      const style = el?.getAttribute("style") ?? "";
-      expect(style).not.toMatch(/outline/);
-      expect(style).toMatch(/color-scheme:\s*dark/);
+      expect(el?.classList.contains("admin-native-control")).toBe(true);
+      expect(el?.getAttribute("style")).toBeNull();
     }
   });
 });
@@ -272,6 +276,22 @@ describe("FieldInput slug interaction", () => {
     // A single trailing hyphen is allowed mid-typing; otherwise the value is a valid slug.
     expect(final === "" || SLUG_RE.test(final.replace(/-$/, ""))).toBe(true);
   });
+
+  it("keeps a trailing hyphen while focused and strips it on blur", async () => {
+    const { spy, user } = setup(spec, "");
+    await user.type(screen.getByRole("textbox"), "foo-");
+    expect(last(spy)).toBe("foo-");
+    await user.tab();
+    expect(last(spy)).toBe("foo");
+    expect(screen.getByRole<HTMLInputElement>("textbox").value).toBe("foo");
+  });
+
+  it("emits nothing on blur when the value needs no normalising", async () => {
+    const { spy, user } = setup(spec, "foo");
+    await user.click(screen.getByRole("textbox"));
+    await user.tab();
+    expect(spy).not.toHaveBeenCalled();
+  });
 });
 
 describe("FieldInput toggle interaction", () => {
@@ -339,17 +359,20 @@ describe("FieldInput image interaction", () => {
     expect(fileInput(container).value).toBe("");
   });
 
-  it("resets the file input when the upload rejects, without an unhandled rejection", async () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("logs a structured admin.upload_failed when the upload rejects, never console.error", async () => {
+    logClient.mockClear();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const uploadFile = vi
       .fn<(f: File, t: "diagram") => Promise<string | null>>()
       .mockRejectedValue(new Error("network"));
     const { spy, user, container } = setup(spec, "", uploadFile);
     await user.upload(fileInput(container), file());
-    await waitFor(() => expect(logged).toHaveBeenCalled());
+    await waitFor(() => expect(logClient).toHaveBeenCalled());
+    expect(logClient).toHaveBeenCalledWith("admin.upload_failed", expect.objectContaining({ field: "f" }));
+    expect(consoleError).not.toHaveBeenCalled();
     expect(spy).not.toHaveBeenCalled();
     expect(fileInput(container).value).toBe("");
-    logged.mockRestore();
+    consoleError.mockRestore();
   });
 
   it("clears the value from the Remove button", async () => {

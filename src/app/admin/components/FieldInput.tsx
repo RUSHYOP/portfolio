@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type ReactNode, type CSSProperties } from "react";
+import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import type { FieldSpec, FieldValue } from "@/lib/collections/fieldSpec";
+import { logClient } from "@/lib/clientLog";
 
 interface FieldInputProps {
   name: string;
@@ -18,22 +19,11 @@ interface FieldInputProps {
 const COUNTED_TYPES = new Set<FieldSpec["type"]>(["text", "textarea", "markdown", "slug"]);
 
 /**
- * globals.css styles .admin-field inputs/textareas but not <select> or number inputs;
- * these inline tokens keep those two native widgets on the dark admin palette without
- * editing the shared stylesheet (Task 10 may promote them to real CSS).
+ * Class for <select> and number inputs, which the typed-input rules in globals.css miss.
+ * Task 10 promoted the former inline NATIVE_CONTROL_STYLE into `.admin-field
+ * .admin-native-control` there (dark color-scheme, explicit :focus-visible ring).
  */
-const NATIVE_CONTROL_STYLE: CSSProperties = {
-  background: "var(--primary)",
-  border: "1px solid var(--border)",
-  color: "var(--white)",
-  colorScheme: "dark",
-  fontSize: "0.95rem",
-  fontFamily: "inherit",
-  padding: "0.7rem 0.9rem",
-  // No `outline: none` — suppressing it would hide the keyboard focus ring on these two
-  // native widgets; `colorScheme: dark` keeps the UA-drawn ring on the admin palette.
-  width: "100%",
-};
+const NATIVE_CONTROL_CLASS = "admin-native-control";
 
 /**
  * Keeps a slug field typeable: lowercase, spaces→hyphen, drop anything SLUG_RE rejects,
@@ -98,6 +88,12 @@ export default function FieldInput({ name, spec, value, onChange, uploadFile, up
           // Filter per keystroke instead of slugify(): slugify strips trailing hyphens,
           // which would swallow the hyphen the moment the user types it.
           onChange={(e) => onChange(constrainSlug(e.target.value))}
+          // The trailing hyphen only survives while the field has focus; on blur the value
+          // is normalised so what is submitted always satisfies SLUG_RE. Emits only on change.
+          onBlur={() => {
+            const trimmed = str.replace(/-+$/, "");
+            if (trimmed !== str) onChange(trimmed);
+          }}
           {...a11y}
         />
       );
@@ -108,7 +104,7 @@ export default function FieldInput({ name, spec, value, onChange, uploadFile, up
         <input
           id={id}
           type="number"
-          style={NATIVE_CONTROL_STYLE}
+          className={NATIVE_CONTROL_CLASS}
           value={numDraft ?? committed}
           max={spec.max}
           onChange={(e) => {
@@ -167,7 +163,7 @@ export default function FieldInput({ name, spec, value, onChange, uploadFile, up
       // A disabled placeholder keeps the visible state honest and forces a real pick.
       const unmatched = !options.some((o) => o.value === str);
       control = (
-        <select id={id} style={NATIVE_CONTROL_STYLE} value={str} onChange={(e) => onChange(e.target.value)} {...a11y}>
+        <select id={id} className={NATIVE_CONTROL_CLASS} value={str} onChange={(e) => onChange(e.target.value)} {...a11y}>
           {unmatched && <option value={str} disabled>Select…</option>}
           {options.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -252,8 +248,8 @@ export default function FieldInput({ name, spec, value, onChange, uploadFile, up
               } catch (err) {
                 // uploadFile is contracted to resolve null on failure; a throw would otherwise
                 // escape this async handler as an unhandled rejection. The owner of uploadFile
-                // surfaces user-facing upload errors.
-                console.error("FieldInput: upload failed", err);
+                // surfaces user-facing upload errors; this is the structured record of it.
+                logClient("admin.upload_failed", { field: name, message: String(err) });
               } finally {
                 // Always clear, even if the upload rejected, so re-picking the same file fires change again.
                 input.value = "";

@@ -1,5 +1,13 @@
 /** Single source of truth for the client event names the /api/logs route accepts. */
-export const LOG_EVENTS = ["quality.tier", "quality.probe", "scene.context_lost"] as const;
+// Task 10: admin.* events let the CMS admin report upload/mutation failures through the
+// structured log pipeline instead of console.*.
+export const LOG_EVENTS = [
+  "quality.tier",
+  "quality.probe",
+  "scene.context_lost",
+  "admin.upload_failed",
+  "admin.save_failed",
+] as const;
 
 export type LogEvent = (typeof LOG_EVENTS)[number];
 

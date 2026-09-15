@@ -37,6 +37,8 @@ const UPLOAD_LIMITS: Record<string, { maxBytes: number; maxWidth: number; maxHei
   project_icon: { maxBytes: 512 * 1024, maxWidth: 256, maxHeight: 256, extensions: ["jpg", "jpeg", "png", "webp", "svg"] },
   skill_icon: { maxBytes: 200 * 1024, maxWidth: 128, maxHeight: 128, extensions: ["jpg", "jpeg", "png", "webp", "svg"] },
   audio: { maxBytes: 10 * 1024 * 1024, maxWidth: 0, maxHeight: 0, extensions: ["mp3", "ogg", "wav"] },
+  // Case-study architecture diagrams (Task 10): wider and taller than an icon, still capped at 1MB.
+  diagram: { maxBytes: 1024 * 1024, maxWidth: 1600, maxHeight: 1200, extensions: ["jpg", "jpeg", "png", "webp", "svg"] },
 };
 
 export async function POST(request: NextRequest) {

@@ -11,11 +11,6 @@ export const caseStudies = defineCollection(caseStudiesDef);
 export const testimonials = defineCollection(testimonialsDef);
 export const inquiries = defineCollection(inquiriesDef);
 
-/** Keyed by API path segment — the admin uses this to build field forms and URLs. */
-export const ALL_DEFS = {
-  services: servicesDef,
-  process: processStepsDef,
-  "case-studies": caseStudiesDef,
-  testimonials: testimonialsDef,
-  inquiries: inquiriesDef,
-} as const;
+// ALL_DEFS lives in ./defs (mongoose-free) so client components can import it; re-exported
+// here so server-side consumers keep one import site and the two can never drift.
+export { ALL_DEFS, type CollectionKey } from "./defs";

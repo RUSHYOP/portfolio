@@ -15,7 +15,12 @@ export interface Settings {
   showHeroButton: boolean; showNavbar: boolean; navLinks: NavLink[]; footerSections: FooterSection[];
 }
 
-export type Tab = "content" | "projects" | "skills" | "navigation" | "media";
+// Task 10: the schema-driven consulting tabs join the union; they are mounted in Task 11.
+export type Tab = "content" | "projects" | "skills" | "navigation" | "media" | "consulting" | "caseStudies" | "testimonials" | "inbox";
+/** Upload kinds accepted by /api/upload — `diagram` added for case-study architecture images. */
+export type UploadType = "profile" | "project_icon" | "skill_icon" | "audio" | "diagram";
+// Type-only re-export: erased at compile time, so no mongoose reaches the client bundle.
+export type { Item as CollectionItem } from "@/lib/collections/defineCollection";
 
 export const EMPTY_PROJECT: Omit<Project, "id" | "order"> = { title: "", description: "", icon: "", technologies: [], liveLink: "", liveLinkLabel: "", codeLink: "", showLiveLink: false, showCodeLink: true };
 

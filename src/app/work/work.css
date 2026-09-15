@@ -121,14 +121,14 @@ body:has(.work) { background: #0a0a0a; }
 
 /* ====== Sanitised CMS markdown ======
    renderMarkdown's allow-list is h1–h4, p, ul/ol/li, strong, em, code, pre, a,
-   blockquote, br, hr — every one of them is styled below. */
+   blockquote, br, hr — every one of them is styled below, except h1: it is
+   transformed to h2 before it reaches the DOM (the page owns the only <h1>). */
 .work__prose {
   max-width: 68ch;
   font-size: 1.05rem;
   line-height: 1.7;
   font-weight: 300;
 }
-.work__prose h1,
 .work__prose h2,
 .work__prose h3,
 .work__prose h4 {
@@ -140,7 +140,6 @@ body:has(.work) { background: #0a0a0a; }
   margin: 2.25rem 0 0.75rem;
 }
 .work__prose > :first-child { margin-top: 0; }
-.work__prose h1 { font-size: 1.6rem; }
 .work__prose h2 { font-size: 1.35rem; }
 .work__prose h3 { font-size: 1.15rem; }
 .work__prose h4 { font-size: 1rem; }

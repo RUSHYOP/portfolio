@@ -22,6 +22,9 @@ const SANITIZE: sanitizeHtml.IOptions = {
   allowedSchemes: ["http", "https", "mailto"],
   allowProtocolRelative: false,
   transformTags: {
+    // The page already owns the <h1>; a markdown h1 would nest a second one under an h2.
+    // simpleTransform (not removing "h1" from allowedTags) keeps the heading, only demoted.
+    h1: sanitizeHtml.simpleTransform("h2", {}),
     a: (tagName, attribs) => {
       const href = attribs.href?.trim();
       if (href && SAFE_HREF.test(href)) {

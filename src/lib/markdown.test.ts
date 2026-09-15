@@ -18,6 +18,20 @@ describe("renderMarkdown", () => {
     expect(html).toContain("<code>x</code>");
   });
 
+  // F4: the page already owns the <h1>; a markdown h1 would nest a second one under an h2.
+  it("demotes a markdown h1 to h2 while keeping its text", () => {
+    const html = renderMarkdown("# Title");
+    expect(html).toContain("<h2>Title</h2>");
+    expect(html).not.toContain("<h1");
+  });
+
+  // F12: an anchor with no href attribute at all must survive as plain link text.
+  it("keeps the text of a raw anchor that has no href at all", () => {
+    const html = renderMarkdown("<a>bare</a>");
+    expect(html).toContain("bare");
+    expect(html).not.toContain("href");
+  });
+
   it("drops raw HTML and script", () => {
     const html = renderMarkdown('hello <script>alert(1)</script> <img src=x onerror=alert(1)> <div>d</div>');
     expect(html).not.toContain("<script");

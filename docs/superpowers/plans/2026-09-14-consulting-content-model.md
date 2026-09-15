@@ -1696,6 +1696,8 @@ EOF
 
 ### Task 8: Inquiry routes (public POST, admin GET/PUT/DELETE)
 
+> **Post-review amendments (2026-09-15):** no `console.*` — the missing-salt warning is a once-per-process `appendLog("inquiries", { level: "warn", event: "ip_salt_missing" })`; client IP comes from `clientIp(request)` (prefers `x-real-ip`, then first hop of `x-forwarded-for`, else `"unknown"`) with the Vercel-edge trust assumption documented in code; after a successful `create` the notification tail (mail → `notifyFailed` update → log) is isolated in its own try/catch so a stored inquiry always returns 201. Code in the steps below is superseded where it conflicts.
+
 **Files:**
 - Create: `src/lib/inquiryLimiter.ts`, `src/app/api/inquiries/route.ts`, `src/app/api/inquiries/[id]/route.ts`
 - Test: `src/app/api/inquiries/route.test.ts`

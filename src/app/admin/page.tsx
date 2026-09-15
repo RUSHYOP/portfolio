@@ -86,6 +86,19 @@ export default function AdminPage() {
     setTab(next);
   }, []);
 
+  // With nine tabs the strip scrolls on a phone (~3 fit at 390px), so a tab reached by
+  // ⌘1–9 could land entirely off-screen. Keep the active tab visible by scrolling the
+  // strip itself — never scrollIntoView, which would also move the page.
+  const tabsRef = useRef<HTMLElement | null>(null);
+  const activeTabRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const nav = tabsRef.current;
+    const el = activeTabRef.current;
+    if (!nav || !el || typeof nav.scrollTo !== "function") return;
+    const left = el.offsetLeft - (nav.clientWidth - el.offsetWidth) / 2;
+    nav.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+  }, [tab, authenticated]);
+
   useEffect(() => {
     fetch("/api/auth/verify").then((r) => { if (r.ok) setAuthenticated(true); }).finally(() => setChecking(false));
   }, []);
@@ -316,13 +329,15 @@ export default function AdminPage() {
         </motion.button>
       </header>
 
-      <nav className="admin-tabs" aria-label="Admin sections">
+      <nav className="admin-tabs" aria-label="Admin sections" ref={tabsRef}>
         {TABS.map((t) => {
           const isActive = tab === t;
           const isDirty = dirtyTabs.current.has(t);
           return (
             <button
               key={t}
+              // Only the active tab is tracked; the effect above scrolls it into view.
+              ref={isActive ? activeTabRef : null}
               className={`admin-tab ${isActive ? "active" : ""}`}
               onClick={() => switchTab(t)}
               aria-current={isActive ? "page" : undefined}

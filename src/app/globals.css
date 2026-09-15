@@ -2012,6 +2012,13 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
+  /* Preview + native file input + Remove overflow a phone-width column otherwise. */
+  flex-wrap: wrap;
+}
+
+/* The native file input reports a wide intrinsic min-width; let it shrink to the column. */
+.admin-icon-upload input[type="file"] {
+  max-width: 100%;
 }
 
 .admin-projects-grid {
@@ -2064,6 +2071,9 @@ body {
 .admin-skill-actions {
   display: flex;
   gap: 0.5rem;
+  /* Collection rows carry up to five buttons (move, publish, edit, delete + confirm);
+     without wrapping the last one is pushed past the card edge on a phone. */
+  flex-wrap: wrap;
 }
 
 /* Admin Media */

@@ -32,6 +32,9 @@
 - Task 6 `markdown.ts` — marked + sanitize-html allow-list. Review fix: hrefs are kept only when they match `^(https?:|mailto:)` (relative/anchor links were slipping past `allowedSchemes`), render errors logged via `appendLog`. Authoring constraint: case-study links must be absolute.
 - Task 7 `rateLimit.ts` + `mail.ts` — fixed-window limiter; Resend batch send (owner notification with `replyTo` inquirer, plain-text auto-reply), never throws, env read inside the function. `RESEND_FROM` / `INQUIRY_NOTIFY_TO` / `INQUIRY_IP_SALT` added to `.env.local` and Vercel production.
 - Local Mongo: Docker Desktop restarted on a kernel `mongo:latest` (8.x) refuses (SERVER-121912); `portfolio-mongo-local` recreated on `mongo:7` at 27018 and re-seeded.
+- Task 8 — public inquiry POST (byte-measured 4 KB guard → JSON → honeypot → validate → email → salted IP hash + 5/hour limit → create → non-blocking mail) plus admin GET/PUT-status/DELETE. Review fixes: `clientIp()` with the Vercel-edge trust boundary documented, once-per-process structured salt warning, post-create tail isolated so a stored inquiry never returns 500. Live smoke: unauth GET 401, honeypot 201 with nothing stored.
+- Task 9 `FieldInput` — one widget per field type (chips, slug live-filter, switch toggle, image upload via the existing `/api/upload`). Review fixes: focus ring restored on select/number, hyphen collapse, chip dedupe; RTL + user-event + jsdom added as devDeps with a per-file `@vitest-environment jsdom` pragma (global env stays node).
+- Task 10 `CollectionTab` — generic list/editor/reorder/publish for any def; mongoose-free `collections/defs.ts` so client code never pulls the DB; `admin.upload_failed` / `admin.save_failed` client log events; auto-slug from title until edited. Review clean. Suite 265/265.
 - Deferred minors live in `.superpowers/sdd/progress.md` for the whole-branch review.
 
 ### Next

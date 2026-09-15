@@ -101,6 +101,8 @@ export async function POST(request: NextRequest) {
       budget: String(created.budget),
       timeline: String(created.timeline),
     });
+    // `sent` means "the owner was notified"; a failed auto-reply alone does not flag the
+    // inquiry (it is logged as notify.autoreply_failed inside sendInquiryEmails).
     if (!sent) {
       // Mark for admin follow-up and log the failure — but the submitter still gets 201.
       await inquiries.update(created.id, { notifyFailed: true });

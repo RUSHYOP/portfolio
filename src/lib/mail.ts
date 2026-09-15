@@ -24,8 +24,11 @@ export interface MailPayload {
   text: string;
 }
 
+// One send per email, not a batch: a batch is all-or-nothing, so a rejected inquirer
+// address would also kill the owner notification. `resend.emails.send` resolves to
+// `{ data, error }` — only `error` is read here.
 export type MailClient = {
-  batch: { send(payload: MailPayload[]): Promise<{ error: { message: string } | null }> };
+  emails: { send(payload: MailPayload): Promise<{ error: { message: string } | null }> };
 };
 
 /** Pure builder: owner notification (reply-to the inquirer) + auto-reply to the inquirer (reply-to the owner). */
@@ -71,11 +74,26 @@ export function buildInquiryEmails(inq: InquiryForMail, env: { from: string; not
 let defaultClient: MailClient | null = null;
 function clientFor(env: NodeJS.ProcessEnv): MailClient | null {
   if (!env.RESEND_API_KEY) return null;
-  if (!defaultClient) defaultClient = new Resend(env.RESEND_API_KEY) as unknown as MailClient;
+  if (!defaultClient) {
+    // Thin adapter, not a cast: Resend's send resolves to `{ data, error }` and we
+    // narrow it to the `{ error }` shape MailClient promises.
+    const resend = new Resend(env.RESEND_API_KEY);
+    defaultClient = { emails: { send: async (payload: MailPayload) => ({ error: (await resend.emails.send(payload)).error }) } };
+  }
   return defaultClient;
 }
 
-/** Sends the owner notification + auto-reply. Never throws; false means "not sent" (skipped or failed), already logged. */
+/** Provider messages can echo the inquirer's address — cap what reaches the log. */
+const MAX_LOG_MESSAGE = 200;
+const reason = (e: unknown): string =>
+  (e instanceof Error ? e.message : typeof e === "string" ? e : "unknown").slice(0, MAX_LOG_MESSAGE);
+
+/**
+ * Sends the owner notification, then (only if that succeeded) the auto-reply.
+ * `sent` means "the owner was notified": a failed auto-reply is logged but tolerated,
+ * because the inquiry itself has still reached its destination. Never throws — every
+ * failure path is logged via appendLog.
+ */
 export async function sendInquiryEmails(
   inq: InquiryForMail,
   deps: { client?: MailClient; env?: NodeJS.ProcessEnv } = {}
@@ -89,16 +107,29 @@ export async function sendInquiryEmails(
     await appendLog("inquiries", { event: "notify.skipped", id: inq.id, reason: "missing env" });
     return { sent: false };
   }
+  const [owner, reply] = buildInquiryEmails(inq, { from, notifyTo });
+  // 1. Owner notification — the one send that decides `sent`.
   try {
-    const { error } = await client.batch.send(buildInquiryEmails(inq, { from, notifyTo }));
+    const { error } = await client.emails.send(owner);
     if (error) {
-      await appendLog("inquiries", { event: "notify.failed", id: inq.id, message: error.message });
+      await appendLog("inquiries", { event: "notify.failed", id: inq.id, message: reason(error.message) });
       return { sent: false };
     }
-    await appendLog("inquiries", { event: "notify.sent", id: inq.id });
-    return { sent: true };
   } catch (e) {
-    await appendLog("inquiries", { event: "notify.failed", id: inq.id, message: e instanceof Error ? e.message : "unknown" });
+    await appendLog("inquiries", { event: "notify.failed", id: inq.id, message: reason(e) });
     return { sent: false };
   }
+  // 2. Auto-reply — best effort; a bad inquirer address must not undo step 1.
+  try {
+    const { error } = await client.emails.send(reply);
+    if (error) {
+      await appendLog("inquiries", { event: "notify.autoreply_failed", id: inq.id, message: reason(error.message) });
+      return { sent: true };
+    }
+  } catch (e) {
+    await appendLog("inquiries", { event: "notify.autoreply_failed", id: inq.id, message: reason(e) });
+    return { sent: true };
+  }
+  await appendLog("inquiries", { event: "notify.sent", id: inq.id });
+  return { sent: true };
 }

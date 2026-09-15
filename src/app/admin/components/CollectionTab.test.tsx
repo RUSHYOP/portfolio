@@ -192,11 +192,12 @@ describe("CollectionTab editor", () => {
   });
 
   it("PUTs to the item url on save", async () => {
-    const { user, container } = setup([item({ id: "a" })]);
+    const { user, container, loadData } = setup([item({ id: "a" })]);
     await user.click(screen.getByRole("button", { name: "Edit" }));
     await user.type(container.querySelector<HTMLInputElement>("#field-client")!, "Acme");
     await user.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    // The list refresh, not just the request, is what proves the mutation completed.
+    await waitFor(() => expect(loadData).toHaveBeenCalled());
     expect(lastCall()[0]).toBe("/api/case-studies/a");
     expect(lastCall()[1].method).toBe("PUT");
     expect(lastBody()).toMatchObject({ client: "Acme" });
@@ -360,20 +361,20 @@ describe("CollectionTab row actions", () => {
   });
 
   it("toggles published through a PUT", async () => {
-    const { user } = setup([item({ id: "a", published: false })]);
+    const { user, loadData } = setup([item({ id: "a", published: false })]);
     await user.click(screen.getByRole("button", { name: "Publish" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await waitFor(() => expect(loadData).toHaveBeenCalled());
     expect(lastCall()[0]).toBe("/api/case-studies/a");
     expect(lastBody()).toEqual({ published: true });
   });
 
   it("reorders through PUT /reorder with the swapped id list", async () => {
-    const { user } = setup([
+    const { user, loadData } = setup([
       item({ id: "a", title: "Alpha", order: 0 }),
       item({ id: "b", title: "Beta", order: 1 }),
     ]);
     await user.click(screen.getAllByRole("button", { name: /move .* down/i })[0]);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await waitFor(() => expect(loadData).toHaveBeenCalled());
     expect(lastCall()[0]).toBe("/api/case-studies/reorder");
     expect(lastBody()).toEqual({ ids: ["b", "a"] });
   });

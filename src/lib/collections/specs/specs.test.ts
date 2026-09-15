@@ -49,8 +49,12 @@ describe("spec limits (single source of truth)", () => {
     expect(inquiriesDef).toMatchObject({ idPrefix: "inq", orderable: false, publishable: false, publicList: false });
   });
   it("a public inquiry body cannot set status or ipHash", () => {
-    const r = validate(inquiriesDef.fields, { name: "A", email: "a@b.co", building: "x", budget: "lt5k", timeline: "asap", status: "replied" }, "create");
-    expect(r).toEqual({ ok: false, error: "status cannot be set" });
+    const base = { name: "A", email: "a@b.co", building: "x", budget: "lt5k", timeline: "asap" };
+    expect(validate(inquiriesDef.fields, { ...base, status: "replied" }, "create")).toEqual({ ok: false, error: "status cannot be set" });
+    // Every internal field is rejected the same way — ipHash and notifyFailed included,
+    // or a submitter could forge their own rate-limit bucket / clear the follow-up flag.
+    expect(validate(inquiriesDef.fields, { ...base, ipHash: "deadbeef" }, "create")).toEqual({ ok: false, error: "ipHash cannot be set" });
+    expect(validate(inquiriesDef.fields, { ...base, notifyFailed: true }, "create")).toEqual({ ok: false, error: "notifyFailed cannot be set" });
   });
 });
 

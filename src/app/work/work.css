@@ -1,0 +1,201 @@
+/* ====== /work/[slug] reading page ======
+   Same world as /voyage — dark only, one amber accent, monospace telemetry labels —
+   but no scene: this is the page you land on to read, so the type does the work.
+   Colours are pinned locally (not taken from globals.css tokens) for the same reason
+   voyage.css pins them: a light-theme toggle must not bleed into the flight. */
+.work {
+  --amber: #f2b35c;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 6rem clamp(1.5rem, 6vw, 4rem) 8rem;
+  color: #e8e8e8;
+  min-height: 100vh;
+}
+
+/* .work is a centred 72rem column, so its own background would leave a visible seam
+   against the body either side of it. Paint the page instead. */
+body:has(.work) { background: #0a0a0a; }
+
+/* GlobalOverlays renders grain/vignette outside .work, so reach them via body:has()
+   — mirrors the voyage guard so a carried-over light theme can't wash the page out. */
+[data-theme="light"] body:has(.work) .film-grain {
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+}
+[data-theme="light"] body:has(.work) .vignette {
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.work__back {
+  display: inline-block;
+  margin-bottom: 3rem;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a3a3a3;
+  text-decoration: none;
+}
+.work__back:hover { color: #fff; }
+
+.work__eyebrow {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #a3a3a3;
+  margin: 0 0 1rem;
+}
+.work__title {
+  font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin: 0 0 1rem;
+  text-wrap: balance;
+}
+.work__context {
+  font-size: 1.15rem;
+  font-weight: 300;
+  color: #d4d4d4;
+  max-width: 62ch;
+  margin: 0 0 1.5rem;
+}
+
+.work__metrics,
+.work__stack {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+.work__metrics li {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.8rem;
+  color: var(--amber);
+  border: 1px solid rgba(242, 179, 92, 0.35);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+}
+.work__stack li {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a3a3a3;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+}
+
+.work__diagram {
+  margin: 3rem 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  background: #111;
+}
+/* next/image emits intrinsic width/height attrs; override so the diagram scales to the
+   column instead of overflowing on mobile. The max-height + contain guard is for uploads
+   that are not the wide diagram we expect — a tall portrait must not hijack the page. */
+.work__diagram img {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  object-fit: contain;
+  display: block;
+}
+
+.work__section { margin-top: 3.5rem; }
+.work__h2 {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #a3a3a3;
+  margin: 0 0 1rem;
+}
+
+/* ====== Sanitised CMS markdown ======
+   renderMarkdown's allow-list is h1–h4, p, ul/ol/li, strong, em, code, pre, a,
+   blockquote, br, hr — every one of them is styled below. */
+.work__prose {
+  max-width: 68ch;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  font-weight: 300;
+}
+.work__prose h1,
+.work__prose h2,
+.work__prose h3,
+.work__prose h4 {
+  font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 2.25rem 0 0.75rem;
+}
+.work__prose > :first-child { margin-top: 0; }
+.work__prose h1 { font-size: 1.6rem; }
+.work__prose h2 { font-size: 1.35rem; }
+.work__prose h3 { font-size: 1.15rem; }
+.work__prose h4 { font-size: 1rem; }
+.work__prose p { margin: 0 0 1rem; }
+.work__prose strong { font-weight: 500; color: #fff; }
+.work__prose ul,
+.work__prose ol { padding-left: 1.25rem; margin: 0 0 1rem; }
+.work__prose li { margin: 0 0 0.4rem; }
+.work__prose li::marker { color: var(--amber); }
+.work__prose code {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.85em;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.work__prose pre {
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0 0 1rem;
+}
+/* Inside a block, the chrome belongs to <pre>, not to each token. */
+.work__prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.work__prose a {
+  color: var(--amber);
+  text-underline-offset: 3px;
+}
+.work__prose a:hover { text-decoration-thickness: 2px; }
+.work__prose blockquote {
+  border-left: 2px solid var(--amber);
+  margin: 1rem 0;
+  padding-left: 1rem;
+  color: #d4d4d4;
+}
+.work__prose hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin: 2rem 0;
+}
+
+/* Tighter top padding on phones — 6rem of dead space above the back link is a lot
+   of scrolling before the title arrives. */
+@media (max-width: 767px) {
+  .work { padding-top: 3.5rem; }
+  .work__back { margin-bottom: 2rem; }
+  .work__diagram { margin: 2rem 0; border-radius: 14px; }
+  .work__section { margin-top: 2.5rem; }
+}

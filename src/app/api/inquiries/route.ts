@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { inquiries } from "@/lib/collections";
 import { listAndCreate } from "@/lib/collections/routeHandlers";
 import { checkInquiryLimit } from "@/lib/inquiryLimiter";
+import { clientIp } from "@/lib/clientIp";
 import { sendInquiryEmails } from "@/lib/mail";
 import { appendLog } from "@/lib/log";
 
@@ -21,21 +22,22 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let saltWarned = false;
 /** Salted SHA-256 of the client IP — never store or log the raw IP. */
 function ipHash(request: NextRequest): string {
-  const ip = (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  // IP source and its trust boundary live in clientIp(); see the doc comment there.
+  const ip = clientIp(request);
   const salt = process.env.INQUIRY_IP_SALT ?? "";
   if (!salt && !saltWarned) {
     saltWarned = true;
-    console.warn("INQUIRY_IP_SALT is not set; inquiry IP hashes are unsalted");
+    // Structured (never console) and fire-and-forget, so a log fault can't fail a submission.
+    void Promise.resolve(appendLog("inquiries", { level: "warn", event: "ip_salt_missing" })).catch(() => {
+      // logging must never fail a response
+    });
   }
   return createHash("sha256").update(`${salt}:${ip}`).digest("hex");
 }
 
 /** Admin list (newest first, includes status/ipHash/notifyFailed). */
 const admin = listAndCreate(inquiries);
-export async function GET(request: NextRequest) {
-  const res = await admin.GET(request);
-  return res;
-}
+export const GET = admin.GET;
 
 /** Public submission from the Landing form. */
 export async function POST(request: NextRequest) {
@@ -77,10 +79,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Too many inquiries, please try again later" }, { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } });
   }
 
+  // 7. Persist with server-set internal fields (status/ipHash/notifyFailed) — never client-settable.
+  // Only the store itself may fail the submission: its try/catch is scoped to `create` alone.
+  let created: Awaited<ReturnType<typeof inquiries.create>>;
   try {
-    // 7. Persist with server-set internal fields (status/ipHash/notifyFailed) — never client-settable.
-    const created = await inquiries.create(v.value, { status: "new", ipHash: hash, notifyFailed: false });
-    // 8. Best-effort notification; never blocks or fails the submission.
+    created = await inquiries.create(v.value, { status: "new", ipHash: hash, notifyFailed: false });
+  } catch (e) {
+    logError("create", e);
+    return NextResponse.json({ error: "Failed to submit inquiry" }, { status: 500 });
+  }
+
+  // 8. Post-create tail: best-effort notification and its bookkeeping. Once the inquiry is stored
+  // the submitter is owed a 201, so every fault here (send, update, log) is swallowed and logged —
+  // a stored inquiry must never surface as a 500 that invites a duplicate resubmission.
+  try {
     const { sent } = await sendInquiryEmails({
       id: created.id,
       name: String(created.name),
@@ -94,9 +106,11 @@ export async function POST(request: NextRequest) {
       await inquiries.update(created.id, { notifyFailed: true });
       await appendLog("inquiries", { event: "notify.failed", id: created.id });
     }
-    return NextResponse.json({ ok: true }, { status: 201 });
   } catch (e) {
-    logError("create", e);
-    return NextResponse.json({ error: "Failed to submit inquiry" }, { status: 500 });
+    // Fire-and-forget like logError: even the failure log must not be able to throw here.
+    void Promise.resolve(appendLog("inquiries", { level: "error", event: "notify_tail_failed", id: created.id, message: String(e) })).catch(() => {
+      // logging must never fail a response
+    });
   }
+  return NextResponse.json({ ok: true }, { status: 201 });
 }

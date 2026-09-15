@@ -33,6 +33,9 @@
     "three": "^0.169.0"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -40,6 +43,7 @@
     "@types/three": "^0.169.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
+    "jsdom": "^29.1.1",
     "typescript": "^5",
     "vitest": "^5.0.0"
   }

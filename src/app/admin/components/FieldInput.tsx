@@ -30,13 +30,23 @@ const NATIVE_CONTROL_STYLE: CSSProperties = {
   fontSize: "0.95rem",
   fontFamily: "inherit",
   padding: "0.7rem 0.9rem",
-  outline: "none",
+  // No `outline: none` — suppressing it would hide the keyboard focus ring on these two
+  // native widgets; `colorScheme: dark` keeps the UA-drawn ring on the admin palette.
   width: "100%",
 };
 
-/** Keeps a slug field typeable: lowercase, spaces→hyphen, drop anything SLUG_RE rejects. */
+/**
+ * Keeps a slug field typeable: lowercase, spaces→hyphen, drop anything SLUG_RE rejects,
+ * then collapse hyphen runs and strip a leading hyphen so the live value is never invalid
+ * in a way the user cannot see. A single *trailing* hyphen survives so `foo-bar` is typeable.
+ */
 function constrainSlug(raw: string): string {
-  return raw.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  return raw
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-/, "");
 }
 
 export default function FieldInput({ name, spec, value, onChange, uploadFile, uploading, error }: FieldInputProps) {
@@ -172,7 +182,13 @@ export default function FieldInput({ name, spec, value, onChange, uploadFile, up
       const add = () => {
         const t = chipDraft.trim();
         if (!t || full) return;
-        onChange([...items, t.slice(0, spec.max ?? 200)]);
+        const next = t.slice(0, spec.max ?? 200);
+        // Duplicate: clear the draft but emit nothing — the value asked for is already present.
+        if (items.includes(next)) {
+          setChipDraft("");
+          return;
+        }
+        onChange([...items, next]);
         setChipDraft("");
       };
       control = (
@@ -230,16 +246,30 @@ export default function FieldInput({ name, spec, value, onChange, uploadFile, up
               const input = e.target;
               const file = input.files?.[0];
               if (!file || !uploadFile) return;
-              const path = await uploadFile(file, "diagram");
-              // Clear so re-picking the same file fires change again.
-              input.value = "";
-              if (path) onChange(path);
+              try {
+                const path = await uploadFile(file, "diagram");
+                if (path) onChange(path);
+              } catch (err) {
+                // uploadFile is contracted to resolve null on failure; a throw would otherwise
+                // escape this async handler as an unhandled rejection. The owner of uploadFile
+                // surfaces user-facing upload errors.
+                console.error("FieldInput: upload failed", err);
+              } finally {
+                // Always clear, even if the upload rejected, so re-picking the same file fires change again.
+                input.value = "";
+              }
             }}
             {...a11y}
           />
           {uploading && <span className="admin-uploading">Uploading...</span>}
           {str && (
-            <button type="button" className="admin-btn admin-btn-sm admin-btn-outline" onClick={() => onChange("")}>
+            <button
+              type="button"
+              className="admin-btn admin-btn-sm admin-btn-outline"
+              // Names the field it clears — several image fields can share one form.
+              aria-label={`Remove ${spec.label}`}
+              onClick={() => onChange("")}
+            >
               Remove
             </button>
           )}

@@ -4,6 +4,10 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Settings } from "./types";
 
 type ContentFormState = {
+  // Task 12: the /voyage hero copy and manifesto line are editable here.
+  heroHeadline: string;
+  heroSubheadline: string;
+  manifesto: string;
   aboutHeading: string;
   aboutText: string;
   quote1: string;
@@ -24,6 +28,9 @@ interface ContentTabProps {
 
 function formFromSettings(s: Settings): ContentFormState {
   return {
+    heroHeadline: s.heroHeadline || "",
+    heroSubheadline: s.heroSubheadline || "",
+    manifesto: s.manifesto || "",
     aboutHeading: s.aboutHeading || "",
     aboutText: s.aboutText || "",
     quote1: s.quote1 || "",
@@ -160,7 +167,9 @@ export default function ContentTab({ settings, onSave, onDirtyChange }: ContentT
       {/* Hero */}
       <div className="admin-section-card">
         <h3>Hero Section</h3>
-        <label className="admin-toggle-switch">
+        {/* The toggle was the card's last element until Task 12 added fields below it;
+            .admin-toggle-switch carries no bottom margin, so the gap is supplied here. */}
+        <label className="admin-toggle-switch" style={{ marginBottom: "1.25rem" }}>
           <input
             type="checkbox"
             checked={contentForm.showHeroButton}
@@ -168,6 +177,34 @@ export default function ContentTab({ settings, onSave, onDirtyChange }: ContentT
           />
           <span>&quot;HIT IT&quot; Button: {contentForm.showHeroButton ? "Visible" : "Hidden"}</span>
         </label>
+
+        {/* Task 12: drives the /voyage <h1> and the line under it. */}
+        <div className="admin-field">
+          <label htmlFor="heroHeadline">
+            Headline<span className="admin-required">*</span>
+          </label>
+          <input
+            id="heroHeadline"
+            type="text"
+            maxLength={120}
+            value={contentForm.heroHeadline}
+            onChange={(e) => updateForm({ heroHeadline: e.target.value })}
+          />
+          <div className="admin-char-count">{contentForm.heroHeadline.length} / 120</div>
+        </div>
+
+        <div className="admin-field">
+          <label htmlFor="heroSubheadline">Subheadline</label>
+          <textarea
+            id="heroSubheadline"
+            rows={2}
+            maxLength={240}
+            value={contentForm.heroSubheadline}
+            onChange={(e) => updateForm({ heroSubheadline: e.target.value })}
+            style={{ resize: "vertical" }}
+          />
+          <div className="admin-char-count">{contentForm.heroSubheadline.length} / 240</div>
+        </div>
       </div>
 
       {/* About */}
@@ -238,6 +275,22 @@ export default function ContentTab({ settings, onSave, onDirtyChange }: ContentT
               {renderItalicPreview(contentForm.quote2)}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Dark Passage (Task 12) — one manifesto line. */}
+      <div className="admin-section-card">
+        <h3>Dark Passage</h3>
+        <div className="admin-field">
+          <label htmlFor="manifesto">Manifesto line</label>
+          <input
+            id="manifesto"
+            type="text"
+            maxLength={200}
+            value={contentForm.manifesto}
+            onChange={(e) => updateForm({ manifesto: e.target.value })}
+          />
+          <div className="admin-char-count">{contentForm.manifesto.length} / 200</div>
         </div>
       </div>
 

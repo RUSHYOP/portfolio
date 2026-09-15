@@ -6,6 +6,7 @@ import type { Settings, Project, Skill, Tab, CollectionItem, UploadType } from "
 import { DEFAULT_SETTINGS } from "./components/types";
 // Client-safe defs barrel — "@/lib/collections" would pull Mongoose into the browser bundle.
 import { ALL_DEFS } from "@/lib/collections/defs";
+import { logClient } from "@/lib/clientLog";
 import ContentTab from "./components/ContentTab";
 import ProjectsTab from "./components/ProjectsTab";
 import SkillsTab from "./components/SkillsTab";
@@ -126,27 +127,44 @@ export default function AdminPage() {
 
   const loadData = useCallback(async () => {
     if (!authenticated) return;
-    // ?all=1 on every collection: the admin needs drafts and internal fields, and the
-    // authed branch answers `no-store` where the public list is CDN-cached for an hour.
-    const [pRes, sRes, setRes, svcRes, prcRes, csRes, tsRes, inqRes] = await Promise.all([
-      fetch("/api/projects"),
-      fetch("/api/skills"),
-      fetch("/api/settings"),
-      fetch("/api/services?all=1"),
-      fetch("/api/process?all=1"),
-      fetch("/api/case-studies?all=1"),
-      fetch("/api/testimonials?all=1"),
-      fetch("/api/inquiries"),
-    ]);
-    if (pRes.ok) setProjects(await pRes.json());
-    if (sRes.ok) setSkills(await sRes.json());
-    if (setRes.ok) { const s: Settings = await setRes.json(); setSettings(s); }
-    if (svcRes.ok) setServices(await svcRes.json());
-    if (prcRes.ok) setProcessSteps(await prcRes.json());
-    if (csRes.ok) setCaseStudiesItems(await csRes.json());
-    if (tsRes.ok) setTestimonialsItems(await tsRes.json());
-    if (inqRes.ok) setInquiriesItems(await inqRes.json());
-    setLoaded(true);
+    /**
+     * One rejected fetch (or one unparseable body) must not take the whole dashboard down:
+     * `Promise.allSettled` plus a per-list apply means a failed list stays empty, is logged,
+     * and every other tab still renders. `setLoaded(true)` lives in `finally` so no tab can
+     * be pinned on "Loading…" by a failure.
+     */
+    const load = async <T,>(
+      url: string,
+      collection: string,
+      apply: (data: T) => void,
+    ): Promise<void> => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          logClient("admin.save_failed", { collection, verb: "load", status: res.status });
+          return;
+        }
+        apply((await res.json()) as T);
+      } catch (e) {
+        logClient("admin.save_failed", { collection, verb: "load", message: String(e) });
+      }
+    };
+    try {
+      // ?all=1 on every collection: the admin needs drafts and internal fields, and the
+      // authed branch answers `no-store` where the public list is CDN-cached for an hour.
+      await Promise.allSettled([
+        load<Project[]>("/api/projects", "projects", setProjects),
+        load<Skill[]>("/api/skills", "skills", setSkills),
+        load<Settings>("/api/settings", "settings", setSettings),
+        load<CollectionItem[]>("/api/services?all=1", "services", setServices),
+        load<CollectionItem[]>("/api/process?all=1", "process", setProcessSteps),
+        load<CollectionItem[]>("/api/case-studies?all=1", "case-studies", setCaseStudiesItems),
+        load<CollectionItem[]>("/api/testimonials?all=1", "testimonials", setTestimonialsItems),
+        load<CollectionItem[]>("/api/inquiries?all=1", "inquiries", setInquiriesItems),
+      ]);
+    } finally {
+      setLoaded(true);
+    }
   }, [authenticated]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -385,8 +403,8 @@ export default function AdminPage() {
             {tab === "navigation" && <NavigationTab settings={settings} onSave={saveSettings} onDirtyChange={(d) => setDirty("navigation", d)} />}
             {tab === "media" && <MediaTab settings={settings} uploading={uploading} toast={toast} uploadFile={uploadFile} onSave={saveSettings} />}
             {tab === "consulting" && <ConsultingTab services={services} process={processSteps} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("consulting", d)} />}
-            {tab === "caseStudies" && <CollectionTab def={ALL_DEFS["case-studies"]} apiBase="/api/case-studies" title="Case studies" items={caseStudiesItems} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("caseStudies", d)} />}
-            {tab === "testimonials" && <CollectionTab def={ALL_DEFS.testimonials} apiBase="/api/testimonials" title="Testimonials" items={testimonialsItems} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("testimonials", d)} />}
+            {tab === "caseStudies" && <CollectionTab def={ALL_DEFS["case-studies"]} apiBase="/api/case-studies" title="Case studies" singular="case study" items={caseStudiesItems} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("caseStudies", d)} />}
+            {tab === "testimonials" && <CollectionTab def={ALL_DEFS.testimonials} apiBase="/api/testimonials" title="Testimonials" singular="testimonial" items={testimonialsItems} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("testimonials", d)} />}
             {tab === "inbox" && <InboxTab inquiries={inquiriesItems} toast={toast} loadData={loadData} loading={!loaded} />}
           </motion.div>
         </AnimatePresence>

@@ -178,6 +178,24 @@ describe("byId", () => {
     expect(await res.json()).toEqual({ error: "slug already exists" });
     expect(appendLog).not.toHaveBeenCalled();
   });
+  // F10: an empty update writes nothing but would still pay the full revalidation cost.
+  it("PUT 400s on an empty update without touching the store or the cache", async () => {
+    const col = fakeCol();
+    vi.mocked(verifyRequest).mockResolvedValue(true);
+    const res = await byId(col).PUT(req("PUT", {}), ctx("t_1"));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "No fields to update" });
+    expect(col.update).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+  // F12: the logger is fire-and-forget — a rejected appendLog must not change the response.
+  it("GET still returns its logged 500 when appendLog itself rejects", async () => {
+    vi.mocked(appendLog).mockRejectedValueOnce(new Error("log sink down"));
+    const col = fakeCol({ list: vi.fn(async () => { throw new Error("db down"); }) });
+    const res = await listAndCreate(col).GET(req("GET"));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Failed to load t" });
+  });
   it("PUT does not revalidate when the item is missing", async () => {
     const col = fakeCol();
     vi.mocked(verifyRequest).mockResolvedValue(true);

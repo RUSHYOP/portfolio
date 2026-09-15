@@ -1,18 +1,11 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { inquiries } from "@/lib/collections";
-import { listAndCreate } from "@/lib/collections/routeHandlers";
+import { listAndCreate, logApiError } from "@/lib/collections/routeHandlers";
 import { checkInquiryLimit } from "@/lib/inquiryLimiter";
 import { clientIp } from "@/lib/clientIp";
 import { sendInquiryEmails } from "@/lib/mail";
 import { appendLog } from "@/lib/log";
-
-/** Fire-and-forget structured error log, mirroring routeHandlers' logError — never blocks the response. */
-function logError(verb: string, err: unknown): void {
-  void Promise.resolve(appendLog("api", { level: "error", collection: "inquiries", verb, message: String(err) })).catch(() => {
-    // logging must never fail a response
-  });
-}
 
 // Hard cap on the raw request body before it is even parsed as JSON.
 const MAX_BODY_BYTES = 4096;
@@ -85,7 +78,7 @@ export async function POST(request: NextRequest) {
   try {
     created = await inquiries.create(v.value, { status: "new", ipHash: hash, notifyFailed: false });
   } catch (e) {
-    logError("create", e);
+    logApiError("inquiries", "create", e);
     return NextResponse.json({ error: "Failed to submit inquiry" }, { status: 500 });
   }
 
@@ -109,8 +102,8 @@ export async function POST(request: NextRequest) {
       await appendLog("inquiries", { event: "notify.failed", id: created.id });
     }
   } catch (e) {
-    // Fire-and-forget like logError: even the failure log must not be able to throw here.
-    void Promise.resolve(appendLog("inquiries", { level: "error", event: "notify_tail_failed", id: created.id, message: String(e) })).catch(() => {
+    // Fire-and-forget like logApiError: even the failure log must not be able to throw here.
+    void Promise.resolve(appendLog("inquiries", { level: "error", event: "notify.tail_failed", id: created.id, message: String(e) })).catch(() => {
       // logging must never fail a response
     });
   }

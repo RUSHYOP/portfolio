@@ -30,13 +30,19 @@ export function revalidateAll(col: Collection): void {
 }
 
 /**
- * Fire-and-forget structured error log. Never records the request body (it may hold secrets),
- * and is deliberately not awaited so a logging failure can never change or delay the response.
+ * Fire-and-forget structured error log for any API route, generic or hand-written.
+ * Never records the request body (it may hold secrets), and is deliberately not awaited
+ * so a logging failure can never change or delay the response.
  */
-function logError(col: Collection, verb: string, err: unknown): void {
-  void Promise.resolve(appendLog("api", { level: "error", collection: col.def.collection, verb, message: String(err) })).catch(() => {
+export function logApiError(collection: string, verb: string, err: unknown): void {
+  void Promise.resolve(appendLog("api", { level: "error", collection, verb, message: String(err) })).catch(() => {
     // logging must never fail a response
   });
+}
+
+/** Collection-shaped wrapper around logApiError, used by the generic handlers below. */
+function logError(col: Collection, verb: string, err: unknown): void {
+  logApiError(col.def.collection, verb, err);
 }
 
 /** Logged JSON 500 with a message built from the human-readable collection name. */
@@ -105,6 +111,8 @@ export function byId(col: Collection) {
       if (!parsed.ok) return badRequest("Invalid JSON");
       const v = col.validate(parsed.body, "update");
       if (!v.ok) return badRequest(v.error);
+      // Nothing to write, but a write would still revalidate every path the collection feeds.
+      if (Object.keys(v.value).length === 0) return badRequest("No fields to update");
       try {
         const updated = await col.update(id, v.value);
         if (!updated) return notFound(col.def.name);

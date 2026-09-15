@@ -98,12 +98,12 @@ describe("POST /api/inquiries", () => {
   it("a stored inquiry never surfaces as 500: post-create tail failure is logged, still 201", async () => {
     vi.mocked(sendInquiryEmails).mockResolvedValue({ sent: false });
     vi.mocked(inquiries.update).mockRejectedValue(new Error("db down"));
-    const before = logCalls("notify_tail_failed").length;
+    const before = logCalls("notify.tail_failed").length;
     const res = await post(good);
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ ok: true });
-    expect(logCalls("notify_tail_failed").length).toBe(before + 1);
-    expect(appendLog).toHaveBeenCalledWith("inquiries", expect.objectContaining({ level: "error", event: "notify_tail_failed", id: "inq_1" }));
+    expect(logCalls("notify.tail_failed").length).toBe(before + 1);
+    expect(appendLog).toHaveBeenCalledWith("inquiries", expect.objectContaining({ level: "error", event: "notify.tail_failed", id: "inq_1" }));
   });
   it("500 only when the store itself fails", async () => {
     vi.mocked(inquiries.create).mockRejectedValue(new Error("db down"));

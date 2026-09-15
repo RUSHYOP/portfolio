@@ -5,7 +5,9 @@ Architecture and visual-design reference for the portfolio site. `README.md` cov
 ## Stack
 
 - **Next.js 16** (App Router, Turbopack) · **React 19** · **TypeScript**
-- **MongoDB + Mongoose** — content store (projects, skills, settings) and media (GridFS)
+- **MongoDB + Mongoose** — content store (projects, skills, settings, and the consulting collections: services, process steps, case studies, testimonials, inquiries) and media (GridFS)
+- **Resend** — transactional mail for inquiry notifications (`src/lib/mail.ts`)
+- **marked + sanitize-html** — server-side markdown rendering for case-study bodies
 - **Framer Motion** — all UI motion/transitions
 - **Three.js** — particle starfield background
 - Custom **Web Audio API** engine — ambient bed + reactive SFX (no audio library)
@@ -17,15 +19,24 @@ Architecture and visual-design reference for the portfolio site. `README.md` cov
 ```
 src/app/page.tsx (server)          — fetches projects/skills/settings via src/lib/data.ts, renders PageClient
 src/app/projects/page.tsx (server) — standalone /projects listing with tag filters
-src/app/admin/page.tsx (client)    — CMS: auth gate + 5-tab dashboard
-src/app/api/*                      — REST-ish route handlers (auth, projects, skills, settings, media, upload)
+src/app/admin/page.tsx (client)    — CMS: auth gate + 9-tab dashboard
+src/app/work/[slug]/page.tsx       — ISR case-study reading page (published slugs only)
+src/app/api/*                      — REST-ish route handlers (auth, projects, skills, settings, media, upload,
+                                     services, process, case-studies, testimonials, inquiries)
 src/lib/mongodb.ts                 — cached Mongoose connection (global cache survives HMR/serverless reuse)
 src/lib/models.ts                  — Project / Skill / Settings schemas
+src/lib/collections/*              — schema-driven CMS: one def per collection → model, API and admin UI
+src/lib/markdown.ts                — marked + sanitize-html allow-list (case-study bodies)
+src/lib/mail.ts, src/lib/rateLimit.ts — Resend inquiry mail; fixed-window per-IP-hash limiter
 src/lib/auth.ts                    — JWT issue/verify, rate-limited login, timing-safe credential check
 src/lib/gridfs.ts                  — media stored as MongoDB GridFS chunks, served via /api/media/[fileId]
 ```
 
-The public site is server-rendered for data (SEO, fast first paint) and hands off to one big client component (`PageClient`) that owns intro sequencing, scroll/audio reactivity, and the Three.js background. The admin dashboard is a single client route with five tabs (Content, Projects, Skills, Navigation, Media) driven by the same collections the public site reads — there is no separate CMS backend.
+The public site is server-rendered for data (SEO, fast first paint) and hands off to one big client component (`PageClient`) that owns intro sequencing, scroll/audio reactivity, and the Three.js background. The admin dashboard is a single client route with nine tabs (Content, Projects, Skills, Navigation, Media, Consulting, Case studies, Testimonials, Inbox — ⌘1–9) driven by the same collections the public site reads — there is no separate CMS backend.
+
+**Schema-driven collections** (`src/lib/collections/*`): the consulting content model is declared once per collection as a `CollectionDef` (`specs/{services,processSteps,caseStudies,testimonials,inquiries}.ts`) — field types, labels, limits, `orderable` / `publishable` / `publicList`, searchable fields and the paths to revalidate. `defineCollection(def)` turns that def into a Mongoose model, a DTO mapper, CRUD + reorder and a `validate(body, mode)` function; `routeHandlers.ts` turns the same object into `GET/POST`, `GET/PUT/DELETE by id` and `POST /reorder`, so each API route file is two lines. The defs also live in a mongoose-free `defs.ts`, which the client imports: the generic admin `CollectionTab` renders a list, an editor, move-up/move-down reordering and a publish toggle for *any* def, with `FieldInput` supplying one widget per field type (`text`, `textarea`, `markdown`, `chips`, `image`, `toggle`, `select`, `slug`, `number`). One definition therefore drives the database, the API, the validation on both sides and the UI — adding a collection is a spec file plus three route stubs, and client and server can never validate differently.
+
+Public reads go through the published-only branch (`col.list({ publishedOnly: true })`); the admin asks for the same routes with `?all=1`, which requires the JWT cookie and returns drafts and internal fields. Inquiries are write-only from the public side: `publicList: false` means every GET is authenticated, and the POST path applies a 4 KB body cap, a honeypot, shared validation, a salted-IP-hash rate limit (5/hour) and non-blocking Resend mail, in that order, so a mail outage never loses a stored inquiry.
 
 **Auth**: single hardcoded admin (`ADMIN_EMAIL`/`ADMIN_PASSWORD` env vars, not a Users collection). Login sets an httpOnly JWT cookie (`admin_token`, 8h expiry). Login attempts are rate-limited per IP (5 / 15 min) and credential comparison is timing-safe.
 
@@ -52,6 +63,8 @@ Palette is deliberately near-monochrome (black/white + grays) — no brand color
 - Mono/label accents (loading text, tags, timestamps): **JetBrains Mono**
 
 **Layout**: single-column scrolling page, sections registered by `id` for anchor-nav scrolling (`#about`, `#projects`, `#contact`). Breakpoint at `768px` collapses all grids (about, contact, projects, skills, footer) to one column and hides the desktop nav menu.
+
+**`/work/[slug]`** (`src/app/work/work.css`) shares `/voyage`'s world rather than the noir home page's: dark only, one amber accent (`--amber: #f2b35c`), JetBrains Mono telemetry labels for the eyebrow/metrics/stack, and a centred 72rem reading column where the typography carries the page because there is no 3D scene. Its colours are pinned locally instead of read from the globals.css tokens — the same guard `voyage.css` uses — plus `[data-theme="light"] body:has(.work)` shields for grain and vignette, so a carried-over light theme can't wash the page out. Page background is painted on `body:has(.work)` so the narrow column leaves no seam.
 
 **Admin panel** gets its own CSS section (`Admin Panel`, `src/app/globals.css:1269`) — a flat, utilitarian dashboard style, deliberately *not* sharing the cinematic treatment (see Overlays below).
 
@@ -90,9 +103,13 @@ sfxBus (clicks, whooshes, impacts, keystrokes)┘
 |---|---|---|
 | `/` | Server + client hydration | Hero → Quote → About → Quote → Projects (carousel) → Contact → Footer |
 | `/projects` | Server | Full project list with technology-tag filtering |
-| `/admin` | Client-only | CMS login gate → Content / Projects / Skills / Navigation / Media tabs |
+| `/admin` | Client-only | CMS login gate → Content / Projects / Skills / Navigation / Media / Consulting / Case studies / Testimonials / Inbox tabs |
+| `/voyage` | Server (ISR, 5m) | Cinematic consulting page (noindex until launch) |
+| `/work/[slug]` | Server (ISR, 5m + `generateStaticParams`) | Case-study reading page; unknown or unpublished slug → 404 |
 | `/api/auth/{login,logout,verify}` | Route handler | JWT cookie session |
 | `/api/{projects,skills,settings}[/:id]` | Route handler | CRUD backing the CMS + public data fetch |
+| `/api/{services,process,case-studies,testimonials}[/:id]`, `…/reorder` | Route handler | Generic collection CRUD + reordering; GET is published-only unless `?all=1` + auth |
+| `/api/inquiries[/:id]` | Route handler | Public POST (honeypot + rate limit + Resend mail); all reads/writes otherwise admin-only |
 | `/api/upload`, `/api/media/[fileId]` | Route handler | GridFS upload / stream-back |
 
 ## Notes for future changes

@@ -37,8 +37,27 @@
 - Task 10 `CollectionTab` — generic list/editor/reorder/publish for any def; mongoose-free `collections/defs.ts` so client code never pulls the DB; `admin.upload_failed` / `admin.save_failed` client log events; auto-slug from title until edited. Review clean. Suite 265/265.
 - Task 11 — Consulting / Case studies / Testimonials / Inbox tabs wired into the admin with ⌘1–9 and an unsaved-changes confirm; first browser render of the CMS UI (14 screenshots in `screenshots/admin/sub-project-2/`, 1440×900 + 390×844). Three mobile bugs found and fixed by looking: tab strip didn't scroll the active tab into view, row actions clipped past the card, image-upload row overflowed. The first implementer stalled at browser login; the browser pass was re-run as its own agent. Resend verified end-to-end with a real inquiry (owner notification + auto-reply delivered).
 - Task 12 — hero headline / subheadline / manifesto inputs on the Content tab; `loadData` now `Promise.allSettled` so one failed fetch can't pin the admin on "Loading…"; `CollectionTab` `singular` prop ("New service", "Case study created"). Found by the browser pass: the long-running dev server held a stale compiled Mongoose model (`mongoose.models.X ||` never recompiles under HMR), so new schema fields were silently dropped until restart. Review clean. Suite 286/286.
+- Task 13 — `/work/[slug]` case-study reading page: ISR (`revalidate = 300`) + `generateStaticParams` over published slugs, `notFound()` on an unknown or unpublished slug, server-sanitised markdown body, metrics/stack/diagram blocks, `work.css` pinning its own dark palette (one amber accent) so a light-theme toggle can't bleed in. `metadata.ts` builds the per-case-study `title` + `description`.
+- Task 14 — `scripts/seed.ts` seeds 3 services + 4 process steps and the `manifesto` setting; docs refreshed (`worklog.md`, `insights.md`, `design.md`, `README.md`); closing verification run.
 - Deferred minors live in `.superpowers/sdd/progress.md` for the whole-branch review.
 
+### Sub-project 2 deliverables (14 tasks)
+- `src/lib/collections/*` — `fieldSpec` validator, `defineCollection` factory, `routeHandlers`, five collection specs (`services`, `processSteps`, `caseStudies`, `testimonials`, `inquiries`) + mongoose-free `defs.ts`.
+- API — `/api/{services,process,case-studies,testimonials}` (+ `/[id]`, `/reorder`) and `/api/inquiries` (+ `/[id]`); public GETs are published-only, admin GETs use `?all=1`.
+- Mail/abuse — `src/lib/mail.ts` (Resend batch: owner notification + inquirer auto-reply), `src/lib/rateLimit.ts` (5/hour per salted IP hash), 4 KB body cap, honeypot.
+- Admin — generic `CollectionTab` + `FieldInput`, `ConsultingTab`, `InboxTab`, Content-tab hero/manifesto inputs, nine tabs with ⌘1–9 and an unsaved-changes confirm.
+- Public — `getVoyageContent()` / `getCaseStudyBySlug()` / `getPublishedCaseStudySlugs()` in `data.ts`, `/work/[slug]`, `src/lib/markdown.ts` (marked + sanitize-html allow-list).
+- Env vars added (`.env.local` + Vercel production, values never committed): `RESEND_API_KEY`, `RESEND_FROM`, `INQUIRY_NOTIFY_TO`, `INQUIRY_IP_SALT`.
+- Seed decision: `scripts/seed.ts` clears and re-inserts `services` / `processsteps` (defaults, like projects/skills/settings) but never touches `casestudies`, `testimonials` or `inquiries` — those are author/visitor data.
+
+### Task 14 closing verification (2026-09-15)
+- `npm run typecheck` 0 errors · `npm test` 291/291 in 28 files · `npm run build` succeeds (`/work/[slug]` listed as SSG + 5m revalidate, `/work/pricing-engine` prerendered).
+- `npm run lint` — 16 problems (10 errors, 6 warnings), **all pre-existing** in files this branch never touched (`TypewriterText`, `ThemeToggle`, `ThreeBackground`, `CustomCursor`, `CinematicIntro`, `FilmGrain`, `ProjectsClient`, plus `admin/page.tsx:337` which dates to 668dac3). Linting sub-project 2's files alone: 0 problems.
+- Live checks against the dev server: `/api/services` 3, `/api/process` 4, `/api/case-studies` 1 (published only), `/api/testimonials` 0 public / 1 with `?all=1` authenticated; `/api/inquiries` 401 unauthenticated, 2 items authenticated; `/work/pricing-engine` 200, `/work/nope` 404; honeypot POST 201 with the inquiry count unchanged; a 5 KB body 413. Unpublishing `pricing-engine` dropped the public list to 0 and `/work/pricing-engine` to 404; restored afterwards.
+
+### Sub-project 2 complete — pending whole-branch review
+- All 14 tasks done on `feat/consulting-cms`; whole-branch review + merge to `master` is the next gate (deferred minors in `.superpowers/sdd/progress.md`).
+
 ### Next
-- Sub-project 2 Tasks 4–14 (specs → routes → markdown → mail → inquiries → admin tabs → `/work/[slug]` → seed/docs), then whole-branch review and merge.
+- Whole-branch review of `feat/consulting-cms`, then merge to `master`.
 - Plan slice 3 (Approach Vector + Jump) carrying forward the tuned constants (`STAR_SCALE_MAX = 2.4`, `LAUNCH_LOOK_OFFSET = (-28, 18, 0)`, `GLOW_MIN = 3.5`); slice 3 wires `getVoyageContent()` into `VoyageRoot`.

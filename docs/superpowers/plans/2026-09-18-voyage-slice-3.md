@@ -87,6 +87,9 @@ Every number in Tasks 5, 6, 8 and 10 is derived from this. **The controller revi
 - **Task 9:** the hook uses `performance.now()`; its effect cleanup also resets the Jump letterbox.
 - **Task 10 retunes:** `voyage.css` declares `-webkit-backdrop-filter` before `backdrop-filter` at all four sites (lightningcss dropped the standard property — no glass had blurred since slice 1); Topology `OFFSET_Z −34→−24`, `OFFSET_X −2.6→−0.9`; mobile Approach pin `padding-top: 4.5rem`; still-tier mobile panels `flex: 0 0 auto; overflow: visible`. Baselines: `screenshots/voyage/slice-3/` (16 files).
 - **Execution shape:** Tasks 2–8 ran in parallel git worktrees (user directive), each independently reviewed; Task 9 sequential; Task 10 run by the controller.
+- **Deferral #4 (Topology parallax):** accepted at browser review; post-merge follow-up.
+- **Deferral #5 (no flare fade-out / relaxation tail):** accepted at browser review; post-merge follow-up.
+- **Deferral #6, heading half:** fixed in final wave (empty-title h2 omitted); the scroll-region `tabIndex` half stays a post-merge follow-up.
 
 ## Deferred to execution review (from plan review)
 

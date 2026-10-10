@@ -13,6 +13,19 @@ const GLOW_SCALE = 4.2;
  *  with a halo from frame one. */
 const GLOW_MIN = 3.5;
 
+/** World-space width of the additive burst at full flare. Spec §3 asks for "star flares";
+ *  with no post-processing in the pipeline (Q3: no bloom) the flare is one more additive
+ *  sprite — the technique the glow already uses. */
+const BURST_WORLD = 26;
+
+/**
+ * Chapter 03's flare ramp over the Jump's chapterProgress: 0 at both ends, peak at
+ * mid-beat, clamped so another chapter's progress can never flare the star.
+ */
+export function jumpGlare(t01: number): number {
+  return Math.sin(Math.PI * Math.min(1, Math.max(0, t01)));
+}
+
 /** AMBER as sRGB "r,g,b" bytes for canvas gradient stops. Unpacked from the hex rather than
  *  read off THREE.Color: ColorManagement is on by default in three >= r152, so Color.r/g/b
  *  hold linear-sRGB and would shift 242,179,92 to 226,115,27 in an sRGB canvas. */
@@ -82,6 +95,23 @@ function makeGlowTexture(): THREE.Texture {
   return tex;
 }
 
+/** White-hot core fading through amber — the Jump burst. Browser-only, like the glow. */
+function makeBurstTexture(): THREE.Texture {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size; canvas.height = size;
+  const g = canvas.getContext("2d")!;
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.18, `rgba(${AMBER_RGB},0.75)`);
+  grad.addColorStop(1, `rgba(${AMBER_RGB},0)`);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 /**
  * The amber star at STAR_POSITION: an FBM-shaded sphere with a fresnel rim and an
  * additive glow sprite. Scale follows starScale(progress); glare is a 0..1 control
@@ -105,6 +135,9 @@ export class EnergyOrb implements SetPiece {
   });
   private glowMaterial: THREE.SpriteMaterial | null = null;
   private glow: THREE.Sprite | null = null;
+  // Chapter 03 burst: a second additive sprite, browser-only like the glow.
+  private burstMaterial: THREE.SpriteMaterial | null = null;
+  private burst: THREE.Sprite | null = null;
   private scene: THREE.Scene | null = null;
   private glare = 0;
 
@@ -129,6 +162,17 @@ export class EnergyOrb implements SetPiece {
       this.glow = new THREE.Sprite(this.glowMaterial);
       this.glow.scale.set(GLOW_SCALE, GLOW_SCALE, 1);
       this.group.add(this.glow);
+      // Jump burst — kept inside the document guard so a node build stays a single child.
+      this.burstMaterial = new THREE.SpriteMaterial({
+        map: makeBurstTexture(),
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        opacity: 0,
+      });
+      this.burst = new THREE.Sprite(this.burstMaterial);
+      this.burst.visible = false;
+      this.group.add(this.burst);
     }
     this.group.position.copy(STAR_POSITION);
     this.scene = scene;
@@ -146,15 +190,30 @@ export class EnergyOrb implements SetPiece {
     const sc = Math.max(0.001, s);
     this.group.scale.setScalar(sc);
     this.material.uniforms.uTime.value = ctx.t;
-    this.material.uniforms.uGlare.value = this.glare;
+    // Chapter 03's flare and The Pilot's setGlare are combined by max so neither driver
+    // can cancel the other, and setGlare keeps its meaning outside the Jump.
+    const jump = ctx.voyage.chapter.id === "jump" ? jumpGlare(ctx.voyage.chapterProgress) : 0;
+    const glare = Math.max(this.glare, jump);
+    this.material.uniforms.uGlare.value = glare;
     if (this.glow) {
       // The sprite is a child of the scaled group, so its scale is in orb radii: divide the
       // world-space target back out by `sc`. The GLOW_MIN floor fades in with ignite so the
       // halo does not pop in at full size behind the ignition curtain.
       // A Sprite is a billboarded quad; z stays 1 so only its width/height breathe.
       const world = Math.max(GLOW_MIN * ctx.ignite, GLOW_SCALE * sc);
-      const g = (world / sc) * (1 + ctx.audioEnergy * 0.4) * (1 + this.glare * 2);
+      // Combined glare (not just setGlare) so the halo also swells through the Jump.
+      const g = (world / sc) * (1 + ctx.audioEnergy * 0.4) * (1 + glare * 2);
       this.glow.scale.set(g, g, 1);
+    }
+    if (this.burst && this.burstMaterial) {
+      // Hidden outside the beat rather than drawn at zero opacity.
+      this.burst.visible = jump > 0.001;
+      // Opacity and scale are both gated by ignite (uGlare is not, per the design note) so the
+      // burst cannot flash behind the ignition curtain. Scale is world-space width divided by
+      // `sc` because the sprite lives in the scaled group.
+      this.burstMaterial.opacity = jump * ctx.ignite;
+      const b = (BURST_WORLD * jump * ctx.ignite) / sc;
+      this.burst.scale.set(b, b, 1);
     }
   }
 
@@ -167,6 +226,11 @@ export class EnergyOrb implements SetPiece {
     this.glowMaterial?.dispose();
     this.glowMaterial = null;
     this.glow = null;
+    // Burst texture + material: idempotent like the glow path above.
+    this.burstMaterial?.map?.dispose();
+    this.burstMaterial?.dispose();
+    this.burstMaterial = null;
+    this.burst = null;
     this.group = null;
     this.scene = null;
   }

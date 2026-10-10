@@ -198,6 +198,9 @@
   position: static; height: auto; min-height: 100vh;
   padding-top: 2rem; padding-bottom: 2rem;
 }
+.chapter--approach[data-static="true"] .services {
+  display: grid; grid-template-columns: minmax(0, 1fr);
+}
 .chapter--approach[data-static="true"] .service-panel {
   position: static; inset: auto; opacity: 1; transform: none; overflow: visible; max-height: none;
   visibility: visible; pointer-events: auto;

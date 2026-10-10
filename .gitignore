@@ -45,3 +45,4 @@ api-keys*.csv
 
 # Playwright MCP session cache (console/page snapshots)
 .playwright-mcp/
+/.worktrees/

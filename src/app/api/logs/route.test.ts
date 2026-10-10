@@ -71,4 +71,12 @@ describe("POST /api/logs", () => {
     expect(appendLog).toHaveBeenCalledTimes(1);
     expect(appendLog).toHaveBeenCalledWith("client", expect.objectContaining({ event: "quality.tier", tier: "high" }));
   });
+
+  // Slice 3 Task 9: the Jump beat's log line must survive the route's allow-list.
+  it("accepts the voyage.jump event the Jump beat emits", async () => {
+    // The route imports LOG_EVENTS from clientLog, so this pins that the two stay in step.
+    const res = await POST(post(JSON.stringify({ event: "voyage.jump", progress: 0.2004 })));
+    expect(res.status).toBe(204);
+    expect(appendLog).toHaveBeenCalledWith("client", expect.objectContaining({ event: "voyage.jump" }));
+  });
 });

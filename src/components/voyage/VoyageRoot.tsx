@@ -19,12 +19,18 @@ import FlightRail from "./FlightRail";
 import Dock from "@/components/dock/Dock";
 import Ignition from "./Ignition";
 import Launch from "./Launch";
+// Slice 3: chapter 02's panels and chapter 03's beat.
+import Services from "./Services";
+import { useJumpBeat } from "./useJumpBeat";
 
 const SceneRoot = dynamic(() => import("@/scene/SceneRoot"), { ssr: false });
 
 /** Settle window before the FPS probe samples. On a repeat visit Ignition finishes at
  *  mount, so a shorter delay would sample the warm-up frames it means to exclude. */
 const PROBE_DELAY_MS = 900;
+
+/** Chapter 03 has no component of its own — it is 25vh of scroll and a beat. */
+const jumpChapter = CHAPTERS.find((c) => c.id === "jump")!;
 
 interface VoyageRootProps {
   settings: Settings;
@@ -98,21 +104,29 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
   }, []);
   const onIgnitionComplete = useCallback(() => setIgnited(true), []);
 
-  const placeholders = useMemo(() => CHAPTERS.filter((c) => c.id !== "launch"), []);
+  // Chapters 01–03 own their own sections now; the rest are still placeholders.
+  const placeholders = useMemo(
+    () => CHAPTERS.filter((c) => c.id !== "launch" && c.id !== "approach" && c.id !== "jump"),
+    [],
+  );
+
+  // Computed before the early return so the hook below is never called conditionally.
+  const animated = tier !== null && tier !== "still";
+  const jumpLetterbox = useJumpBeat(animated);
 
   if (tier === null) return <div className="voyage-root voyage-root--booting" />;
-
-  const animated = tier !== "still";
-
-  // Placeholder use until Task 9 renders Services — Task 9 deletes this line.
-  void services;
 
   return (
     <div className="voyage-root" data-tier={tier}>
       <VoyageScroll smooth={animated} />
-      {animated ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
+      {/* Narrowed on the literal: SceneRoot takes Exclude<Tier, "still">, and `animated` is a
+          plain boolean TypeScript cannot tie back to `tier`. */}
+      {tier !== "still" ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
 
-      <Letterbox active={animated && letterbox} />
+      {/* Two independent sources, OR'd here. Ignition writes `letterbox` and clears it
+          unconditionally in finish() (Ignition.tsx:49), so sharing one boolean would let it
+          stomp a Jump-driven true. */}
+      <Letterbox active={animated && (letterbox || jumpLetterbox)} />
       <Telemetry />
       <FlightRail />
       <Dock visible={ignited} />
@@ -123,6 +137,17 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
           `scrollHeight - innerHeight` equals VOYAGE_SCROLL_VH — the store's denominator. */}
       <main className="voyage-track" style={{ minHeight: `${VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH}vh` }}>
         <Launch headline={settings.heroHeadline} subheadline={settings.heroSubheadline} ready={ignited} />
+        {/* Inside the `tier === null` boot gate: Services calls useReducedMotion(), which must
+            never server-render. */}
+        <Services services={services} animated={animated} />
+        {/* Chapter 03 carries 25vh of scroll and nothing else: no pin, no label, and no
+            aria-label — an empty labelled region is a screen-reader dead end. The beat it
+            names is entirely in useJumpBeat + the set pieces. */}
+        <section
+          id="jump"
+          className="chapter chapter--micro"
+          style={{ height: `${sectionHeightVh(jumpChapter)}vh` }}
+        />
         {placeholders.map((c) => (
           <section
             key={c.id}

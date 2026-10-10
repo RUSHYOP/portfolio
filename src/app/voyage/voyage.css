@@ -160,7 +160,10 @@
    0.453) and push the replacement windows' 0.56 end outside the pin. Adjust the panel's own
    internal padding instead. */
 @media (max-width: 767px) {
-  .chapter--approach .chapter__pin { height: 64vh; }
+  /* padding-top, NOT top: an inner inset keeps the sticky hold at 150 − 64 = 86vh (a `top`
+     offset would cut it). 4.5rem clears the fixed mobile dock (bottom ≈ 69px) so the chapter
+     label and the panel's header no longer sit under the pill — browser review, mobile-p10. */
+  .chapter--approach .chapter__pin { height: 64vh; padding-top: 4.5rem; }
   .services { position: relative; flex: 1 1 auto; }
   .service-panel {
     position: absolute; inset: 0; overflow-y: auto;

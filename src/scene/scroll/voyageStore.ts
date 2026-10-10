@@ -35,9 +35,10 @@ export function normalizeVelocity(pxPerFrame: number): number {
 /** How close a settled scroll must land to the programmatic target before the flag clears. */
 export const PROGRAMMATIC_EPS = 0.002;
 
-/** Hard ceiling on one programmatic scroll. Lenis animates for 1.4s (VoyageScroll.tsx:39)
- *  and its lerp tail can stall short of the target; without this exit an interrupted
- *  scrollTo would suppress the Jump beat for the rest of the session. */
+/** Hard ceiling on one programmatic scroll. Lenis animates for 1.4s (VoyageScroll.tsx:39),
+ *  and a user wheel/touch interrupting it leaves the target unreached; without this exit an
+ *  interrupted scrollTo would suppress the Jump beat for the rest of the session.
+ *  Read via Date.now() (not performance.now()) so vitest fake timers can drive the timeout. */
 export const PROGRAMMATIC_TIMEOUT_MS = 2000;
 
 let programmaticTarget: number | null = null;
@@ -101,7 +102,10 @@ export const voyageStore = {
   tick(dtMs: number): void {
     // NaN/Infinity deltas (a stalled or mis-timed interval) would poison elapsedMs permanently.
     if (!Number.isFinite(dtMs) || dtMs <= 0) return;
-    state = { ...state, elapsedMs: state.elapsedMs + dtMs };
+    // Resolve the deadline here too: otherwise idle ticks re-emit a stale `true` after the
+    // timeout, and a detector that carries it as its previous flag suppresses a real crossing.
+    const prog = resolveProgrammatic(state.progress);
+    state = { ...state, elapsedMs: state.elapsedMs + dtMs, programmatic: prog };
     emit();
   },
 
@@ -119,8 +123,17 @@ export const voyageStore = {
     // No scroller means nothing will move, so there is no programmatic travel to suppress.
     if (!scroller) return;
     const p = clamp01(progress);
-    // Already there: no scroll event will fire, so nothing would ever clear the flag.
-    if (Math.abs(p - state.progress) < PROGRAMMATIC_EPS) { scroller(p); return; }
+    // Already there: no scroll event will fire, so nothing would ever clear the flag. This
+    // call also replaces any earlier target, so disarm it (and emit) before re-asserting.
+    if (Math.abs(p - state.progress) < PROGRAMMATIC_EPS) {
+      programmaticTarget = null;
+      if (state.programmatic) {
+        state = { ...state, programmatic: false };
+        emit();
+      }
+      scroller(p);
+      return;
+    }
     programmaticTarget = p;
     programmaticDeadlineMs = Date.now() + PROGRAMMATIC_TIMEOUT_MS;
     if (!state.programmatic) {

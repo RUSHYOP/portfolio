@@ -186,6 +186,67 @@ describe("voyageStore.programmatic", () => {
     expect(cb.mock.calls[1][0].programmatic).toBe(false);
   });
 
+  // Final-review fix: the idle tick used to re-emit a stale `true` after the deadline, and
+  // useJumpBeat copied it into prevProgrammatic, suppressing the next genuine crossing.
+  it("tick resolves the deadline, so idle ticks stop emitting a stale flag", () => {
+    vi.useFakeTimers();
+    const cb = vi.fn();
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.9);
+    voyageStore.setScroll(0.3, 0.6);
+    voyageStore.subscribe(cb);
+    vi.advanceTimersByTime(PROGRAMMATIC_TIMEOUT_MS + 1);
+    voyageStore.tick(250);
+    expect(voyageStore.getState().programmatic).toBe(false);
+    expect(cb.mock.lastCall?.[0].programmatic).toBe(false);
+  });
+
+  // Guard ordering: an identical position/velocity emit after the timeout must still clear
+  // the flag and notify (no tick in between, or the tick would already have cleared it).
+  it("an unchanged setScroll after the timeout still clears and emits", () => {
+    vi.useFakeTimers();
+    const cb = vi.fn();
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.9);
+    voyageStore.setScroll(0.3, 0.6);
+    voyageStore.subscribe(cb);
+    vi.advanceTimersByTime(PROGRAMMATIC_TIMEOUT_MS + 1);
+    voyageStore.setScroll(0.3, 0.6);
+    expect(voyageStore.getState().programmatic).toBe(false);
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb.mock.lastCall?.[0].programmatic).toBe(false);
+  });
+
+  // A replacing scrollTo renews the deadline: 2500ms after the first call, but only 1000ms
+  // after the second, the flag must still be armed.
+  it("a replacing scrollTo renews the deadline", () => {
+    vi.useFakeTimers();
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.5);
+    vi.advanceTimersByTime(1500);
+    voyageStore.scrollTo(0.84);
+    vi.advanceTimersByTime(1000);
+    voyageStore.setScroll(0.6, 0.4);
+    expect(voyageStore.getState().programmatic).toBe(true);
+  });
+
+  // A no-op scrollTo after an armed one replaces the target with "here", so it must disarm:
+  // no scroll event will follow to clear the flag.
+  it("a scrollTo to the current position disarms a scroll in flight", () => {
+    const cb = vi.fn();
+    const scroller = vi.fn();
+    voyageStore.registerScroller(scroller);
+    voyageStore.scrollTo(0.5);
+    voyageStore.subscribe(cb);
+    voyageStore.scrollTo(voyageStore.getState().progress);
+    expect(voyageStore.getState().programmatic).toBe(false);
+    expect(cb.mock.lastCall?.[0].programmatic).toBe(false);
+    expect(scroller).toHaveBeenCalledTimes(2);
+    // Disarmed, not merely hidden: a later emit far from 0.5 must not re-arm it.
+    voyageStore.setScroll(0.3, 0.2);
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
   it("reset() disarms a scroll in flight", () => {
     voyageStore.registerScroller(vi.fn());
     voyageStore.scrollTo(0.5);

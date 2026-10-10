@@ -228,7 +228,7 @@
 
 /* ====== Orbit process ====== */
 .process h2 { font-family: "Styrene A", var(--font-space-grotesk), sans-serif; font-size: clamp(2rem,4vw,3.5rem); font-weight:500; line-height:1.08; }
-.process h3 { font-size:clamp(1.35rem,2vw,2rem); font-weight:500; margin:0 0 1rem; }
+.process h3 { font-size:clamp(1.35rem,2vw,2rem); font-weight:500; margin:0 0 1rem; overflow-wrap:anywhere; }
 .process__pin { padding-top:90px; padding-bottom:60px; }
 .process__content { width:min(46%,580px); margin-left:auto; height:min(680px,calc(100dvh - 170px)); min-height:0; display:flex; flex-direction:column; }
 .process__content > .chapter__label, .process__content > h2, .process__count, .process__all-toggle { flex-shrink:0; }

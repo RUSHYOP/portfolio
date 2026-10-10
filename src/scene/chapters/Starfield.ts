@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { TIER_SETTINGS, type Tier } from "@/scene/quality";
-import { type ChapterId } from "@/scene/camera/flightPath";
 // Seeded PRNG so a given tier always renders the same sky (stable screenshots).
 // Shared with WarpStreaks so both fields are reproducible from one implementation.
 import { mulberry32 } from "@/scene/prng";
@@ -11,27 +10,6 @@ const CORRIDOR_Z_FAR = -220;
 const CORRIDOR_RADIUS = 45;
 const BASE_SIZE = 0.14;
 const BASE_OPACITY = 0.85;
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const smooth = (t: number) => t * t * (3 - 2 * t);
-
-/* Focus-pull window over Approach's chapterProgress (spec §3: "when a chapter panel pins,
- * background particles behind it soften"). Approach's section is 150vh and .chapter__pin is
- * 100vh, so the pin is stationary only for chapterProgress 0..1/3 — the field is fully soft
- * across that docked frame and releases as the panel block scrolls away. */
-const SOFTEN_IN = 0.02;
-const SOFTEN_FULL = 0.22;
-const SOFTEN_HOLD_END = 0.45;
-const SOFTEN_OUT = 0.65;
-
-/** 0..1 focus pull for a chapter + its local progress. Zero everywhere but Approach. */
-export function approachSoften(chapterId: ChapterId, chapterProgress: number): number {
-  if (chapterId !== "approach") return 0;
-  const t = clamp01(chapterProgress);
-  if (t <= SOFTEN_IN || t >= SOFTEN_OUT) return 0;
-  if (t < SOFTEN_FULL) return smooth((t - SOFTEN_IN) / (SOFTEN_FULL - SOFTEN_IN));
-  if (t <= SOFTEN_HOLD_END) return 1;
-  return smooth(1 - (t - SOFTEN_HOLD_END) / (SOFTEN_OUT - SOFTEN_HOLD_END));
-}
 
 /**
  * A soft round sprite for the point material — the default PointsMaterial draws squares.
@@ -77,9 +55,6 @@ export class Starfield implements SetPiece {
   private disc: THREE.CanvasTexture | null = null;
   private _positions: Float32Array = new Float32Array(0);
   private soften = 0;
-  /** Chapter-driven focus pull, owned by update(). Kept apart from `soften` so the external
-   *  setSoften control (later slices) and the chapter cannot overwrite each other. */
-  private chapterSoften = 0;
   private fade = 0;
   private scene: THREE.Scene | null = null;
 
@@ -100,7 +75,6 @@ export class Starfield implements SetPiece {
   build(scene: THREE.Scene, tier: Tier): void {
     // An unpaired second build() would leak the previous Points into the scene.
     if (this.points) this.dispose();
-    this.chapterSoften = 0;
     // Round sprites instead of the default squares (no-op where there is no document).
     this.disc = makeDiscTexture();
     if (this.disc) {
@@ -136,21 +110,15 @@ export class Starfield implements SetPiece {
     this.fade = Math.min(1, Math.max(0, v));
   }
 
-  /** Apply control values to the material. Exposed for tests; update() calls it every frame.
-   *  The manual and chapter-driven pulls are combined by max. */
+  /** Apply control values to the material. Exposed for tests; update() calls it every frame. */
   applyControls(ignite: number, audioEnergy = 0): void {
-    const soften = Math.max(this.soften, this.chapterSoften);
-    this.material.size = BASE_SIZE * (1 + soften * 0.6) * (1 + audioEnergy * 1.5);
-    const focus = 1 - soften * 0.65;
+    this.material.size = BASE_SIZE * (1 + this.soften * 0.6) * (1 + audioEnergy * 1.5);
+    const focus = 1 - this.soften * 0.65;
     this.material.opacity = BASE_OPACITY * ignite * focus * (1 - this.fade) * (0.75 + audioEnergy * 0.5);
   }
 
   update(ctx: FrameContext): void {
     if (!this.points) return;
-    // Chapter 02 owns the focus pull. Eased (tau ~0.33s) so a flick through Approach
-    // blurs and recovers rather than strobing.
-    const target = approachSoften(ctx.voyage.chapter.id, ctx.voyage.chapterProgress);
-    this.chapterSoften += (target - this.chapterSoften) * Math.min(1, ctx.dt * 3);
     this.applyControls(ctx.ignite, ctx.audioEnergy);
     this.points.rotation.z += ctx.dt * 0.004 * (1 + ctx.audioEnergy * 2);
   }

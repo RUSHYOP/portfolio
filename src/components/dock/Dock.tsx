@@ -33,7 +33,6 @@ export default function Dock({ visible }: DockProps) {
   // Focus moves to the sheet's close button on open and back to the menu button on close.
   const menuRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const sheetRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const s = useVoyage();
   const compact = s.progress > 0.05;
@@ -52,17 +51,6 @@ export default function Dock({ visible }: DockProps) {
     const menu = menuRef.current;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
-      if (e.key === "Tab") {
-        const controls = sheetRef.current?.querySelectorAll<HTMLButtonElement>("button:not([disabled])");
-        if (!controls?.length) return;
-        const first = controls[0];
-        const last = controls[controls.length - 1];
-        const outside = !sheetRef.current?.contains(document.activeElement);
-        if (outside || (e.shiftKey ? document.activeElement === first : document.activeElement === last)) {
-          e.preventDefault();
-          (e.shiftKey ? last : first).focus();
-        }
-      }
     };
     window.addEventListener("keydown", onKeyDown);
     // RAF so the close button exists after AnimatePresence has mounted the sheet.
@@ -92,7 +80,7 @@ export default function Dock({ visible }: DockProps) {
       className="dock"
       data-dock-frame
       data-compact={compact ? "true" : "false"}
-      initial={false}
+      initial={{ y: -40, opacity: 0 }}
       animate={{ y: visible ? 0 : -40, opacity: visible ? 1 : 0 }}
       transition={{ duration: 0.6, ease: [0.2, 0.7, 0.2, 1] }}
     >
@@ -126,7 +114,6 @@ export default function Dock({ visible }: DockProps) {
       <AnimatePresence>
         {open && (
           <motion.div
-            ref={sheetRef}
             className="dock__sheet"
             id="dock-sheet"
             role="dialog"

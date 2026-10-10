@@ -3,46 +3,30 @@
 import { useEffect } from "react";
 import Lenis from "lenis";
 import "lenis/dist/lenis.css";
-import { CHAPTERS } from "@/scene/camera/flightPath";
-import { measureScrollSegments, toScroll, toVoyage, type ScrollSegment } from "./scrollGeometry";
-import { voyageStore, normalizeVelocity, PROGRAMMATIC_TIMEOUT_MS } from "./voyageStore";
+import { voyageStore, normalizeVelocity } from "./voyageStore";
 
 interface VoyageScrollProps {
   /** false → native scroll (reduced motion / still tier). */
   smooth: boolean;
 }
 
+function maxScroll(): number {
+  return Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+}
+
 /** T+ clock cadence, in ms. Shared by the interval delay and the tick delta so they cannot drift. */
-const TICK_MS = 50;
+const TICK_MS = 250;
 
 /** Bridges page scroll (Lenis or native) into voyageStore. Renders nothing. */
 export default function VoyageScroll({ smooth }: VoyageScrollProps) {
   useEffect(() => {
-    const track = document.querySelector<HTMLElement>(".voyage-track");
-    let segments: ScrollSegment[] = [];
-    const measure = () => {
-      segments = measureScrollSegments(track, CHAPTERS, window.scrollY, window.innerHeight);
-      voyageStore.setScroll(toVoyage(window.scrollY, segments), 0);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    if (track) {
-      observer.observe(track);
-      track.querySelectorAll<HTMLElement>(":scope > section").forEach(section => observer.observe(section));
-    }
-    window.addEventListener("resize", measure);
-    const cleanupGeometry = () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-    };
     // Drives the T+ readout independently of scroll activity.
     const tick = setInterval(() => voyageStore.tick(TICK_MS), TICK_MS);
 
     if (smooth) {
       const lenis = new Lenis({ autoRaf: true, lerp: 0.1, smoothWheel: true });
-      let navigationDeadline = 0;
       // Lenis emits nothing on construction; seed from the restored scroll position like the native branch does.
-      voyageStore.setScroll(toVoyage(window.scrollY, segments), 0);
+      voyageStore.setScroll(window.scrollY / maxScroll(), 0);
       // Lenis passes its own instance to the scroll callback (ScrollCallback = (lenis: Lenis) => void).
       lenis.on("scroll", (e) => {
         // An unscrollable page (limit 0, e.g. before layout) reports progress === 1, which would
@@ -50,23 +34,10 @@ export default function VoyageScroll({ smooth }: VoyageScrollProps) {
         // forward-compatibility in case the ratio ever becomes NaN/Infinity.
         if (e.limit <= 0) return;
         if (!Number.isFinite(e.progress)) return;
-        voyageStore.setScroll(toVoyage(e.scroll, segments), Date.now() < navigationDeadline ? 0 : normalizeVelocity(e.velocity));
+        voyageStore.setScroll(e.progress, normalizeVelocity(e.velocity));
       });
-      voyageStore.registerScroller((p) => {
-        // Canonical epsilon can be reached before Lenis has finished its physical tail.
-        // Keep velocity/audio quiet until its completion callback, with a bounded timeout
-        // for interrupted animations. The store retains its existing public API.
-        navigationDeadline = Date.now() + PROGRAMMATIC_TIMEOUT_MS;
-        lenis.scrollTo(toScroll(p, segments), {
-          duration: 1.4,
-          onComplete: () => {
-            navigationDeadline = 0;
-            voyageStore.setScroll(toVoyage(window.scrollY, segments), 0);
-          },
-        });
-      });
+      voyageStore.registerScroller((p) => lenis.scrollTo(p * maxScroll(), { duration: 1.4 }));
       return () => {
-        cleanupGeometry();
         clearInterval(tick);
         voyageStore.unregisterScroller();
         lenis.destroy();
@@ -78,8 +49,10 @@ export default function VoyageScroll({ smooth }: VoyageScrollProps) {
     const onScroll = () => {
       const now = performance.now();
       const y = window.scrollY;
-      const progress = toVoyage(y, segments);
-      // Preserve the velocity sample if a nonfinite frame is skipped.
+      const progress = y / maxScroll();
+      // Guard before mutating lastY/lastT, so a skipped frame does not swallow the delta it
+      // carried. maxScroll() floors at 1, so this cannot fire today; kept for parity with the
+      // Lenis branch's finiteness guard.
       if (!Number.isFinite(progress)) return;
       const frames = Math.max(1, (now - lastT) / 16.67);
       const vel = normalizeVelocity((y - lastY) / frames);
@@ -88,10 +61,9 @@ export default function VoyageScroll({ smooth }: VoyageScrollProps) {
       voyageStore.setScroll(progress, vel);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    voyageStore.registerScroller((p) => window.scrollTo({ top: toScroll(p, segments), behavior: "auto" }));
+    voyageStore.registerScroller((p) => window.scrollTo({ top: p * maxScroll(), behavior: "auto" }));
     onScroll();
     return () => {
-      cleanupGeometry();
       clearInterval(tick);
       voyageStore.unregisterScroller();
       window.removeEventListener("scroll", onScroll);

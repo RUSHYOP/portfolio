@@ -42,20 +42,6 @@ Public reads go through the published-only branch (`col.list({ publishedOnly: tr
 
 **Media pipeline**: uploads go through `/api/upload` → validated by type-specific size/dimension limits (`profile`, `project_icon`, `skill_icon`, `audio`) → stored in GridFS → referenced as `/api/media/{fileId}`. (`scripts/migrate-media.ts` was a one-time migration off static `public/` files; `@vercel/blob` is a leftover dependency, not the active storage path.)
 
-## Voyage architecture — Approach Vector and Jump
-
-The visual gate was reopened on 2026-09-30 after the user rejected the original card/graph/tunnel presentation. Launch → Approach → Jump now uses a restrained cinematic background and an editorial DOM foreground. The pending production-browser/reviewer gate is recorded in the correction report.
-
-`src/app/voyage/page.tsx` reads actual published CMS records and passes them to `VoyageRoot`. Hero, navigation and Services render in server HTML before tier selection; only the scene and Ignition require the detected tier. Launch has no hidden initial pose. The obsolete theme affordance is removed from Voyage, with a labelled audio control retained.
-
-Services narrows optional fields through `readService`, renders each authored record once, and keeps normal document flow in every quality tier. Desktop rows place index/title beside detail; mobile rows stack. No count threshold, equal cards, horizontal strip, 64vh pin or solo visibility window remains. N=1/6/10 long-copy DOM fixtures exercise the same layout; real browser overflow/reflow checks are a separate gate. N=0 temporarily retains the default empty interval until shared omission work.
-
-`VoyageScroll` owns local measured `ScrollSegment` geometry. ResizeObserver measures the track and section bounds after content/font changes; resize reseeds canonical progress without navigation. `toVoyage` and `toScroll` are inverse piecewise mappings shared by native and Lenis scrolling. Store/camera/rail APIs retain canonical chapter intervals. Surface includes exactly one trailing viewport, and the root adds no minimum travel. Services is intrinsically sized in all tiers, so arbitrary record counts do not compress reading time into a fixed allocation.
-
-The single scene registers Starfield, WarpStreaks and EnergyOrb; the decorative Topology primitive is retained as dormant code but omitted from both desktop and mobile. Fewer, dimmer stars and varied additive streaks support the foreground. Streak intensity and Jump flare follow actual velocity and settle exponentially with delta time. The store clears stale native velocity after idle and suppresses programmatic velocity through arrival, including audio/FOV drivers. Orb core and halo have projection bounds across portrait and landscape aspects; Launch framing places the destination clear of copy. Renderer antialiasing is enabled within the existing DPR caps; hardware performance remains subject to the browser gate.
-
-`useJumpBeat` retains forward organic edge detection and the existing whoosh, with programmatic suppression. Its hold gates premature placeholder labels, while Jump no longer lowers letterbox bars over navigation. Ignition alone owns cinematic bars. No new compositor, context, dependency or CMS proof content is introduced.
-
 ## Visual design system
 
 Design tokens live in `src/app/globals.css` as CSS custom properties, swapped via `[data-theme="dark"|"light"]` on `<html>` (see `ThemeToggle.tsx`, persisted to `localStorage`).

@@ -87,8 +87,6 @@ describe("TIER_SETTINGS", () => {
     expect(TIER_SETTINGS.mid.dpr).toBe(1);
     expect(TIER_SETTINGS.mid.starCount).toBeLessThan(TIER_SETTINGS.high.starCount);
     expect(TIER_SETTINGS.mid.streakCount).toBeLessThan(TIER_SETTINGS.high.streakCount);
-    expect(TIER_SETTINGS.mid.topologyNodes).toBeLessThan(TIER_SETTINGS.high.topologyNodes);
-    expect(TIER_SETTINGS.still.topologyNodes).toBe(0);
     expect(TIER_SETTINGS.still.starCount).toBe(0);
     expect(TIER_SETTINGS.still.streakCount).toBe(0);
   });

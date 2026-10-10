@@ -10,9 +10,6 @@ export const LOG_EVENTS = [
   // A failed *read* is not a failed save: the dashboard reports them separately so a
   // stale tab can be told apart from a rejected mutation.
   "admin.load_failed",
-  // Slice 3: one line per Jump beat that actually fired, so the browser review can tell a
-  // missed beat apart from a suppressed one.
-  "voyage.jump",
 ] as const;
 
 export type LogEvent = (typeof LOG_EVENTS)[number];

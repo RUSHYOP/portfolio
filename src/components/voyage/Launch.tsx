@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
 import { useVoyage } from "@/scene/scroll/useVoyage";
 import { voyageStore } from "@/scene/scroll/voyageStore";
@@ -15,6 +16,9 @@ interface LaunchProps {
 
 const chapter = CHAPTERS.find((c) => c.id === "launch")!;
 const landing = CHAPTERS.find((c) => c.id === "landing")!;
+const approach = CHAPTERS.find((c) => c.id === "approach")!;
+
+const EASE = [0.2, 0.7, 0.2, 1] as const;
 
 // Module scope: stable onClick identities across the per-frame useVoyage() re-renders.
 const book = () => {
@@ -23,6 +27,7 @@ const book = () => {
 };
 const seeWork = () => {
   getAudioEngine().click({ volume: 0.05 });
+  voyageStore.scrollTo(approach.start + 0.001);
 };
 
 /** Chapter 01. Hero over the parked camera; the distant star sits low-right in the scene. */
@@ -36,11 +41,16 @@ export default function Launch({ headline, subheadline, ready }: LaunchProps) {
     <section
       id="launch"
       className="chapter chapter--launch"
-      style={{ minHeight: `${sectionHeightVh(chapter)}vh` }}
+      style={{ height: `${sectionHeightVh(chapter)}vh` }}
       aria-label="Launch"
     >
       <div className="chapter__pin">
-        <div className="launch">
+        <motion.div
+          className="launch"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: ready ? 1 : 0, y: ready ? 0 : 12 }}
+          transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
+        >
           <p className="chapter__label">
             {chapter.index} / {chapter.label}
           </p>
@@ -48,9 +58,9 @@ export default function Launch({ headline, subheadline, ready }: LaunchProps) {
           <p className="launch__sub">{subheadline}</p>
           <div className="launch__ctas">
             <CallToAction label="Book a call" onClick={book} />
-            <CallToAction label="See the work" variant="ghost" href="/projects" onClick={seeWork} />
+            <CallToAction label="See the work" variant="ghost" onClick={seeWork} />
           </div>
-        </div>
+        </motion.div>
         {/* Gated on ready: the hint must not appear before the hero fades up. */}
         <p className="launch__hint" style={{ opacity: ready ? hintOpacity : 0 }} aria-hidden="true">
           SCROLL TO DEPART ↓

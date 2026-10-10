@@ -31,20 +31,19 @@ export const CHAPTERS: readonly Chapter[] = [
 
 export const CONTENT_CHAPTERS: readonly Chapter[] = CHAPTERS.filter((c) => !c.micro);
 
-/** Default physical scroll allocation in vh. With only default section heights,
- * the track is this allocation plus VOYAGE_TAIL_VH. Chapters with intrinsic or
- * extended heights are mapped through measured scroll segments; voyage progress
- * is canonical and is not generally scrollY / document scroll limit. */
+/** Scrollable range of the voyage in vh — the denominator the store's progress divides by.
+ *  1250 is the minimum at which every content chapter (smallest span 0.08) still clears
+ *  the 100vh sticky pin; total travel = 12.5 viewports + 1 tail. */
 export const VOYAGE_SCROLL_VH = 1250;
 
-/** The final section includes one extra viewport so its measured end minus this
- * tail equals the true document scroll limit. Default section offsets equal
- * chapter.start * VOYAGE_SCROLL_VH only when all default allocations are used;
- * measured geometry is authoritative once any section differs. */
+/** The last section carries one extra viewport beyond its chapter span, so the track is
+ *  `VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH` tall and `scrollHeight - innerHeight === VOYAGE_SCROLL_VH`.
+ *  That identity is the point: store progress (`scrollY / (scrollHeight - innerHeight)`) and
+ *  section offsets then share one denominator, so chapter `c` begins at document offset
+ *  `c.start * VOYAGE_SCROLL_VH` exactly — `scrollTo(c.start)` lands on the section it names. */
 export const VOYAGE_TAIL_VH = 100;
 
-/** Default DOM allocation in vh; variable chapters may use intrinsic/extended height.
- * The final chapter carries the tail. */
+/** DOM height of a chapter's section, in vh. The tail rides on the final chapter. */
 export function sectionHeightVh(chapter: Chapter): number {
   return (chapter.end - chapter.start) * VOYAGE_SCROLL_VH + (chapter.id === "surface" ? VOYAGE_TAIL_VH : 0);
 }

@@ -9,15 +9,12 @@ import { TIER_SETTINGS, type Tier } from "@/scene/quality";
 import { Starfield } from "@/scene/chapters/Starfield";
 import { EnergyOrb } from "@/scene/chapters/EnergyOrb";
 import { WarpStreaks } from "@/scene/chapters/WarpStreaks";
-import { Topology } from "@/scene/chapters/Topology";
-import { OrbitRing } from "@/scene/chapters/OrbitRing";
 import type { FrameContext, SetPiece } from "@/scene/chapters/types";
 
 interface SceneRootProps {
   tier: Exclude<Tier, "still">;
   /** Flip to true when Ignition completes; the scene fades in over ~1.2s. */
   ignite: boolean;
-  processCount: number;
   onContextLost: () => void;
 }
 
@@ -25,7 +22,7 @@ const IGNITE_SECONDS = 1.2;
 const POSE_LERP = 0.08;
 
 /** Owns the single WebGL context. Reads voyageStore imperatively — no React re-renders per frame. */
-export default function SceneRoot({ tier, ignite, processCount, onContextLost }: SceneRootProps) {
+export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const igniteRef = useRef(ignite);
   // Layout effect, not a render-phase write (react-hooks/refs). No dep array so it re-syncs
@@ -63,8 +60,7 @@ export default function SceneRoot({ tier, ignite, processCount, onContextLost }:
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 400);
 
-    // Registry order controls set-piece updates; Three.js render passes determine draw order.
-    const pieces: SetPiece[] = [new Starfield(), new WarpStreaks(), new Topology(), new OrbitRing(processCount), new EnergyOrb()];
+    const pieces: SetPiece[] = [new Starfield(), new WarpStreaks(), new EnergyOrb()];
     for (const p of pieces) p.build(scene, tier);
 
     const pose: CameraPose = { position: new THREE.Vector3(), lookAt: new THREE.Vector3() };
@@ -153,12 +149,7 @@ export default function SceneRoot({ tier, ignite, processCount, onContextLost }:
       smoothLook.lerp(pose.lookAt, POSE_LERP);
       camera.position.set(smoothPos.x + mouse.x * 0.35, smoothPos.y + mouse.y * 0.25, smoothPos.z);
       camera.lookAt(smoothLook);
-      // A single bank-and-settle; rotateZ resets from lookAt each frame, never accumulates.
-      if (voyage.chapter.id === "orbit") {
-        const bank = Math.sin(Math.PI * Math.min(1, voyage.chapterProgress / 0.2));
-        camera.rotateZ(-Math.PI / 6 * bank);
-      }
-      const targetFov = fovForVelocity(voyage.programmatic ? 0 : voyage.velocity);
+      const targetFov = fovForVelocity(voyage.velocity);
       if (Math.abs(camera.fov - targetFov) > 0.01) {
         camera.fov += (targetFov - camera.fov) * 0.1;
         camera.updateProjectionMatrix();
@@ -191,7 +182,7 @@ export default function SceneRoot({ tier, ignite, processCount, onContextLost }:
       renderer.dispose();
       if (host.contains(canvas)) host.removeChild(canvas);
     };
-  }, [tier, onContextLost, processCount]);
+  }, [tier, onContextLost]);
 
   return <div ref={hostRef} className="voyage-scene" aria-hidden="true" />;
 }

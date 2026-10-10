@@ -1,17 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Settings } from "@/lib/data";
-import type { Item } from "@/lib/collections/defineCollection";
-import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
-import { orbitHeightVh } from "./orbitPhase";
+import { CHAPTERS, VOYAGE_SCROLL_VH, VOYAGE_TAIL_VH, sectionHeightVh } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import VoyageScroll from "@/scene/scroll/VoyageScroll";
 import { detectEnv, selectTier, probeDemote, runFpsProbe, type Tier } from "@/scene/quality";
 import { logClient } from "@/lib/clientLog";
 import { useAudio } from "@/hooks/useAudio";
-import AudioVisualizer from "@/components/AudioVisualizer";
+import { FloatingControls } from "@/components/ThemeToggle";
 import StillSky from "@/scene/StillSky";
 import Telemetry from "./Telemetry";
 import Letterbox from "./Letterbox";
@@ -19,9 +17,6 @@ import FlightRail from "./FlightRail";
 import Dock from "@/components/dock/Dock";
 import Ignition from "./Ignition";
 import Launch from "./Launch";
-import Services from "./Services";
-import Process from "./Process";
-import { useJumpBeat } from "./useJumpBeat";
 
 const SceneRoot = dynamic(() => import("@/scene/SceneRoot"), { ssr: false });
 
@@ -29,18 +24,11 @@ const SceneRoot = dynamic(() => import("@/scene/SceneRoot"), { ssr: false });
  *  mount, so a shorter delay would sample the warm-up frames it means to exclude. */
 const PROBE_DELAY_MS = 900;
 
-/** Chapter 03 has no component of its own — it is 25vh of scroll and a beat. */
-const jumpChapter = CHAPTERS.find((c) => c.id === "jump")!;
-
 interface VoyageRootProps {
   settings: Settings;
-  /** Chapter 02's panels. Untyped past Item's three base fields — narrowed in Services. */
-  services: Item[];
-  /** Chapter 04's ordered process steps. */
-  process: Item[];
 }
 
-export default function VoyageRoot({ settings, services, process }: VoyageRootProps) {
+export default function VoyageRoot({ settings }: VoyageRootProps) {
   const [tier, setTier] = useState<Tier | null>(null);
   const [ignited, setIgnited] = useState(false);
   const [letterbox, setLetterbox] = useState(false);
@@ -66,7 +54,7 @@ export default function VoyageRoot({ settings, services, process }: VoyageRootPr
   // Scroll velocity → audio filter, only while unmuted.
   useEffect(() => {
     if (state.muted) return;
-    return voyageStore.subscribe((s) => engine.setScrollEnergy(s.programmatic ? 0 : s.velocity));
+    return voyageStore.subscribe((s) => engine.setScrollEnergy(s.velocity));
   }, [engine, state.muted]);
 
   // FPS probe after ignition; demote one tier if it can't hold 45fps.
@@ -90,7 +78,11 @@ export default function VoyageRoot({ settings, services, process }: VoyageRootPr
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [ignited, tier]);
 
-  // Dark-only scene and audio voicing share the same theme.
+  // The voyage is dark-only; the theme toggle is removed in slice 8. Keyed on `tier` because
+  // FloatingControls (which writes the stored/OS theme on mount) only mounts once `tier` is
+  // resolved — so this effect must re-run in that same commit to win over it.
+  // The audio engine keys its voicing off the theme too, and FloatingControls sets it from
+  // the stored/OS theme on mount — so pin it here in the same commit, not just the attribute.
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "dark");
     engine.setTheme("dark");
@@ -102,44 +94,30 @@ export default function VoyageRoot({ settings, services, process }: VoyageRootPr
   }, []);
   const onIgnitionComplete = useCallback(() => setIgnited(true), []);
 
-  // Chapters 01–04 own their own sections now; the rest are still placeholders.
-  const placeholders = useMemo(
-    () => CHAPTERS.filter((c) => c.id !== "launch" && c.id !== "approach" && c.id !== "jump"),
-    [],
-  );
+  const placeholders = useMemo(() => CHAPTERS.filter((c) => c.id !== "launch"), []);
 
-  // Content is always rendered; quality selection only enhances its background.
-  const animated = tier !== null && tier !== "still";
-  const jumpLetterbox = useJumpBeat(animated);
-  const reservations = Object.fromEntries(CHAPTERS.map(c => [`--reserve-${c.id}`, `${sectionHeightVh(c)}vh`])) as CSSProperties;
-  const trackStyle = { ...reservations, "--reserve-orbit": `${orbitHeightVh(process.length)}vh` } as CSSProperties;
+  if (tier === null) return <div className="voyage-root voyage-root--booting" />;
+
+  const animated = tier !== "still";
 
   return (
-    <div className="voyage-root" data-tier={tier ?? "pending"} data-jump={jumpLetterbox ? "true" : undefined}>
+    <div className="voyage-root" data-tier={tier}>
       <VoyageScroll smooth={animated} />
-      {tier && tier !== "still" ? <SceneRoot tier={tier} ignite={ignited} processCount={process.length} onContextLost={onContextLost} /> : <StillSky />}
+      {animated ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
 
-      {/* Ignition clears its own state on finish, independently from the Jump hold. */}
-      <Letterbox active={animated && (letterbox || jumpLetterbox)} />
+      <Letterbox active={animated && letterbox} />
       <Telemetry />
       <FlightRail />
-      <Dock visible />
+      <Dock visible={ignited} />
 
-      {tier && <Ignition enabled={animated} onComplete={onIgnitionComplete} onLetterbox={setLetterbox} />}
+      <Ignition enabled={animated} onComplete={onIgnitionComplete} onLetterbox={setLetterbox} />
 
-      {/* Measured child sections determine travel; Surface includes one final viewport tail. */}
-      <main className="voyage-track" style={trackStyle}>
-        <Launch headline={settings.heroHeadline} subheadline={settings.heroSubheadline} ready />
-        <Services services={services} animated={animated} />
-        {/* Chapter 03 carries 25vh of scroll and nothing else: no pin, label or aria-label. */}
-        <section
-          id="jump"
-          className="chapter chapter--micro"
-          style={{ height: `${sectionHeightVh(jumpChapter)}vh` }}
-        />
-        {placeholders.map((c) => {
-          if (c.id === "orbit") return <Process key={c.id} steps={process} animated={animated} />;
-          return <section
+      {/* Track height = scrollable range + the final section's tail viewport, so that
+          `scrollHeight - innerHeight` equals VOYAGE_SCROLL_VH — the store's denominator. */}
+      <main className="voyage-track" style={{ minHeight: `${VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH}vh` }}>
+        <Launch headline={settings.heroHeadline} subheadline={settings.heroSubheadline} ready={ignited} />
+        {placeholders.map((c) => (
+          <section
             key={c.id}
             id={c.id}
             className={`chapter chapter--placeholder${c.micro ? " chapter--micro" : ""}`}
@@ -152,15 +130,11 @@ export default function VoyageRoot({ settings, services, process }: VoyageRootPr
                 </p>
               </div>
             )}
-          </section>;
-        })}
+          </section>
+        ))}
       </main>
 
-      <button type="button" className="voyage-audio" onClick={toggleMuted}
-        aria-label={state.muted ? "Enable audio" : "Mute audio"} aria-pressed={!state.muted}>
-        <AudioVisualizer active={!state.muted} />
-        <span>Sound {state.muted ? "off" : "on"}</span>
-      </button>
+      <FloatingControls muted={state.muted} onToggleMute={toggleMuted} />
     </div>
   );
 }

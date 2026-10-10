@@ -2440,8 +2440,8 @@ body {
   align-items: center;
   gap: 0;
   background: rgba(20, 20, 20, 0.65);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 9999px;
   padding: 0.25rem;

@@ -4,6 +4,9 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import Dock from "./Dock";
 
 beforeEach(() => {
+  vi.stubGlobal("ResizeObserver", class {
+    observe() {} unobserve() {} disconnect() {}
+  });
   vi.stubGlobal("matchMedia", (media: string) => ({ matches: false, media,
     addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }));
   vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => setTimeout(() => cb(performance.now()), 16));

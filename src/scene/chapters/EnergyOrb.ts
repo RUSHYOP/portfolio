@@ -14,7 +14,7 @@ const GLOW_SCALE = 4.2;
 const GLOW_MIN = 3.5;
 
 /** World-space width of the additive burst at full flare. */
-const BURST_WORLD = 5;
+const BURST_WORLD = 26;
 
 /** Chapter 03's flare ramp over Jump chapterProgress, clamped to this beat. */
 export function jumpGlare(t01: number): number {
@@ -68,8 +68,8 @@ const FRAG = /* glsl */ `
     n = n * 0.6 + fbm(p * 6.0 - uTime * 0.08) * 0.4;
     float fresnel = pow(1.0 - max(dot(vNormal, vView), 0.0), 2.2);
     vec3 body = mix(uColor * 0.5, uColor * 1.1, n);
-    // Keep the destination amber even under acceleration.
-    vec3 col = body + fresnel * uColor * 1.0 + uGlare * uColor * 0.25;
+    // Glare blows out toward white but keeps uColor as the only chroma in the orb.
+    vec3 col = body + fresnel * uColor * 1.0 + uGlare * mix(vec3(1.0), uColor, 0.35);
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -90,14 +90,14 @@ function makeGlowTexture(): THREE.Texture {
   return tex;
 }
 
-/** Soft amber accent during movement. Browser-only, like the glow. */
+/** White-hot core fading through amber — the Jump burst. Browser-only, like the glow. */
 function makeBurstTexture(): THREE.Texture {
   const size = 256;
   const canvas = document.createElement("canvas");
   canvas.width = size; canvas.height = size;
   const g = canvas.getContext("2d")!;
   const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  grad.addColorStop(0, `rgba(${AMBER_RGB},0.45)`);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
   grad.addColorStop(0.18, `rgba(${AMBER_RGB},0.75)`);
   grad.addColorStop(1, `rgba(${AMBER_RGB},0)`);
   g.fillStyle = grad;
@@ -134,9 +134,6 @@ export class EnergyOrb implements SetPiece {
   private burst: THREE.Sprite | null = null;
   private scene: THREE.Scene | null = null;
   private glare = 0;
-  private jumpEnergy = 0;
-  private readonly cameraSpace = new THREE.Vector3();
-  private readonly framedPosition = new THREE.Vector3();
 
   /** The scene object, exposed read-only for tests and debug overlays. */
   get object(): THREE.Group | null {
@@ -146,7 +143,6 @@ export class EnergyOrb implements SetPiece {
   build(scene: THREE.Scene, _tier: Tier): void {
     // An unpaired second build() would leak the previous Group into the scene.
     if (this.group) this.dispose();
-    this.jumpEnergy = 0;
     this.group = new THREE.Group();
     this.geometry = new THREE.SphereGeometry(1, 48, 48);
     this.group.add(new THREE.Mesh(this.geometry, this.material));
@@ -183,34 +179,13 @@ export class EnergyOrb implements SetPiece {
   update(ctx: FrameContext): void {
     // SceneRoot may tick before the build lands.
     if (!this.group) return;
-    this.group.position.copy(STAR_POSITION);
-    // During Launch keep the destination in the reserved negative space above mobile
-    // copy / to the right of desktop copy. Blend back to its world destination in Approach.
-    const framing = Math.min(1, Math.max(0, (.2 - ctx.voyage.progress) / .12));
-    if (framing > 0) {
-      this.cameraSpace.copy(STAR_POSITION).applyMatrix4(ctx.camera.matrixWorldInverse);
-      const depth = Math.max(1, -this.cameraSpace.z);
-      const halfHeight = depth * Math.tan(THREE.MathUtils.degToRad(ctx.camera.fov / 2));
-      this.framedPosition.set(halfHeight * ctx.camera.aspect * .68,
-        halfHeight * (ctx.camera.aspect < 1 ? .72 : -.05), -depth).applyMatrix4(ctx.camera.matrixWorld);
-      this.group.position.lerp(this.framedPosition, framing);
-    }
-    // Bound the physical core and halo in projection, including narrow portrait screens.
-    this.cameraSpace.copy(this.group.position).applyMatrix4(ctx.camera.matrixWorldInverse);
-    const depth = Math.max(.1, -this.cameraSpace.z);
-    const viewHeight = 2 * depth * Math.tan(THREE.MathUtils.degToRad(ctx.camera.fov / 2));
-    const haloLimit = viewHeight * Math.min(.09, ctx.camera.aspect * .16);
-    const s = Math.min(starScale(ctx.voyage.progress), haloLimit / 5) * ctx.ignite;
+    const s = starScale(ctx.voyage.progress) * ctx.ignite;
     const sc = Math.max(0.001, s);
     this.group.scale.setScalar(sc);
     this.material.uniforms.uTime.value = ctx.t;
     // Chapter 03's flare and The Pilot's setGlare combine by max so neither can cancel
     // the other, and setGlare keeps its meaning outside the Jump.
-    const target = ctx.voyage.chapter.id === "jump" && !ctx.voyage.programmatic
-      ? jumpGlare(ctx.voyage.chapterProgress) * ctx.voyage.velocity * .25 : 0;
-    this.jumpEnergy += (target - this.jumpEnergy) * (1 - Math.exp(-Math.max(0, ctx.dt) * 18));
-    if (ctx.voyage.programmatic) this.jumpEnergy = 0;
-    const jump = this.jumpEnergy;
+    const jump = ctx.voyage.chapter.id === "jump" && !ctx.voyage.programmatic ? jumpGlare(ctx.voyage.chapterProgress) : 0;
     const glare = Math.max(this.glare, jump);
     this.material.uniforms.uGlare.value = glare;
     if (this.glow) {
@@ -218,15 +193,15 @@ export class EnergyOrb implements SetPiece {
       // world-space target back out by `sc`. The GLOW_MIN floor fades in with ignite so the
       // halo does not pop in at full size behind the ignition curtain.
       // A Sprite is a billboarded quad; z stays 1 so only its width/height breathe.
-      const world = Math.min(haloLimit, Math.max(GLOW_MIN * ctx.ignite, GLOW_SCALE * sc));
-      const g = Math.min(haloLimit, world * (1 + ctx.audioEnergy * 0.1) * (1 + glare * .2)) / sc;
+      const world = Math.max(GLOW_MIN * ctx.ignite, GLOW_SCALE * sc);
+      const g = (world / sc) * (1 + ctx.audioEnergy * 0.4) * (1 + glare * 2);
       this.glow.scale.set(g, g, 1);
     }
     if (this.burst && this.burstMaterial) {
       // Hidden outside the beat rather than drawn at zero opacity.
       this.burst.visible = jump > 0.001;
       this.burstMaterial.opacity = jump * ctx.ignite;
-      const b = Math.min(haloLimit, BURST_WORLD * jump * ctx.ignite) / sc;
+      const b = (BURST_WORLD * jump * ctx.ignite) / sc;
       this.burst.scale.set(b, b, 1);
     }
   }

@@ -9,6 +9,7 @@ import { TIER_SETTINGS, type Tier } from "@/scene/quality";
 import { Starfield } from "@/scene/chapters/Starfield";
 import { EnergyOrb } from "@/scene/chapters/EnergyOrb";
 import { WarpStreaks } from "@/scene/chapters/WarpStreaks";
+import { Topology } from "@/scene/chapters/Topology";
 import type { FrameContext, SetPiece } from "@/scene/chapters/types";
 
 interface SceneRootProps {
@@ -44,7 +45,7 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
     try {
       renderer = new THREE.WebGLRenderer({
         canvas,
-        antialias: true,
+        antialias: false,
         powerPreference: "high-performance",
         stencil: false,
       });
@@ -61,7 +62,7 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 400);
 
     // Registry order controls set-piece updates; Three.js render passes determine draw order.
-    const pieces: SetPiece[] = [new Starfield(), new WarpStreaks(), new EnergyOrb()];
+    const pieces: SetPiece[] = [new Starfield(), new WarpStreaks(), new Topology(), new EnergyOrb()];
     for (const p of pieces) p.build(scene, tier);
 
     const pose: CameraPose = { position: new THREE.Vector3(), lookAt: new THREE.Vector3() };

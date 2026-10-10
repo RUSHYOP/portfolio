@@ -15,8 +15,6 @@ interface LaunchProps {
 
 const chapter = CHAPTERS.find((c) => c.id === "launch")!;
 const landing = CHAPTERS.find((c) => c.id === "landing")!;
-const approach = CHAPTERS.find((c) => c.id === "approach")!;
-
 
 // Module scope: stable onClick identities across the per-frame useVoyage() re-renders.
 const book = () => {
@@ -25,7 +23,6 @@ const book = () => {
 };
 const seeWork = () => {
   getAudioEngine().click({ volume: 0.05 });
-  voyageStore.scrollTo(approach.start + 0.001);
 };
 
 /** Chapter 01. Hero over the parked camera; the distant star sits low-right in the scene. */
@@ -47,11 +44,11 @@ export default function Launch({ headline, subheadline, ready }: LaunchProps) {
           <p className="chapter__label">
             {chapter.index} / {chapter.label}
           </p>
-          <h1 className="launch__title">{headline.split(/(\s+)/).map((word, i) => word.includes("-") ? <span className="launch__word" key={i}>{word}</span> : word)}</h1>
+          <h1 className="launch__title">{headline}</h1>
           <p className="launch__sub">{subheadline}</p>
           <div className="launch__ctas">
-            <CallToAction label="Discuss a project" onClick={book} />
-            <CallToAction label="Explore services" variant="ghost" onClick={seeWork} />
+            <CallToAction label="Book a call" onClick={book} />
+            <CallToAction label="See the work" variant="ghost" href="/projects" onClick={seeWork} />
           </div>
         </div>
         {/* Gated on ready: the hint must not appear before the hero fades up. */}

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 
-/** Cinematic bars (8vh each). Shown only during Ignition; Jump keeps navigation unobscured. */
+/** Cinematic bars (8vh each). Shown during Ignition and Jump. */
 export default function Letterbox({ active }: { active: boolean }) {
   const t = { duration: 0.45, ease: [0.7, 0, 0.2, 1] as const };
   return (

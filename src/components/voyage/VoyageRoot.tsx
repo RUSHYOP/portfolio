@@ -12,6 +12,7 @@ import { logClient } from "@/lib/clientLog";
 import { useAudio } from "@/hooks/useAudio";
 import AudioVisualizer from "@/components/AudioVisualizer";
 import StillSky from "@/scene/StillSky";
+import Telemetry from "./Telemetry";
 import Letterbox from "./Letterbox";
 import FlightRail from "./FlightRail";
 import Dock from "@/components/dock/Dock";
@@ -113,7 +114,8 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
       {tier && tier !== "still" ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
 
       {/* Ignition clears its own state on finish, independently from the Jump hold. */}
-      <Letterbox active={animated && letterbox} />
+      <Letterbox active={animated && (letterbox || jumpLetterbox)} />
+      <Telemetry />
       <FlightRail />
       <Dock visible />
 

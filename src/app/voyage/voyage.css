@@ -187,8 +187,8 @@
    The section height stays a fixed 150vh on every tier (VoyageScroll derives progress and
    drives scrollTo from `scrollHeight − innerHeight`, so `height: auto` here would land every
    dock and rail link after Approach short). 2rem of padding rather than 6rem keeps the
-   stacked column inside 150vh at 390x844; `mobile-still.png` in Task 10 Step 3 is the
-   evidence. Nothing clips either way — no ancestor sets `overflow: hidden`. */
+   stacked column inside 150vh at 390x844 for the current seed. A larger CMS count will
+   require the measured section height planned for Slice 4. */
 .chapter--approach[data-static="true"] .chapter__pin {
   position: static; height: auto; min-height: 100vh;
   padding-top: 2rem; padding-bottom: 2rem;
@@ -199,6 +199,11 @@
 }
 @media (max-width: 767px) {
   .chapter--approach[data-static="true"] .services { flex-direction: column; }
+  /* Animated cards need an internal scroll region in the 64vh pin; static cards should
+     take their natural height so all content flows in the document. */
+  .chapter--approach[data-static="true"] .service-panel {
+    flex: none; overflow: visible;
+  }
 }
 
 /* ====== CTA ====== */

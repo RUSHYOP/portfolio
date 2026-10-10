@@ -113,7 +113,17 @@ export const voyageStore = {
     if (!scroller) return;
     const p = clamp01(progress);
     // No scroll event will arrive if the reader is already at the destination.
-    if (Math.abs(p - state.progress) < PROGRAMMATIC_EPS) { scroller(p); return; }
+    // A later request to stay here also cancels any earlier destination.
+    if (Math.abs(p - state.progress) < PROGRAMMATIC_EPS) {
+      programmaticTarget = null;
+      programmaticDeadlineMs = 0;
+      if (state.programmatic) {
+        state = { ...state, programmatic: false };
+        emit();
+      }
+      scroller(p);
+      return;
+    }
     programmaticTarget = p;
     programmaticDeadlineMs = Date.now() + PROGRAMMATIC_TIMEOUT_MS;
     if (!state.programmatic) {

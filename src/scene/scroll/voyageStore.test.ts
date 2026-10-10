@@ -158,10 +158,29 @@ describe("voyageStore.programmatic", () => {
 
   it("does not arm when the reader is already at the target", () => {
     const scroller = vi.fn();
+    const cb = vi.fn();
     voyageStore.registerScroller(scroller);
+    voyageStore.subscribe(cb);
     voyageStore.scrollTo(voyageStore.getState().progress);
     expect(voyageStore.getState().programmatic).toBe(false);
     expect(scroller).toHaveBeenCalledTimes(1);
+    expect(cb).not.toHaveBeenCalled();
+  });
+
+  it("a later scrollTo at the current position cancels travel before calling the scroller", () => {
+    const order: string[] = [];
+    voyageStore.registerScroller(() => order.push(`scroll:${voyageStore.getState().programmatic}`));
+    voyageStore.scrollTo(0.9);
+    voyageStore.setScroll(0.3, 0.1);
+    voyageStore.subscribe((s) => order.push(`emit:${s.programmatic}`));
+    order.length = 0;
+
+    voyageStore.scrollTo(0.3);
+    expect(voyageStore.getState().programmatic).toBe(false);
+    expect(order).toEqual(["emit:false", "scroll:false"]);
+
+    voyageStore.setScroll(0.31, 0.1);
+    expect(voyageStore.getState().programmatic).toBe(false);
   });
 
   it("emits the flag to subscribers", () => {

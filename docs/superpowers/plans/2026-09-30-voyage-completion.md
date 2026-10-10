@@ -4,7 +4,7 @@
 
 **Goal:** Complete the approved proof-to-arrival voyage, connect its existing CMS and inquiry backend, launch it at `/`, and remove the replaced experience without fabricating proof or configuration.
 
-**Architecture:** Build on completed Slices 3/4 and the root-local measured scroll geometry. Preserve canonical chapter ranges, but omit empty sections and filter camera waypoints and navigation together; physical mapping skips the resulting canonical gaps. Keep one scene, CMS-derived DOM, accessible static counterparts, and small pure helpers shared between DOM and set pieces.
+**Architecture:** Build on completed Slices 3/4, including Slice 4 Task 3 content-first SSR, stable initial reservations and its measured CLS gate, and the root-local measured scroll geometry. Preserve canonical chapter ranges, but omit empty sections and filter camera waypoints and navigation together; physical mapping skips the resulting canonical gaps. Keep one scene, CMS-derived DOM, accessible static counterparts, and small pure helpers shared between DOM and set pieces.
 
 **Tech Stack:** Existing Next.js 16, React 19, Three.js 0.169, Framer Motion 12, Lenis 1.3, Vitest 5, Mongo/Mongoose, and Resend. Add Playwright and axe test tooling only in the final verification task if absent.
 
@@ -26,7 +26,7 @@
 ## Settled decisions and external dependencies
 
 1. Slice 4's measured mapping, N process records, and original geometric implementation are approved. Empty Orbit is temporary until Task 3 here.
-2. **Scheduler public URL is not present in the inspected Settings model.** Add one validated blank-by-default CMS field. Render the real inquiry form as primary until the user supplies an actual public booking/embed URL. Never invent a provider/account or claim scheduling works without a verified URL. A generic iframe `load` event cannot prove a cross-origin scheduler is usable; keep a permanent direct booking link and a visible form, with a 4s slow/error promotion.
+2. **Scheduler public URL is not present in the inspected Settings model.** Add one validated blank-by-default CMS field. Render the real inquiry form as primary until the user supplies an actual public booking/embed URL. Never invent a provider/account or claim scheduling works without a verified URL. A generic iframe `load` event cannot prove a cross-origin scheduler is usable; keep a permanent direct booking link and a prominent form from first render; promote the form after 4s regardless of iframe load unless a real provider-specific readiness contract is later implemented.
 3. `POST /api/inquiries` already validates, rate-limits, stores, and sends best-effort Resend notifications. Deployment needs working MongoDB, `INQUIRY_IP_SALT`, and the environment values read by `src/lib/mail.ts`. Storage success is a real success even when notification fails; existing backend records notification failure for admin follow-up.
 4. Current Settings can truthfully supply portrait, heading, biography, location, manifesto and footer links. It has **no verified credential strip model**. Show location and CMS skills only. Do not hardcode IEEE/degree/years merely because the visual spec lists them. Verified extra credentials remain content-dependent.
 5. `/work/[slug]` already sanitizes markdown, handles unknown/unpublished slugs as 404, and renders no scene. Enhance navigation/metadata at launch; do not rebuild it.
@@ -45,8 +45,10 @@
 | 7 / 7 | `Pilot.tsx`, `Horizon.ts`, `Surface.tsx`, scene/root | Truthful arrival, horizon, relaunch |
 | 7 / 8 | `schedulerUrl.ts`, settings layers, `Landing.tsx` and tests | Configurable booking + real inquiry form |
 | 7 / 9 | screenshots, notes | Arrival/browser gate |
-| 8 / 10 | `/page.tsx`, collection specs, legacy components/audio/theme | Home launch, invalidation, removals |
-| 8 / 11 | integration tests, perf/accessibility evidence | Final release gate |
+| 8 / 10 | rate limiter, logs, preview DTO, cache headers | Public launch hardening |
+| 8 / 11 | `/page.tsx`, collection specs, legacy components/audio/theme | Home launch, invalidation, removals |
+| recovery / 12 | admin field/default/upload/status/shortcut modules, shared color token | Recovered CMS follow-ups |
+| 8 / 13 | integration tests, perf/accessibility evidence | Final post-change release gate |
 
 Use the exact file paths given within each task. All new DOM modules live under `src/components/voyage`; set pieces under `src/scene/chapters`.
 
@@ -249,14 +251,14 @@ Run new tests, `npm run typecheck`, touched-file lint, existing work metadata/AP
 
 **Files:** Create `src/scene/camera/activeChapters.ts`, `activeFlightPath.ts`, `activeFlightPath.test.ts`; modify `flightPath.ts`, `scrollGeometry.test.ts`, `VoyageScroll.tsx`, `VoyageRoot.tsx`, `SceneRoot.tsx`, `FlightRail.tsx`, `src/components/dock/Dock.tsx`.
 
-**Interfaces:** `activeChapters({process,cases,testimonials,still}): readonly Chapter[]`; `createActiveFlightPath(chapters): (progress:number,out?:CameraPose)=>CameraPose`. Preserve canonical ranges/indices. Store `chapterAt` is unchanged because the bridge never emits a removed span. `toScroll` in Slice 4 already clamps a gap target to the next retained section start. No global mutable configuration; pass active chapter array as root props and capture in bridge/scene effects.
+**Interfaces:** `activeChapters({services,process,cases,testimonials,portfolio,still}): readonly Chapter[]`; `createActiveFlightPath(chapters): (progress:number,out?:CameraPose)=>CameraPose`. Preserve canonical ranges/indices. Store `chapterAt` is unchanged because the bridge never emits a removed span. `toScroll` in Slice 4 already clamps a gap target to the next retained section start. No global mutable configuration; pass active chapter array as root props and capture in bridge/scene effects.
 
 - [ ] Add pure `activeChapters.ts`:
 
 ```ts
 import { CHAPTERS } from "./flightPath";
-export function activeChapters({process,cases,testimonials,still}:{process:number;cases:number;testimonials:number;still:boolean}) {
-  return CHAPTERS.filter(c=>!(c.id==="orbit"&&!process)&&!(c.id==="worlds"&&!cases)&&!(c.id==="belt"&&!testimonials)&&!(c.id==="jump"&&still));
+export function activeChapters({services,process,cases,testimonials,portfolio,still}:{services:number;process:number;cases:number;testimonials:number;portfolio:number;still:boolean}) {
+  return CHAPTERS.filter(c=>!(c.id==="approach"&&!services)&&!(c.id==="orbit"&&!process)&&!(c.id==="worlds"&&!cases)&&!(c.id==="belt"&&!testimonials)&&!(c.id==="constellation"&&!portfolio)&&!(c.id==="jump"&&still));
 }
 ```
 
@@ -273,7 +275,7 @@ import {expect,it} from "vitest";
 import {activeChapters} from "./activeChapters";
 import {createActiveFlightPath} from "./activeFlightPath";
 it("drops optional waypoints, retains forward motion, and joins canonical gaps continuously",()=>{
-  const chapters=activeChapters({process:0,cases:0,testimonials:0,still:false});
+  const chapters=activeChapters({services:1,process:0,cases:0,testimonials:0,portfolio:1,still:false});
   expect(chapters.some(c=>["orbit","worlds","belt"].includes(c.id))).toBe(false);
   const pose=createActiveFlightPath(chapters);
   let z=Infinity;
@@ -282,10 +284,35 @@ it("drops optional waypoints, retains forward motion, and joins canonical gaps c
   expect(pose(jump.end).position.distanceTo(pose(passage.start).position)).toBeLessThan(1e-6);
 });
 it("removes Jump in still but retains the static manifesto",()=>{
- const ids=activeChapters({process:4,cases:2,testimonials:0,still:true}).map(c=>c.id);
+ const ids=activeChapters({services:1,process:4,cases:2,testimonials:0,portfolio:2,still:true}).map(c=>c.id);
  expect(ids).not.toContain("jump");expect(ids).toContain("passage");
 });
 ```
+
+- [ ] Add these additional assertions to `activeFlightPath.test.ts` (import `* as THREE` and `STAR_POSITION` from the existing modules). They check finite projected composition and continuity, not only depth:
+
+```ts
+it("keeps retained boundary poses finite, continuous and the pre-arrival star in frame",()=>{
+ for(let mask=0;mask<32;mask++)for(const still of [false,true]){
+  const cases=(mask&4)?0:2;
+  const chapters=activeChapters({services:(mask&1)?0:3,process:(mask&2)?0:4,cases,testimonials:(mask&8)?0:2,portfolio:cases+((mask&16)?0:3),still});
+  const sample=createActiveFlightPath(chapters);
+  for(const aspect of [1440/900,390/844]){
+   const camera=new THREE.PerspectiveCamera(60,aspect,.1,400);
+   for(let i=0;i<chapters.length;i++){
+    const chapter=chapters[i],pose=sample(chapter.start);
+    expect([...pose.position.toArray(),...pose.lookAt.toArray()].every(Number.isFinite)).toBe(true);
+    if(i){const previous=sample(chapters[i-1].end);expect(previous.position.distanceTo(pose.position)).toBeLessThan(1e-6);expect(previous.lookAt.distanceTo(pose.lookAt)).toBeLessThan(1e-6);}
+    camera.position.copy(pose.position);camera.lookAt(pose.lookAt);camera.updateMatrixWorld(true);
+    const target=pose.lookAt.clone().project(camera);expect(Math.abs(target.x)).toBeLessThan(1e-6);expect(Math.abs(target.y)).toBeLessThan(1e-6);
+    if(chapter.start<=.74){const star=STAR_POSITION.clone().project(camera);expect(Number.isFinite(star.x)&&Number.isFinite(star.y)).toBe(true);expect(Math.abs(star.x)).toBeLessThan(1.4);expect(Math.abs(star.y)).toBeLessThan(1.4);}
+   }
+  }
+ }
+});
+```
+
+The ±1.4 guard catches subjects flung far out of frame; it does not replace the browser's readable composition review. Sample intermediate segments as well for finite pose and forward depth using the existing 100-sample loop. If a filtered curve fails, adjust only its lateral interpolation/target clamping and rerun all omission masks; do not change the tuned complete path or weaken the assertion blindly.
 
 - [ ] Implement `activeFlightPath.ts`:
 
@@ -317,19 +344,19 @@ export function createActiveFlightPath(chapters:readonly Chapter[]) {
 
 Apply this filtered factory **only when chapters are omitted**; retain existing tuned `getCameraPose` when all eleven exist. In SceneRoot effect create `const samplePose = chapters.length===CHAPTERS.length ? getCameraPose : createActiveFlightPath(chapters)` and replace its two pose calls with `samplePose`. Array prop comes from root useMemo, so effects do not rebuild on scroll.
 
-- [ ] In root derive active array using counts and `tier === "still"`. Render its ordered entries instead of CHAPTERS, pass `chapters` into VoyageScroll, SceneRoot, FlightRail and Dock. Remove track's fixed `minHeight` (it would reintroduce blank space after omissions); natural section heights + surface tail now set scroll limit. Process zero already filtered. In bridge measurement map the provided chapters only; remove zero-height rects (`if(rect.height<=0)return []`) defensively. Do not mutate voyageStore or server module constants. Tail stays surface's `100vh`.
+- [ ] Thread `projects: Project[]` into root now by fetching `getProjects()` alongside existing `getVoyageContent()` in the server route; this provides the portfolio count before Task 5 builds the graph. Then in root derive active array using service/process/case/testimonial counts, combined `cases.length + projects.length`, and `tier === "still"`. Empty Approach is removed as well; empty Constellation is removed only when both cases and projects are empty. Render its ordered entries instead of CHAPTERS, pass `chapters` into VoyageScroll, SceneRoot, FlightRail and Dock. Slice 4 already removed the track fixed minHeight. Preserve that behavior: natural section heights + surface tail set scroll limit; pending SSR reservation CSS may only reserve retained chapter elements. Process zero already filtered. In bridge measurement map the provided chapters only; remove zero-height rects (`if(rect.height<=0)return []`) defensively. Do not mutate voyageStore or server module constants. Tail stays surface's `100vh`.
 
-For FlightRail add prop `{chapters:readonly Chapter[]}`; derive content chapters locally; filter out micro-beats. For Dock add same prop; replace `startOf` global with a function closed over these props. Filter Process if absent; change Work destination to Constellation if Worlds absent. Concrete resolution:
+For FlightRail add prop `{chapters:readonly Chapter[]}`; derive content chapters locally; filter out micro-beats. For Dock add same prop; replace `startOf` global with a function closed over these props. Omit Services and Process links when their chapters are absent; change Work destination to Constellation if Worlds is absent and Constellation exists, otherwise omit Work. Concrete resolution:
 
 ```ts
 const links=DOCK_LINKS.flatMap(link=>{
   const chapter=link.chapter==="worlds"&&!chapters.some(c=>c.id==="worlds")?"constellation":link.chapter;
   return chapters.some(c=>c.id===chapter)?[{...link,chapter}]:[];
 });
-const startOf=(id:ChapterId)=>chapters.find(c=>c.id===id)?.start??0;
+const startOf=(id:ChapterId)=>chapters.find(c=>c.id===id)?.start === undefined ? 0 : chapters.find(c=>c.id===id)!.start + .001;
 ```
 
-Use `links` in both desktop/mobile maps. Keep `go()` programmatic suppression, sound gate and focus-return behavior. Rail can retain canonical vertical tick placement with gaps; no ghost ticks may remain. All chapter targets including CTA remain canonical and inverse bridge handles them.
+Use `links` in both desktop/mobile maps. Keep `go()` programmatic suppression, sound gate and focus-return behavior. Rail can retain canonical vertical tick placement with gaps; no ghost ticks may remain. All chapter targets remain canonical and inverse bridge handles them. Fix Launch's existing See the work handler (currently aimed at Approach): pass `workChapter: ChapterId | null` from root using Worlds when cases exist, otherwise Constellation when combined portfolio is nonempty, otherwise null. Render the secondary CTA only for a real work target. Its handler resolves that retained chapter and uses `start + .001`; Book a call still uses Landing. Do not leave a Services/Work control pointing at a removed ID merely because the bridge can skip it.
 
 - [ ] Extend scrollGeometry test with missing contiguous chapters and exact shared physical boundaries:
 
@@ -343,7 +370,7 @@ it("maps removed spans to the next retained chapter without blank travel",()=>{
 });
 ```
 
-Run all camera/store/scroll tests; expand active camera test over all eight combinations of empty Orbit/Worlds/Belt and both tiers, preserving same assertions. Confirm full-content camera tests still sample original tuned path. Commit `feat: skip empty voyage chapters and their camera waypoints`.
+Run all camera/store/scroll tests; expand active camera test over all 32 combinations of empty Approach/Orbit/Worlds/Belt/Constellation and both tiers (portfolio count must be ≥case count in valid fixtures), preserving same assertions. Confirm full-content camera tests still sample original tuned path. Commit `feat: skip empty voyage chapters and their camera waypoints`.
 
 ### Task 4: Render authored testimonials and a reversible Dark Passage
 
@@ -480,7 +507,7 @@ Root render branches thread published `testimonials` and `settings.manifesto`. A
 
 **Files:** Create `src/components/voyage/projectGraph.ts`, `projectGraph.test.ts`, `Constellation.tsx`, `src/scene/chapters/Constellation.ts`; modify server page/root/scene/CSS.
 
-**Interfaces:** `buildProjectGraph(projects:Project[]) => {nodes:{id,x,y}[],edges:[number,number][]}`. DOM owns hover/focus/selected state; a React context is unnecessary. Pass an imperative interaction ref from root to scene set piece, `{current:{activeId:string|null}}`; update on DOM interactions, never per-frame React. Still uses the same semantic buttons/details in a normal list.
+**Interfaces:** `portfolioNodes(projects:Project[],cases:Item[]):PortfolioNode[]`; `buildProjectGraph(projects:Project[]) => {nodes:{id,x,y}[],edges:[number,number][]}`. DOM owns hover/focus/selected state; a React context is unnecessary. Pass an imperative interaction ref from root to scene set piece, `{current:{activeId:string|null}}`; update on DOM interactions, never per-frame React. Still uses the same semantic buttons/details in a normal list.
 
 - [ ] Add pure test, run red, then implement:
 
@@ -493,6 +520,13 @@ it("connects actual shared technologies once, case-insensitively",()=>{expect(bu
 it("handles empty graph",()=>{expect(buildProjectGraph([])).toEqual({nodes:[],edges:[]});});
 // projectGraph.ts
 import type {Project} from "@/lib/data";
+import type {Item} from "@/lib/collections/defineCollection";
+import {readProof} from "./proof";
+export type PortfolioNode=Project & {kind:"case"|"project"};
+export function portfolioNodes(projects:Project[],cases:Item[]):PortfolioNode[]{
+ const worlds=cases.map((item,index)=>{const c=readProof(item);return {id:`case:${c.id}`,kind:"case" as const,title:c.title,description:c.context,icon:"",technologies:c.stack,liveLink:`/work/${encodeURIComponent(c.slug)}`,liveLinkLabel:"Read the case study",showLiveLink:true,codeLink:"",showCodeLink:false,order:index};});
+ return [...worlds,...projects.map(p=>({...p,id:`project:${p.id}`,kind:"project" as const}))];
+}
 export function buildProjectGraph(projects:Project[]){
  const n=projects.length;
  const nodes=projects.map((p,i)=>({id:p.id,x:.5+.38*Math.cos(i*Math.PI*2/Math.max(1,n)-Math.PI/2),y:.5+.36*Math.sin(i*Math.PI*2/Math.max(1,n)-Math.PI/2)}));
@@ -501,8 +535,23 @@ export function buildProjectGraph(projects:Project[]){
  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if([...tags[i]].some(t=>tags[j].has(t)))edges.push([i,j]);
  return {nodes,edges};
 }
-export function safeProjectHref(value:string){try{const u=new URL(value);return u.protocol==="https:"||u.protocol==="http:"?u.href:"";}catch{return "";}}
+export function safeProjectHref(value:string){if(/^\/work\/[A-Za-z0-9%_-]+$/.test(value))return value;try{const u=new URL(value);return u.protocol==="https:"||u.protocol==="http:"?u.href:"";}catch{return "";}}
 ```
+
+- [ ] Add combined-graph identity tests to `projectGraph.test.ts` (import `portfolioNodes`):
+
+```ts
+it("retains each authored case as its own node alongside projects",()=>{
+ const cases=[{id:"same",order:0,createdAt:"",title:"Actual case",slug:"actual",context:"Actual context",stack:["React"]}];
+ const nodes=portfolioNodes([p("same",["React"])],cases);
+ expect(nodes.map(n=>n.id)).toEqual(["case:same","project:same"]);
+ expect(nodes[0]).toMatchObject({kind:"case",title:"Actual case",liveLink:"/work/actual",technologies:["React"]});
+ expect(buildProjectGraph(nodes).edges).toEqual([[0,1]]);
+ expect(portfolioNodes([],[])).toEqual([]);
+});
+```
+
+This link is an actual case reading URL; the edge says only “shared React,” not that the project and case are the same engagement.
 
 - [ ] Create DOM chapter:
 
@@ -521,6 +570,7 @@ export default function Constellation({projects,animated,interaction}:{projects:
  const preview=projects.find(p=>p.id===hovered);
  const mark=(id:string|null)=>{setHovered(id);interaction.current.activeId=id??selected;};
  const choose=(id:string)=>{setSelected(id);interaction.current.activeId=id;};
+ if(!projects.length)return null;
  return <section id="constellation" className="chapter constellation" aria-labelledby="constellation-title">
   <div className="voyage-static">
    <p className="chapter__label">08 / CONSTELLATION</p><h2 id="constellation-title">A wider view</h2>
@@ -534,7 +584,7 @@ export default function Constellation({projects,animated,interaction}:{projects:
     {current?<><h3>{current.title}</h3><p>{current.description}</p><ul className="voyage-chips">{current.technologies.map((t,i)=><li key={`${i}-${t}`}>{t}</li>)}</ul>
      {current.showLiveLink&&safeProjectHref(current.liveLink)&&<a href={safeProjectHref(current.liveLink)} target="_blank" rel="noopener noreferrer">{current.liveLinkLabel||"View project"} ↗</a>}
      {current.showCodeLink&&safeProjectHref(current.codeLink)&&<a href={safeProjectHref(current.codeLink)} target="_blank" rel="noopener noreferrer">View code ↗</a>}
-     <button type="button" onClick={()=>{setSelected(null);interaction.current.activeId=null;}}>Close details</button></>:<p>{projects.length?"Select a project to explore it.":"Project details are being prepared."}</p>}
+     <button type="button" onClick={()=>{setSelected(null);interaction.current.activeId=null;}}>Close details</button></>:<p>Select a case or project to explore it.</p>}
    </div><Link href="/projects">All projects →</Link>
   </div>
  </section>;
@@ -601,9 +651,9 @@ if(this.lastActive!==this.interaction.current.activeId){
 }
 ```
 
-Reset `lastActive=undefined` on build/dispose. This scene composition expands the project system across the frame; the camera continues forward and never reverses. It represents the same portfolio system as the Worlds passage, without inventing case/project associations.
+Reset `lastActive=undefined` on build/dispose. The scene uses the **same authored cases as individually labelled case nodes**, alongside separate project nodes. Prefix IDs by kind; never collapse a case into a project or invent a case→project relation. Edges only indicate actual shared case.stack/project.technologies tags. At Constellation entry scale the case nodes from planet-like points to their final small star size as the wider graph reveals. The camera continues forward; the just-passed case worlds remain identifiable by their exact titles and /work links. Use case nodes first in graph ordering so Worlds order is preserved.
 
-- [ ] Fetch `getProjects()` alongside `getVoyageContent()` on the server; thread `projects: Project[]` through root/SceneRoot. Root creates `const projectInteraction=useRef({activeId:null as string|null})`; pass same ref to DOM and set piece. Register new scene piece and branch. Add CSS:
+- [ ] Reuse `getProjects()`/root props already threaded by Task 3; keep raw `projects: Project[]` at root for authored data, derive `const graphItems=useMemo(()=>portfolioNodes(projects,cases),[projects,cases])`, and pass `graphItems` to the DOM Constellation and scene constructor using their existing `projects` parameter. PortfolioNode structurally extends Project, so both consumers keep their exact typed interfaces. Include graphItems in scene dependencies. Root creates `const projectInteraction=useRef({activeId:null as string|null})`; pass same ref to DOM and set piece. Register new scene piece and branch. Add CSS:
 
 ```css
 .constellation {min-height:180vh;}
@@ -632,7 +682,7 @@ Reset `lastActive=undefined` on build/dispose. This scene composition expands th
 
 **Files:** Create `src/components/voyage/Pilot.tsx`, `Surface.tsx`, `arrival.ts`, `arrival.test.ts`, `src/scene/chapters/Horizon.ts`; modify root/scene/orb/CSS.
 
-**Interfaces:** `Pilot({settings:Settings,skills:Skill[],animated:boolean})`; `Surface({sections:FooterSection[],onRelaunch:()=>void})`; root `relaunchEpoch:number` prop read by scene without recreating GL. `pilotGlare(local)` peaks early, `pilotReveal(local)` reveals real portrait/bio as glare dims.
+**Interfaces:** `Pilot({settings:Settings,skills:Skill[],animated:boolean})`; `Surface({sections:FooterSection[],chapters:readonly Chapter[],onRelaunch:()=>void})`; root `relaunchEpoch:number` prop read by scene without recreating GL. `pilotGlare(local)` peaks early, `pilotReveal(local)` reveals real portrait/bio as glare dims.
 
 - [ ] Write pure envelope tests then implement:
 
@@ -713,28 +763,64 @@ export class Horizon implements SetPiece{
 
 Register Horizon in existing scene list; still gets a CSS static gradient behind Landing, no scene.
 
+- [ ] Add `Surface.test.tsx` link-policy cases alongside the component:
+
+```ts
+import {expect,it} from "vitest";
+import {footerHref} from "./Surface";
+const retained=new Set(["pilot","landing","surface","constellation"]);
+it("rejects control/backslash and protocol-relative footer paths",()=>{
+ for(const input of [String.raw`/\evil.example/path`,"//evil.example", "\u0000/ok", "javascript:alert(1)"])expect(footerHref(input,retained)).toBe("");
+ expect(footerHref("/projects",retained)).toBe("/projects");expect(footerHref("#contact",retained)).toBe("#landing");expect(footerHref("https://example.com/work",retained)).toBe("https://example.com/work");
+});
+it("reroutes empty portfolio aliases to the existing projects route and omits other absent chapters",()=>{
+ const emptyPortfolio=new Set(["launch","pilot","landing","surface"]);
+ expect(footerHref("#projects",emptyPortfolio)).toBe("/projects");
+ expect(footerHref("/#constellation",emptyPortfolio)).toBe("/projects");
+ expect(footerHref("/voyage#worlds",emptyPortfolio)).toBe("/projects");
+ expect(footerHref("#approach",emptyPortfolio)).toBe("");
+ expect(footerHref("/#orbit",emptyPortfolio)).toBe("");
+ expect(footerHref("#arbitrary-missing-fragment",emptyPortfolio)).toBe("");
+ expect(footerHref("#projects",retained)).toBe("#constellation");
+});
+```
+
 - [ ] Add Surface with safe authored footer links and relaunch:
 
 ```tsx
 "use client";
 import type {FooterSection} from "@/lib/data";
-function footerHref(value:string){
- const aliases:Record<string,string>={"#about":"#pilot","#contact":"#landing","#projects":"#constellation"};
- const href=aliases[value]??value;
- if(href.startsWith("/")&&!href.startsWith("//")||href.startsWith("#"))return href;
- try{const url=new URL(href);return ["https:","http:","mailto:"].includes(url.protocol)?href:"";}catch{return "";}
+import type {Chapter} from "@/scene/camera/flightPath";
+export function footerHref(value:string,retained:ReadonlySet<string>):string{
+ if(/[\u0000-\u001f\u007f\\]/.test(value))return "";
+ const aliases:Record<string,string>={about:"pilot",contact:"landing",projects:"constellation"};
+ const fragment=(hash:string,prefix="")=>{
+  let source:string;try{source=decodeURIComponent(hash.slice(1));}catch{return "";}
+  const id=aliases[source]??source;
+  if(retained.has(id))return `${prefix}#${id}`;
+  return id==="constellation"||id==="worlds"?"/projects":"";
+ };
+ if(value.startsWith("#"))return fragment(value);
+ if(value.startsWith("/")&&!value.startsWith("//")){
+  const url=new URL(value,"https://voyage.invalid");
+  if((url.pathname==="/"||url.pathname==="/voyage")&&url.hash)return fragment(url.hash,url.pathname+url.search);
+  return value;
+ }
+ try{const url=new URL(value);return ["https:","http:","mailto:"].includes(url.protocol)?value:"";}catch{return "";}
 }
-export default function Surface({sections,onRelaunch}:{sections:FooterSection[];onRelaunch:()=>void}){
+export default function Surface({sections,chapters,onRelaunch}:{sections:FooterSection[];chapters:readonly Chapter[];onRelaunch:()=>void}){
+ const retained=new Set(chapters.map(chapter=>chapter.id));
+ const groups=sections.map(section=>({...section,links:section.links.flatMap(link=>{const href=footerHref(link.url,retained);return href?[{...link,url:href}]:[];})})).filter(section=>section.links.length>0);
  return <section id="surface" className="chapter surface" style={{minHeight:"162.5vh"}}>
   <footer className="voyage-static"><p className="chapter__label">11 / SURFACE</p>
-   <div className="surface__links">{sections.map((section,i)=><nav key={i} aria-label={section.title}><h2>{section.title}</h2><ul>{section.links.map((link,j)=>footerHref(link.url)&&<li key={j}><a href={footerHref(link.url)}>{link.label}</a></li>)}</ul></nav>)}</div>
+   <div className="surface__links">{groups.map((section,i)=><nav key={i} aria-label={section.title}><h2>{section.title}</h2><ul>{section.links.map((link,j)=><li key={j}><a href={link.url}>{link.label}</a></li>)}</ul></nav>)}</div>
    <p className="chapter__label">NEXT.JS · THREE.JS · MONGODB</p><button type="button" onClick={onRelaunch}>Relaunch ↑</button>
   </footer>
  </section>;
 }
 ```
 
-Replace literal 162.5 with `sectionHeightVh(CHAPTERS.find(c=>c.id==="surface")!)` in component code using existing imports; the extra tail must remain exactly one viewport beyond surface allocation. Root owns callback:
+Pass the same retained `chapters` array used by dock/rail from VoyageRoot into Surface. Missing ordinary chapter fragments are omitted; missing Worlds/Constellation aliases truthfully lead to the existing `/projects` page, even if that page currently has no records. Drop a footer group if filtering leaves no links. Replace literal 162.5 with `sectionHeightVh(CHAPTERS.find(c=>c.id==="surface")!)` in component code using existing imports; the extra tail must remain exactly one viewport beyond surface allocation. Root owns callback:
 
 ```ts
 const [relaunchEpoch,setRelaunchEpoch]=useState(0);
@@ -842,17 +928,19 @@ import {schedulerUrl as normalizeUrl} from "@/lib/schedulerUrl";
 import {getAudioEngine} from "@/lib/audio/AudioEngine";
 export default function Landing({schedulerUrl,animated}:{schedulerUrl:string;animated:boolean}){
  const url=normalizeUrl(schedulerUrl)||"";
- const [embedState,setEmbedState]=useState<"loading"|"loaded"|"failed">("loading");
+ const [embedState,setEmbedState]=useState<"loading"|"failed">("loading");
  const [state,setState]=useState<"idle"|"sending"|"success"|"error">("idle");
  const [error,setError]=useState("");const busy=useRef(false);const request=useRef<AbortController|null>(null);
  const status=useRef<HTMLParagraphElement>(null);const mounted=useRef(true);
- useEffect(()=>{if(!url)return;const timer=window.setTimeout(()=>setEmbedState(current=>current==="loaded"?current:"failed"),4000);return()=>window.clearTimeout(timer);},[url]);
+ useEffect(()=>{if(!url)return;const timer=window.setTimeout(()=>setEmbedState("failed"),4000);return()=>window.clearTimeout(timer);},[url]);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;request.current?.abort();};},[]);
  useEffect(()=>{if(state==="success"||state==="error")status.current?.focus();},[state]);
  async function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(busy.current)return;busy.current=true;setState("sending");setError("");
   const form=event.currentTarget;const data=new FormData(form);
-  const payload=Object.fromEntries(["name","email","building","budget","timeline","website"].map(key=>[key,String(data.get(key)??"")]));
+  const honeypot=form.elements.namedItem("website");
+  if(honeypot instanceof HTMLInputElement)honeypot.value="";
+  const payload={...Object.fromEntries(["name","email","building","budget","timeline"].map(key=>[key,String(data.get(key)??"")])),website:""};
   const body=JSON.stringify(payload);
   if(new TextEncoder().encode(body).length>4096){setError("Please shorten your message before sending.");setState("error");busy.current=false;return;}
   const controller=new AbortController();request.current=controller;
@@ -873,17 +961,17 @@ export default function Landing({schedulerUrl,animated}:{schedulerUrl:string;ani
   <div className="voyage-static"><p className="chapter__label">10 / LANDING</p><h2 id="landing-title">You’ve arrived. Let’s talk about what you’re building.</h2>
    <div className={`landing__grid ${primary?"landing__grid--form-primary":""}`}>
     {url&&<div className="glass landing__scheduler"><h3>Book a call</h3><a href={url} target="_blank" rel="noopener noreferrer">Open booking page ↗</a>
-     {embedState!=="failed"?<iframe key={url} title="Book a call" src={url} onLoad={()=>setEmbedState("loaded")} onError={()=>setEmbedState("failed")} referrerPolicy="strict-origin-when-cross-origin"/>:<p>The booking view is unavailable. Open the booking page or send an inquiry below.</p>}
+     {embedState!=="failed"?<iframe key={url} title="Book a call" src={url} onError={()=>setEmbedState("failed")} referrerPolicy="strict-origin-when-cross-origin"/>:<p>The booking view is unavailable. Open the booking page or send an inquiry below.</p>}
      <button type="button" onClick={()=>setEmbedState("failed")}>Use the inquiry form</button>
     </div>}
-    <form className="glass landing__form" onSubmit={submit} aria-busy={state==="sending"}>
+    <form className="glass landing__form" autoComplete="on" onSubmit={submit} aria-busy={state==="sending"}>
      <h3>{primary?"Tell me what you’re building":"Send an inquiry"}</h3>
      <label htmlFor="inquiry-name">Name</label><input id="inquiry-name" name="name" autoComplete="name" required maxLength={120}/>
      <label htmlFor="inquiry-email">Email</label><input id="inquiry-email" name="email" type="email" autoComplete="email" required maxLength={200}/>
      <label htmlFor="inquiry-building">What are you building?</label><textarea id="inquiry-building" name="building" required maxLength={2000} rows={6}/>
      <label htmlFor="inquiry-budget">Budget range</label><select id="inquiry-budget" name="budget" required defaultValue=""><option value="" disabled>Select a range</option>{BUDGET_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
      <label htmlFor="inquiry-timeline">Timeline</label><select id="inquiry-timeline" name="timeline" required defaultValue=""><option value="" disabled>Select a timeline</option>{TIMELINE_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
-     <div className="landing__honeypot" aria-hidden="true"><label htmlFor="inquiry-website">Website</label><input id="inquiry-website" name="website" tabIndex={-1} autoComplete="off"/></div>
+     <div className="landing__honeypot" aria-hidden="true"><label htmlFor="inquiry-website">Website</label><input id="inquiry-website" name="website" type="text" tabIndex={-1} autoComplete="off" data-lpignore="true" data-1p-ignore="true"/></div>
      <button className="landing__submit" type="submit" disabled={state==="sending"}>{state==="sending"?"Sending…":"Send inquiry →"}</button>
      <p ref={status} tabIndex={-1} role={state==="error"?"alert":"status"}>{state==="success"?"SIGNAL RECEIVED · I reply within 24h":error}</p>
     </form>
@@ -895,13 +983,13 @@ export default function Landing({schedulerUrl,animated}:{schedulerUrl:string;ani
 
 Key `<Landing key={settings.schedulerUrl} ...>` at root to reset embed state when configuration changes. The iframe eagerly loads so its timeout measures an attempted load, rather than an offscreen lazy frame that never started; do not claim the timeout identifies the reason for failure. Better provider-specific deferred loading is not required without a real URL. Keep a direct booking link for CSP/X-Frame-Options cases; onLoad alone does not prove success.
 
-The mounted ref prevents post-unmount state updates. An abort does not mean the server failed to store, so retain the cautious timeout message and never retry automatically. Use native constraint validation for required/email fields; retain input values on failure. Success only after HTTP 2xx, never on click. There is no scheduler-success bell until a real provider contract exists.
+The mounted ref prevents post-unmount state updates. An abort does not mean the server failed to store, so retain the cautious timeout message and never retry automatically. Use native constraint validation for required/email fields; retain input values on failure. Success only after HTTP 2xx for the human payload whose website is explicitly empty, never on click. The server’s bot/honeypot behavior remains unchanged; a browser autofill value is cleared only for this human form submission. There is no scheduler-success bell until a real provider contract exists.
 
 - [ ] Add failing/passing form tests using jsdom and mocked fetch. Required core:
 
 ```tsx
 // @vitest-environment jsdom
-import {render,screen,fireEvent,waitFor,cleanup} from "@testing-library/react";
+import {act,render,screen,fireEvent,waitFor,cleanup} from "@testing-library/react";
 import {afterEach,expect,it,vi} from "vitest";
 import Landing from "./Landing";
 afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.useRealTimers();});
@@ -910,7 +998,27 @@ it("posts exact public fields and reports stored success",async()=>{const fetch=
 it("retains input after a server failure",async()=>{vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response('{}',{status:500})));render(<Landing schedulerUrl="" animated={false}/>);fill();fireEvent.submit(screen.getByRole("button",{name:/Send inquiry/}).closest("form")!);await screen.findByRole("alert");expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Test");});
 ```
 
-Add fake-timer case for iframe stall→4000ms→primary form, invalid URL has no iframe, repeated submits while pending only call fetch once, and 429 produces useful retry copy. Reuse existing API POST tests for validation/storage/email failures; browser tests intercept POST and do not deliver mail.
+Add these exact cases before the remaining form checks:
+
+```tsx
+it("promotes inquiry after four seconds even when iframe load fires",()=>{
+ vi.useFakeTimers();render(<Landing schedulerUrl="https://booking.example.com/actual" animated={false}/>);
+ fireEvent.load(screen.getByTitle("Book a call"));
+ expect(screen.getByLabelText("Name")).toBeTruthy();
+ act(()=>vi.advanceTimersByTime(4000));
+ expect(document.querySelector(".landing__grid--form-primary")).not.toBeNull();
+ expect(screen.getByRole("link",{name:/Open booking page/}).getAttribute("href")).toBe("https://booking.example.com/actual");
+});
+it("clears unexpected browser autofill from the human honeypot payload",async()=>{
+ const fetch=vi.fn().mockResolvedValue(new Response('{"ok":true}',{status:201}));vi.stubGlobal("fetch",fetch);
+ render(<Landing schedulerUrl="" animated={false}/>);fill();
+ fireEvent.change(document.getElementById("inquiry-website")!,{target:{value:"autofilled.example"}});
+ fireEvent.submit(screen.getByRole("button",{name:/Send inquiry/}).closest("form")!);
+ await waitFor(()=>expect(fetch).toHaveBeenCalledOnce());expect(JSON.parse(fetch.mock.calls[0][1].body).website).toBe("");
+});
+```
+
+Also verify fake-timer case for iframe load event (including a provider error page)→4000ms→primary form, invalid URL has no iframe, repeated submits while pending only call fetch once, and 429 produces useful retry copy. Reuse existing API POST tests for validation/storage/email failures; browser tests intercept POST and do not deliver mail.
 
 - [ ] Add CSS and branch:
 
@@ -920,7 +1028,7 @@ Add fake-timer case for iframe stall→4000ms→primary form, invalid URL has no
 .landing__grid--form-primary {grid-template-columns:minmax(0,760px);justify-content:center;}
 .landing__grid--form-primary .landing__scheduler {order:2;}
 .landing__form,.landing__scheduler {padding:clamp(1.25rem,3vw,2.5rem);}
-.landing__form {display:grid;gap:.75rem;}
+.landing__form {display:grid;gap:.75rem;order:-1;border-color:rgba(242,179,92,.35);}
 .landing__form label {font-family:var(--font-jetbrains-mono);text-transform:uppercase;letter-spacing:.12em;font-size:.7rem;margin-top:.6rem;}
 .landing__form input,.landing__form textarea,.landing__form select {width:100%;border:1px solid #444;background:#0a0a0a;color:white;border-radius:10px;padding:.8rem;font:inherit;}
 .landing__form :focus-visible {outline:2px solid #f2b35c;outline-offset:3px;}
@@ -941,7 +1049,103 @@ Run new form/settings tests and existing inquiry API/mail tests, typecheck and t
 
 ## Slice 8 — launch, removals, integration and performance
 
-### Task 10: Launch at `/`, invalidate public content, and delete replaced code paths
+### Task 10: Bound public resource use and close the recovered data/logging gaps
+
+**Files:** Modify `src/lib/rateLimit.ts`, `src/app/api/logs/route.ts`, `src/lib/log.ts`, `src/lib/mail.ts`, project/skill GET routes; create `src/lib/readLimitedBody.ts`, `src/lib/voyageCasePreview.ts` and focused tests; extend existing `data.voyage` characterization tests. No new persistence-test infrastructure.
+
+**Interfaces:** Limiter retains `check` and adds optional `maxKeys` plus read-only `size`; capacity rejects new keys rather than evicting live buckets and resetting abusers. Logs use 60 requests/minute per existing trusted client-IP boundary and a streamed 2048-byte cap. Voyage cases keep Item-compatible **preview** fields; full Markdown stays server-side on `/work/[slug]`.
+
+- [ ] Write limiter cap/expiry test, run red, then replace limiter implementation:
+
+```ts
+interface Entry {count:number;resetAt:number}
+export function createRateLimiter(opts:{max:number;windowMs:number;maxKeys?:number;now?:()=>number}){
+ const now=opts.now??Date.now;const maxKeys=opts.maxKeys??10000;const hits=new Map<string,Entry>();
+ return {
+  get size(){return hits.size;},
+  check(key:string):{allowed:boolean;retryAfterSec:number}{
+   const t=now();
+   // Fixed windows are inserted in reset-time order. Remove expired heads lazily;
+   // no background timer and no full-map scan on every attacker key.
+   while(hits.size){const first=hits.entries().next().value!;if(first[1].resetAt>t)break;hits.delete(first[0]);}
+   const existing=hits.get(key);
+   if(existing){if(existing.count>=opts.max)return {allowed:false,retryAfterSec:Math.max(1,Math.ceil((existing.resetAt-t)/1000))};existing.count++;return {allowed:true,retryAfterSec:0};}
+   if(hits.size>=maxKeys){const first=hits.values().next().value!;return {allowed:false,retryAfterSec:Math.max(1,Math.ceil((first.resetAt-t)/1000))};}
+   hits.set(key,{count:1,resetAt:t+opts.windowMs});return {allowed:true,retryAfterSec:0};
+  }
+ };
+}
+```
+
+Add to `rateLimit.test.ts`:
+
+```ts
+it("caps new keys without resetting live limits, then evicts expired windows",()=>{let now=0;const limiter=createRateLimiter({max:1,windowMs:1000,maxKeys:2,now:()=>now});expect(limiter.check("a").allowed).toBe(true);expect(limiter.check("b").allowed).toBe(true);expect(limiter.check("c").allowed).toBe(false);expect(limiter.check("a").allowed).toBe(false);expect(limiter.size).toBe(2);now=1001;expect(limiter.check("c").allowed).toBe(true);expect(limiter.size).toBe(1);});
+```
+
+Existing fixed-window tests must stay green. This remains per-instance protection, not a distributed quota claim.
+
+- [ ] Create streamed body helper and use it in logs before JSON parse:
+
+```ts
+export async function readLimitedBody(request:Request,maxBytes:number):Promise<string|null>{
+ const declared=Number(request.headers.get("content-length"));if(Number.isFinite(declared)&&declared>maxBytes)return null;
+ if(!request.body)return "";
+ const reader=request.body.getReader();const decoder=new TextDecoder();let bytes=0;let text="";
+ try{while(true){const chunk=await reader.read();if(chunk.done)break;bytes+=chunk.value.byteLength;if(bytes>maxBytes){await reader.cancel().catch(()=>{});return null;}text+=decoder.decode(chunk.value,{stream:true});}return text+decoder.decode();}
+ finally{reader.releaseLock();}
+}
+```
+
+In logs route import `createRateLimiter`, `clientIp`, `createHash` from node:crypto and this helper. Module-local `const limiter=createRateLimiter({max:60,windowMs:60000,maxKeys:10000});`. At POST start:
+
+```ts
+const key=createHash("sha256").update(clientIp(request)).digest("hex");
+const limit=limiter.check(key);
+if(!limit.allowed)return NextResponse.json({error:"Too many log requests"},{status:429,headers:{"Retry-After":String(limit.retryAfterSec)}});
+const raw=await readLimitedBody(request,2048);
+if(raw===null)return NextResponse.json({error:"Payload too large"},{status:413});
+```
+
+Replace old request.text/body-length block; preserve allowed event/object checks. Do not persist the rate key/IP. Add helper test with a chunked stream exceeding 2048, absent content-length, and multibyte text; require null and source cancellation. Logs route tests: first 60 allowed events→204, 61st→429 + Retry-After; oversize→413 without append; invalid event→400; append sink failure must not alter 204. Reset module/clock or mock limiter between cases so tests remain independent.
+
+- [ ] Make appendLog's “never throws” promise true even when serialization or stdout fails. Replace its body:
+
+```ts
+export async function appendLog(name:string,record:Record<string,unknown>):Promise<void>{
+ const safe=name.replace(/[^a-z0-9_-]/gi,"_");let line:string;
+ try{line=JSON.stringify({name:safe,...record,ts:new Date().toISOString()})+"\n";}
+ catch{line=JSON.stringify({name:safe,event:"serialization_failed",ts:new Date().toISOString()})+"\n";}
+ try{await fs.mkdir(LOG_DIR,{recursive:true});await fs.appendFile(path.join(LOG_DIR,`${safe}.jsonl`),line,"utf8");}
+ catch{try{console.log(line.trimEnd());}catch{/* Logging is best effort. */}}
+}
+```
+
+In mail module add `const note=(record:Record<string,unknown>)=>Promise.resolve().then(()=>appendLog("inquiries",record)).catch(()=>{});` and replace every `await appendLog("inquiries", record)` inside `sendInquiryEmails` with `await note(record)`. This preserves the actual owner-send result even under a rejected/mocked logger. Logs route should also use `await Promise.resolve().then(()=>appendLog("client",record)).catch(()=>{});` so the endpoint contract survives an injected sink failure. Test circular record + fs reject + console throw resolves; test missing config with rejecting logger resolves `{sent:false}`; successful owner send plus rejecting logger still resolves `{sent:true}`. Never turn a stored inquiry into 500/retry due to a notification/logging tail.
+
+- [ ] Project public case previews before crossing the client boundary. Create `src/lib/voyageCasePreview.ts`:
+
+```ts
+import type {Item} from "@/lib/collections/defineCollection";
+import {readProof,excerpt} from "@/components/voyage/proof";
+export function voyageCasePreview(item:Item):Item{
+ const c=readProof(item);
+ return {id:item.id,order:item.order,createdAt:item.createdAt,title:c.title,slug:c.slug,context:c.context,
+  problem:excerpt(c.problem),architecture:excerpt(c.architecture),outcome:excerpt(c.outcome),
+  diagram:c.diagram,stack:c.stack,metrics:c.metrics,planetFeature:c.feature};
+}
+```
+
+In getVoyageContent return `caseStudies: cases.map(voyageCasePreview)` instead of full cases. This is Item-compatible and preserves the Worlds/combined graph interfaces, while full getCaseStudyBySlug stays unchanged. No internal/published bookkeeping or full 6000-character Markdown reaches the root. Extend already-created `data.voyage` characterization test to check publishedOnly remains true, ordering remains unchanged, and case body strings are ≤220 characters. Pure projection test:
+
+```ts
+it("keeps lightweight actual proof and drops full bodies/internal metadata",()=>{const item={id:"c",order:2,createdAt:"",title:"Real",slug:"real",problem:"x".repeat(6000),architecture:"y".repeat(6000),outcome:"z".repeat(6000),stack:["React"],ipHash:"private"};const preview=voyageCasePreview(item);expect(String(preview.problem).length).toBeLessThanOrEqual(220);expect(preview.stack).toEqual(["React"]);expect(preview.ipHash).toBeUndefined();expect(JSON.stringify(preview).length).toBeLessThan(1500);});
+```
+
+- [ ] Remove dead `CACHE_HEADERS` constants and `{headers:CACHE_HEADERS}` from both project and skill GET routes; next.config's `/api/*` no-store policy remains authoritative. Do not weaken API cache policy during a voyage task. Test GET route body unchanged and no contradictory public s-maxage declaration; browser network confirms no-store. `/api/media/*` caching is a distinct future optimization, not mixed into this change.
+- [ ] Run limiter/logs/mail/public-reader/API unit tests, typecheck and touched lint. Each item above has a concrete failure gate: map never exceeds cap, stream never buffers beyond bound, no unbounded log writes per key, no full Markdown DTO, no misleading cache header, and logging/mail tail cannot reject successful storage. Commit `fix: harden public voyage data and logging paths`.
+
+### Task 11: Launch at `/`, invalidate public content, and delete replaced code paths
 
 **Files:** Modify `src/app/page.tsx`, `src/app/voyage/page.tsx`, `src/app/layout.tsx`, `src/app/sitemap.ts`, `src/app/work/metadata.ts`, case reading page, collection specs, `src/components/motion/GlobalOverlays.tsx`, `src/hooks/useAudio.ts`, AudioEngine/synths, global/voyage CSS; create `src/components/FloatingAudioControls.tsx`; delete only the legacy component files whose inbound references are removed.
 
@@ -951,18 +1155,25 @@ Run new form/settings tests and existing inquiry API/mail tests, typecheck and t
 
 ```tsx
 import type {Metadata} from "next";
+import {cache} from "react";
 import {getVoyageContent,getProjects,getSkills} from "@/lib/data";
 import VoyageRoot from "@/components/voyage/VoyageRoot";
 import "./voyage/voyage.css";
 export const revalidate=300;
-export const metadata:Metadata={title:"Purav S — AI-powered products, end to end",description:"Full-stack product builds and system architecture for founders and teams.",alternates:{canonical:"/"}};
+const loadHome=cache(()=>Promise.all([getVoyageContent(),getProjects(),getSkills()]));
+export async function generateMetadata():Promise<Metadata>{
+ const [content]=await loadHome();
+ const title=content.settings.heroHeadline.trim()||"Purav S";
+ const description=content.settings.heroSubheadline.trim();
+ return {title,description,alternates:{canonical:"/"},openGraph:{title,description,type:"website"}};
+}
 export default async function Home(){
- const [content,projects,skills]=await Promise.all([getVoyageContent(),getProjects(),getSkills()]);
+ const [content,projects,skills]=await loadHome();
  return <VoyageRoot settings={content.settings} services={content.services} process={content.process} cases={content.caseStudies} testimonials={content.testimonials} projects={projects} skills={skills}/>;
 }
 ```
 
-Update `/voyage` metadata to `robots:{index:false,follow:false},alternates:{canonical:"/"}`. Keep its data composition consistent; extract shared server loader only if it avoids actual duplicate transformation, not a gratuitous wrapper. Existing `/work` return links become `/#worlds`, falling back `/#constellation` only when no published cases (a valid current study means Worlds exists). Remove its `noindex` metadata flag for published studies only; existing notFound pages remain 404. Add published slugs to sitemap using `getPublishedCaseStudySlugs` with its existing build DB-fallback policy.
+Remove the generic portfolio title/description/openGraph defaults from root layout or replace its fallback with the already-approved truthful practice wording; home metadata uses actual CMS hero copy via request-scoped React cache, never invented achievements or endorsements. Preserve metadataBase, title template, locale and twitter card. Update `/voyage` metadata to `robots:{index:false,follow:false},alternates:{canonical:"/"}`. Keep its data composition consistent; extract shared server loader only if it avoids actual duplicate transformation, not a gratuitous wrapper. Existing `/work` return links become `/#worlds`, falling back `/#constellation` only when no published cases (a valid current study means Worlds exists). Remove its `noindex` metadata flag for published studies only; existing notFound pages remain 404. Add published slugs to sitemap using `getPublishedCaseStudySlugs` with its existing build DB-fallback policy.
 
 - [ ] Update all four collection specs (`services.ts`, `processSteps.ts`, `caseStudies.ts`, `testimonials.ts`) to include `"/"` in `revalidate`, preserving `/voyage` and case page invalidation. Add table-driven collection test:
 
@@ -975,7 +1186,60 @@ import {testimonialsDef} from "./testimonials";
 it.each([servicesDef,processStepsDef,caseStudiesDef,testimonialsDef])("invalidates the launched home for $name",definition=>{expect(definition.revalidate).toContain("/");expect(definition.revalidate).toContain("/voyage");});
 ```
 
-Audit `src/app/api/projects` and `src/app/api/skills` mutation routes: each public mutation must invalidate `/` and `/voyage`, preserving `/projects` invalidation. Settings already handles `/`; keep its tests. Preserve case publish/unpublish invalidation and slug handling.
+Replace the existing exact expected arrays in `src/lib/collections/specs/specs.test.ts` as well: services `revalidate:["/", "/voyage"]`; caseStudies `revalidate:["/", "/voyage", "/work/[slug]"]`. Set process/testimonials to `["/", "/voyage"]`. Preserve case path type handling in the generic invalidation helper.
+
+Create `src/lib/revalidatePortfolio.ts`:
+
+```ts
+import {revalidatePath} from "next/cache";
+export function revalidatePortfolio(kind:"projects"|"skills") {
+ revalidatePath("/");revalidatePath("/voyage");
+ if(kind==="projects")revalidatePath("/projects");
+}
+```
+
+Add its import and these exact success-path calls to **all six** mutation handlers, after successful persistence and any 404 guard, before returning success:
+
+| Path/handler | Success insertion |
+|---|---|
+| `src/app/api/projects/route.ts` POST | after `await addProject(newProject)`: `revalidatePortfolio("projects");` |
+| `src/app/api/projects/[id]/route.ts` PUT | after `if (!updated)` return: `revalidatePortfolio("projects");` |
+| `src/app/api/projects/[id]/route.ts` DELETE | after `if (!deleted)` return: `revalidatePortfolio("projects");` |
+| `src/app/api/skills/route.ts` POST | after `await addSkill(newSkill)`: `revalidatePortfolio("skills");` |
+| `src/app/api/skills/[id]/route.ts` PUT | after `if (!updated)` return: `revalidatePortfolio("skills");` |
+| `src/app/api/skills/[id]/route.ts` DELETE | after `if (!deleted)` return: `revalidatePortfolio("skills");` |
+
+For both PUT handlers reject an empty editable patch before persistence. Project editable keys are `title,description,icon,technologies,liveLink,liveLinkLabel,codeLink,showLiveLink,showCodeLink,order`; skill keys are `name,icon,order`. Use `Object.fromEntries(Object.entries(body).filter(([key])=>editableKeys.includes(key)))`, run existing field validation on that patch, return 400 `{error:"No fields to update"}` if it is empty, and pass only the patch to update. First reject null/array/non-object bodies with 400 in both POST and PUT; never accidentally call Object.entries on null. Existing authorization/validation failures and not-found deletes must not invalidate.
+
+Add `src/app/api/portfolioRevalidation.test.ts`:
+
+```ts
+import {beforeEach,expect,it,vi} from "vitest";
+import {NextRequest} from "next/server";
+const mocks=vi.hoisted(()=>({auth:vi.fn(),revalidate:vi.fn(),addProject:vi.fn(),updateProject:vi.fn(),deleteProject:vi.fn(),addSkill:vi.fn(),updateSkill:vi.fn(),deleteSkill:vi.fn()}));
+vi.mock("@/lib/auth",()=>({verifyRequest:mocks.auth}));
+vi.mock("next/cache",()=>({revalidatePath:mocks.revalidate}));
+vi.mock("@/lib/data",()=>({getProjects:vi.fn(async()=>[]),getSkills:vi.fn(async()=>[]),addProject:mocks.addProject,updateProject:mocks.updateProject,deleteProject:mocks.deleteProject,addSkill:mocks.addSkill,updateSkill:mocks.updateSkill,deleteSkill:mocks.deleteSkill}));
+import {POST as createProject} from "./projects/route";
+import {PUT as updateProject,DELETE as deleteProject} from "./projects/[id]/route";
+import {POST as createSkill} from "./skills/route";
+import {PUT as updateSkill,DELETE as deleteSkill} from "./skills/[id]/route";
+const request=(method:string,body?:unknown)=>new NextRequest("http://localhost/api/test",{method,...(body===undefined?{}:{headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})});
+const context=()=>({params:Promise.resolve({id:"existing"})});
+const mutations=[
+ {kind:"projects",run:()=>createProject(request("POST",{title:"Actual title"}))},
+ {kind:"projects",run:()=>updateProject(request("PUT",{title:"Changed"}),context())},
+ {kind:"projects",run:()=>deleteProject(request("DELETE"),context())},
+ {kind:"skills",run:()=>createSkill(request("POST",{name:"TypeScript"}))},
+ {kind:"skills",run:()=>updateSkill(request("PUT",{name:"Changed"}),context())},
+ {kind:"skills",run:()=>deleteSkill(request("DELETE"),context())},
+];
+beforeEach(()=>{vi.clearAllMocks();mocks.auth.mockResolvedValue(true);mocks.addProject.mockResolvedValue({id:"p"});mocks.updateProject.mockResolvedValue({id:"p"});mocks.deleteProject.mockResolvedValue(true);mocks.addSkill.mockResolvedValue({id:"s"});mocks.updateSkill.mockResolvedValue({id:"s"});mocks.deleteSkill.mockResolvedValue(true);});
+it.each(mutations)("invalidates $kind only after success",async({kind,run})=>{expect((await run()).status).toBeLessThan(300);expect(mocks.revalidate.mock.calls.map(([path])=>path)).toEqual(kind==="projects"?["/","/voyage","/projects"]:["/","/voyage"]);});
+it.each(mutations)("does not invalidate unauthorized $kind",async({run})=>{mocks.auth.mockResolvedValue(false);expect((await run()).status).toBe(401);expect(mocks.revalidate).not.toHaveBeenCalled();});
+it("rejects empty/no-editable patches without writes or invalidation",async()=>{for(const body of [{},{id:"replacement"}]){expect((await updateProject(request("PUT",body),context())).status).toBe(400);expect((await updateSkill(request("PUT",body),context())).status).toBe(400);}expect(mocks.updateProject).not.toHaveBeenCalled();expect(mocks.updateSkill).not.toHaveBeenCalled();expect(mocks.revalidate).not.toHaveBeenCalled();});
+it("does not invalidate missing records",async()=>{mocks.deleteProject.mockResolvedValue(false);mocks.updateSkill.mockResolvedValue(null);expect((await deleteProject(request("DELETE"),context())).status).toBe(404);expect((await updateSkill(request("PUT",{name:"x"}),context())).status).toBe(404);expect(mocks.revalidate).not.toHaveBeenCalled();});
+```
 
 - [ ] Create the audio-only controls and replace root import:
 
@@ -1001,22 +1265,135 @@ Delete legacy `PageClient.tsx`, `Navbar.tsx`, `ThemeToggle.tsx`, `TypewriterText
 
 GlobalOverlays changes `isVoyage` to `pathname === "/" || pathname?.startsWith("/voyage")`; still exclude `/admin`, and keep scene absent on `/work/*`. No top progress strip on `/`. Existing standalone `/projects` can keep its ordinary progress indicator unless the user wants all public progress removed; this is distinct from the deleted top navigation.
 
-- [ ] Fix global reduced-motion and initial rendering completely. Root's current `tier===null` early return is a blank server placeholder. Replace it with content-first SSR: define `animated=tier!==null&&tier!=="still"`; render the DOM with still layout until client tier is resolved; mount SceneRoot only when `tier` is high/mid. Keep Ignition's session behavior client-only. To avoid massive CLS from switching a natural-height still layout to cinematic sections, server render the same section-height reservations for default desktop **via CSS**, with static content visible and no motion, then progressively enhance after layout. Alternatively resolve tier from reduced-motion via `useSyncExternalStore` with stable server snapshot and use CSS media queries for intrinsic still layouts. Required CSS:
+- [ ] Preserve Slice 4's now-established content-first SSR contract. Do not reintroduce a tier-null empty root or hidden hero. Extend its pending reservation custom properties when adding variable chapter lengths (`worlds=(1.5*N+1)*100vh`, Belt 160vh, Passage 60vh, Constellation 180vh when present, Pilot 200vh, Landing at least 150vh, Surface default+tail). All chapters—including the inquiry form—must be in the server HTML exactly once. Intrinsic content taller than reservation must use accessible bounded internal scrolling while pending, so hydration does not shift downstream section boundaries. Reduced-motion CSS uses intrinsic static content from the first paint. Keep SceneRoot high/mid-only.
 
-```css
-@media(prefers-reduced-motion:reduce){
- .voyage-root .chapter__pin{position:relative;height:auto;min-height:0;}
- .voyage-root .launch__hint{animation:none;}
- .voyage-root .process,.voyage-root .worlds,.voyage-root .pilot{height:auto!important;min-height:0!important;}
- .voyage-root *, .voyage-root *::before, .voyage-root *::after {scroll-behavior:auto!important;}
-}
-```
-
-**Execution decision is evidence-driven:** measure CLS before/after, use one content-first branch with no duplicate IDs and no hidden duplicate forms. If reserving default heights conflicts with all-step still accessibility, use the still content as the SSR baseline and defer cinematic enhancement until before first paint in a layout effect, measuring actual CLS; never mark the LCP/CLS criterion satisfied merely because the blank placeholder disappeared. This hydration/layout work is a bounded implementation review within Task 10, and may require its own follow-up task if the measured browser behavior demands a different architecture.
+Run actual HTTP response/no-JS checks again at launch; require current hero, each authored body, and form inputs with no duplicate IDs. Record real buffered CLS at both target viewports and require <0.05. This is a regression gate on the concrete Slice 4 implementation, not a deferred architecture choice.
 
 - [ ] Verify exact route/type/lint tests and production build. Run final `rg` searches; no live typewriter/keystroke/light-theme/top-Navbar/carousel code path may remain. Historical docs and screenshots may still contain those words; do not rewrite history. Fix the pre-existing 10 lint errors/6 warnings in their owning modules with narrowly scoped changes, not global disables. Commit `feat: launch voyage home and remove legacy experience`.
 
-### Task 11: Integration, accessibility, performance and final release evidence
+### Task 12: Finish the applicable recovered CMS ergonomics with focused tests
+
+**Files:** `src/lib/collections/fieldSpec.ts`, `defineCollection.ts`, new `fieldDefaults.ts`; admin `CollectionTab.tsx`, `FieldInput.tsx`, `InboxTab.tsx`, `slugify.ts`, `page.tsx`; new `adminShortcut.ts`; new `src/lib/visualTokens.ts`, layout, StillSky, EnergyOrb and applicable styles. Keep this after the core public launch tasks. No new Mongo test service or unrelated admin redesign.
+
+**Interfaces:** Optional number/select fields use empty string as a validated **unset sentinel**, translated to Mongo `$unset`, not stored as a string in a numeric path. An absent field uses its explicitly declared default if one exists; otherwise it remains blank. Required fields reject blank. Shared defaults never fabricate a select's first option.
+
+- [ ] Create client-safe `fieldDefaults.ts` and use it in both collection schema/DTO and admin initial forms:
+
+```ts
+import type {FieldSpec,FieldValue} from "./fieldSpec";
+export function declaredDefault(spec:FieldSpec):FieldValue|undefined{
+ if(spec.default!==undefined)return Array.isArray(spec.default)?[...spec.default]:spec.default;
+ if(spec.type==="chips")return [];
+ if(spec.type==="toggle")return false;
+ if(spec.type==="select"||spec.type==="number")return undefined;
+ return "";
+}
+export function emptyField(spec:FieldSpec):FieldValue{return declaredDefault(spec)??"";}
+```
+
+Replace local `defaultFor` with imported `declaredDefault`, and `emptyFor` with `emptyField`; update comments about select options[0]/default numeric zero. In CollectionTab `emptyForm`, assign `f[k]=emptyField(s)` for each editable field. This keeps explicit defaults but stops inventing unselected select values or numeric zero.
+
+- [ ] Implement unset end-to-end. In fieldSpec `checkField` before its switch add:
+
+```ts
+if(raw===""&&(spec.type==="number"||spec.type==="select")){
+ return spec.required?{error:`${key} is required`}:{value:""};
+}
+```
+
+Export this pure persistence adapter from `fieldSpec.ts`:
+
+```ts
+export function collectionPatch(fields:FieldSpecs,value:Record<string,FieldValue>){
+ const set:Record<string,FieldValue>={};const unset:Record<string,1>={};
+ for(const [key,v] of Object.entries(value)){
+  const field=fields[key];
+  if(v===""&&field&&!field.required&&(field.type==="number"||field.type==="select"))unset[key]=1;
+  else set[key]=v;
+ }
+ return {...(Object.keys(set).length?{$set:set}:{}),...(Object.keys(unset).length?{$unset:unset}:{})};
+}
+```
+
+In defineCollection.update pass `collectionPatch(fields,value)` in place of `{$set:value}`. In create derive `const stored=collectionPatch(fields,value).$set??{}` and spread `stored` instead of value; keep internal fields/order/id semantics. Clearing a declared default resets to that declared default on read; clearing an optional field without a default reads as blank. Do not broaden FieldValue to arbitrary null or silently coerce invalid numeric strings.
+
+In FieldInput's number `onBlur` use:
+
+```tsx
+onBlur={()=>{if(numDraft!==null&&numDraft.trim()==="")onChange("");setNumDraft(null);}}
+```
+
+Blank required inputs now remain blank and fail shared validation rather than snapping back. Partial nonempty invalid numeric drafts still revert on blur; finite numbers retain current behavior. No NaN may enter form state.
+
+- [ ] Remove hardcoded image key at both layers. Change FieldInput's `uploadFile` signature to `(file:File,field:string)=>Promise<string|null>` and its call to `uploadFile(file,name)`. CollectionTab passes `uploadFile={uploadFile}` instead of replacing the field with "diagram". Existing concrete MediaTab/ProjectsTab/SkillsTab upload categories remain unchanged. Test a synthetic image field named `portrait` passes `portrait` and a case field still passes `diagram`.
+
+- [ ] Replace Inbox's hardcoded NEXT_STATUS with schema order:
+
+```ts
+const nextStatus=(current:string)=>{
+ const index=STATUS_OPTIONS.findIndex(option=>option.value===current);
+ return STATUS_OPTIONS[(index+1)%STATUS_OPTIONS.length]?.value??"";
+};
+```
+
+Use `nextStatus(String(i.status))`; if no options exist disable the cycling action rather than posting an empty value. Test a reordered synthetic options array through an extracted `nextOption(current,options)` pure helper if needed; status values must come from schema, not a second record literal.
+
+- [ ] Add `src/app/admin/components/adminShortcut.ts`:
+
+```ts
+export function shortcutIndex(event:Pick<KeyboardEvent,"key"|"metaKey"|"ctrlKey"|"altKey"|"shiftKey"|"target">,tabCount:number):number|null{
+ if(!(event.metaKey||event.ctrlKey)||event.altKey||event.shiftKey||!/^[1-9]$/.test(event.key))return null;
+ const target=event.target;
+ if(target instanceof Element&&target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'))return null;
+ const index=Number(event.key)-1;return index<Math.min(9,tabCount)?index:null;
+}
+```
+
+In admin page onKey replace the lexicographic comparison branch with `const idx=shortcutIndex(e,TABS.length); if(idx!==null){e.preventDefault();switchTab(TABS[idx]);return;}`. Preserve Escape toast behavior. Update comment to Cmd/Ctrl 1–9; do not hijack editing shortcuts in forms, even if tab count grows past nine.
+
+- [ ] Make slug typing and committed slug generation share normalization. Replace `slugify.ts` with:
+
+```ts
+export function constrainSlug(input:string):string{
+ return input.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+/,"").slice(0,80);
+}
+export function slugify(input:string):string{return constrainSlug(input).replace(/-+$/,"");}
+```
+
+Delete FieldInput's private constrainSlug and import this function. Live trailing hyphen survives; blur removes trailing runs. Existing accents test (“Ça va — très bien”) and typed `foo-` behavior must both pass.
+
+- [ ] Add shared amber token without changing its value:
+
+```ts
+// src/lib/visualTokens.ts
+export const AMBER=0xf2b35c;
+export const AMBER_CSS=`#${AMBER.toString(16).padStart(6,"0")}`;
+```
+
+Layout imports AMBER_CSS and sets html style `{{"--amber":AMBER_CSS} as CSSProperties}`. Remove local --amber definitions from voyage/work CSS; replace their literal amber uses with `var(--amber)` (use color-mix for transparent variants). EnergyOrb imports/re-exports AMBER so existing tests keep their interface. StillSky uses `fill={AMBER_CSS}`; Planet/Horizon new materials import AMBER. Horizon's shader color becomes a `uAmber` THREE.Color uniform instead of another RGB literal. Confirm screenshots remain pixel-equivalent in color; do not add amber to monochrome geometry.
+
+- [ ] Focused tests before green:
+
+```ts
+// fieldDefaults/fieldSpec tests
+expect(emptyField({type:"select",label:"Pick",options:[{value:"a",label:"A"}]})).toBe("");
+expect(emptyField({type:"number",label:"Count"})).toBe("");
+expect(emptyField({type:"number",label:"Count",default:3})).toBe(3);
+const fields={count:{type:"number" as const,label:"Count"}};
+expect(validate(fields,{count:""},"update")).toEqual({ok:true,value:{count:""}});
+expect(collectionPatch(fields,{count:""})).toEqual({$unset:{count:1}});
+expect(validate({count:{...fields.count,required:true}},{count:""},"update").ok).toBe(false);
+// slug tests
+expect(constrainSlug("Ça va — très bien-")).toBe("ca-va-tres-bien-");
+expect(slugify("Ça va — très bien-")).toBe("ca-va-tres-bien");
+```
+
+Add jsdom user-event tests: clear optional number then blur emits "", clearing required field shows validation error; image upload forwards actual key; Cmd+9 on body selects tab9 with 12 tabs, Cmd+0/Cmd+10 do nothing, Cmd+2 inside input/textarea/select/contenteditable never switches; Inbox schema status cycle; missing stored select stays blank in `toDto`. Mock only the model boundary to assert update sends `$unset` and create omits the absent numeric path. Reuse the existing data.voyage reader characterization; test publishedOnly/order/DTO boundaries, not Mongo internals or a new heavyweight database harness.
+- [ ] Run affected admin/collection tests, all unit tests, typecheck and clean lint. Brief browser-check edit/save/clear/upload/status/tab shortcuts and the unchanged amber on both voyage/work. Commit `fix: complete recovered CMS field and shortcut follow-ups`. Record closure of each ledger item in worklog; do not silently drop any deferred item or claim an unrun persistence integration suite.
+
+### Task 13: Integration, accessibility, performance and final release evidence
+
+Run this gate only after Task 12’s persistence/admin/shared-token changes are complete. Its production build, end-to-end, accessibility, screenshots and performance evidence must describe the final post-change tree; earlier slice evidence does not substitute for this gate.
 
 **Files:** Add `playwright.config.ts`, `tests/voyage.spec.ts` and package scripts/devDependencies if missing; optional `@axe-core/playwright` tooling; modify only confirmed defects; save `screenshots/voyage/slice-8/*`, `logs/`, `worklog.md`, `insights.md`.
 
@@ -1040,7 +1417,16 @@ test.beforeEach(async({page})=>{await page.addInitScript(()=>sessionStorage.setI
 test("each rendered chapter is reachable and no removed rail target remains",async({page})=>{
  await page.goto("/");await expect(page.locator(".voyage-root")).toBeVisible();
  const ids=await page.locator(".voyage-track > section[id]").evaluateAll(nodes=>nodes.map(node=>node.id));
- for(const id of ids){await page.locator(`#${id}`).evaluate(node=>node.scrollIntoView({block:"start",behavior:"instant"}));await expect(page.locator(`#${id}`)).toBeInViewport();}
+ for(const id of ids){
+  const section=page.locator(`#${id}`);
+  await section.evaluate((node,chapter)=>{const rect=node.getBoundingClientRect();const extra=chapter==="pilot"?rect.height*.55:chapter==="orbit"?innerHeight*.5:chapter==="worlds"?innerHeight*.75:0;window.scrollTo({top:rect.top+scrollY+extra,behavior:"instant"});},id);
+  await expect(section).toBeInViewport();
+  if(id==="jump")continue;
+  if(id==="passage"){await section.evaluate(node=>window.scrollTo({top:node.getBoundingClientRect().top+scrollY+node.getBoundingClientRect().height*.5,behavior:"instant"}));continue;}
+  const heading=section.locator("h1,h2,h3").first();await expect(heading).toBeVisible();await expect(heading).toBeInViewport();
+  await expect.poll(()=>heading.evaluate(node=>{let opacity=1;for(let element:Element|null=node;element;element=element.parentElement)opacity*=Number(getComputedStyle(element).opacity);return opacity;})).toBeGreaterThan(.9);
+  if(id==="landing"){await page.getByLabel("Name",{exact:true}).scrollIntoViewIfNeeded();await expect(page.getByLabel("Name",{exact:true})).toBeInViewport();await page.getByLabel("Name",{exact:true}).focus();await expect(page.getByLabel("Name",{exact:true})).toBeFocused();}
+ }
  const targets=await page.locator(".rail__tick").count();expect(targets).toBe(ids.filter(id=>!["jump","passage"].includes(id)).length);
  expect(await page.locator("#voyage-canvas").count()).toBeLessThanOrEqual(1);
 });
@@ -1066,6 +1452,8 @@ test("keyboard and contrast audit has no serious/critical violations",async({pag
 
 Resolve typing differences against installed Playwright APIs; no `any` suppressions. Add actual integration cases for context loss (`WEBGL_lose_context` when available), dock target→active rail, scheduler blocked/4s form-primary using a test settings fixture isolated from production DB, unknown/unpublished case 404, no canvas on `/work/*` and `/admin`, Relaunch and keyboard project details. A missing scheduler URL is verified as missing config, not bypassed to claim blocked-provider integration coverage.
 
+- [ ] Add actual response/no-JS assertions: request `/` and confirm current CMS hero/process/body/form text in the server payload; open a browser context with `javaScriptEnabled:false`, verify the H1 and named inputs visibly render, and count each chapter ID once. Add keyboard tests to focus/scroll the active mobile Services panel with maximum copy, open/close the Process inline disclosure, navigate combined case/project controls and all Landing inputs in order. Inactive stacked/pinned panels must be excluded from keyboard/pointer access by visibility:hidden (the settled Services gate) or hidden/inert, and absent from Tab order; checking a section rectangle alone is insufficient.
+- [ ] Fix the observed production-console defects recorded in `.playwright-mcp/console-2026-09-30T11-42-25-773Z.log`: inspect each rootlayout preload, remove the unsupported MIME `type` or use the browser-supported type for its actual resource (the existing `.otf` font preload should use `type="font/otf"`, not `font/opentype`). Let Next Image own image preloads where applicable; do not preload assets merely to silence warnings. Resolve favicon.ico404 using an existing real brand asset if available (copy/convert to a valid favicon or add metadata icon pointing to that asset); if none exists, record missing brand input instead of inventing a logo. Verify production network/console has no unsupported-preload warning or missing icon request. Distinguish Framer Motion's informational reduced-motion development message from application errors; do not suppress genuine errors to make the gate green.
 - [ ] Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`. Every unexpected failure must be fixed or explicitly block completion. Test logs must identify actual counts, not guessed counts. Check imports do not drag server/Mongoose code into client chunks. Verify no new console errors/hydration warnings in both routes.
 - [ ] Capture production Lighthouse and performance traces at 1440×900 and a realistic mobile profile. Compare to recorded pre-redesign baseline if it exists; if no usable baseline exists, state comparison unavailable and record absolute results. Target LCP ≤2.5s, CLS <0.05, accessibility ≥95, high-tier desktop ≥55fps and mid-tier phone ≥45fps. Record hardware/browser, tier, DPR, throttling, measured frame counts and probe result. Browser emulation is not evidence of real mid-tier phone GPU performance. Missing hardware validation remains a named limitation, not a fabricated pass.
 - [ ] Use Chrome performance/memory tools to profile all set pieces; fix only observed hot paths. No allocations in per-frame graph construction, no orphan event listeners or geometry after navigation, one context maximum. Confirm context-loss demotion cannot leave pins hiding content. Confirm focus pull applies to readability-critical panels without softening still mode; reuse Starfield's non-destructive max-combined control rather than clobbering external settings. Bloom remains absent unless real visual/perf evidence justifies the new compositor scope.
@@ -1073,7 +1461,7 @@ Resolve typing differences against installed Playwright APIs; no `any` suppressi
 
 ## Common slice browser gate (Tasks 2, 6, 9; repeat after relevant fixes)
 
-1. Run exact slice unit tests, typecheck and touched-file lint. Repository lint may retain the recorded baseline until Task 10. Start/reuse the documented local server.
+1. Run exact slice unit tests, typecheck and touched-file lint. Repository lint may retain the recorded baseline until Task 11. Start/reuse the documented local server.
 2. Read automation tool documentation, open actual page, record tier and FPS probe. Capture 1440×900 and 390×844, ≥5 meaningful positions. Derive targets from actual section bounding rects/viewport holds, not raw old normalized percentages. Confirm scrollY has settled within 2px before captures.
 3. Inspect screenshots for content/ring/planet alignment, crop, glass readability, no unintended amber, dock/controls overlap, heading/body typography, focus visibility and horizontal overflow. Retune numbers only from observed defects; rerun affected checks after edits.
 4. Test keyboard/touch, 200% zoom, longest legal CMS text, empty optional data, reduced motion, WebGL disabled/lost and resizing midway. Do not overwrite real CMS data to create screenshots; temporary fixtures must be local, isolated, and removed before commit.
@@ -1084,5 +1472,5 @@ Resolve typing differences against installed Playwright APIs; no `any` suppressi
 - Implemented by plan: data-driven proof/process/quotes/projects; readable static alternatives; skip semantics across physical layout/camera/navigation; no reverse camera; bookable URL configuration; real inquiry API integration; truthful Pilot; Surface relaunch; home launch; CMS invalidation; legacy removal; automated/browser/perf gates.
 - External inputs still required for full product acceptance: actual public scheduler URL and provider embedding permission; verified published case studies/testimonials/credential copy; deployed DB/email settings; target-device performance evidence when unavailable locally.
 - Provider-specific scheduler completion callbacks and appointment-success sound are not implemented without an actual provider contract. Inquiry success sound is implemented on actual stored-success response.
-- Content-first SSR/hydration and CLS require measured implementation review in Task 10; this plan explicitly refuses to call a blank server placeholder or unmeasured cinematic hydration a performance pass.
+- Content-first SSR ships and is measured in Slice 4 before its visual gate; Slices 5–8 extend its one-DOM reservations and recheck server/no-JS content and CLS. No blank placeholder or unmeasured hydration counts as a pass.
 - Original geometry is approved. No code is represented as a ThreeUI source port unless its source is actually read and attribution retained.

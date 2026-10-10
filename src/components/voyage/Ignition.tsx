@@ -85,7 +85,7 @@ export default function Ignition({ enabled, onComplete, onLetterbox }: IgnitionP
 
   return (
     <AnimatePresence>
-      {visible && (
+      {visible && enabled && (
         <motion.div
           className="ignition"
           role="presentation"

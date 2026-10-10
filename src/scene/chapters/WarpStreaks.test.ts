@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
-import {
-  WarpStreaks, streakLength, streakOpacity,
-  hyperLength, hyperOpacity, hyperConverge,
-  HYPER_LENGTH_MAX, HYPER_OPACITY_PEAK, HYPER_CONVERGE_MAX,
-} from "./WarpStreaks";
+import { WarpStreaks, streakLength, streakOpacity } from "./WarpStreaks";
 import { TIER_SETTINGS } from "@/scene/quality";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { makeFrame } from "./testUtils";
@@ -13,14 +9,12 @@ import { makeFrame } from "./testUtils";
 beforeEach(() => voyageStore.reset());
 
 describe("streak curves", () => {
-  it("length and opacity grow with velocity and clamp", () => {
-    expect(streakLength(0)).toBeCloseTo(0.4, 5);
-    expect(streakLength(1)).toBeCloseTo(14, 5);
-    expect(streakLength(2)).toBeCloseTo(14, 5);
-    expect(streakLength(0.5)).toBeGreaterThan(streakLength(0.2));
-    expect(streakOpacity(0)).toBeCloseTo(0.12, 5);
-    expect(streakOpacity(1)).toBeCloseTo(0.65, 5);
-    expect(streakOpacity(-1)).toBeCloseTo(0.12, 5);
+  it("is quiet at rest and grows monotonically with bounded velocity", () => {
+    expect(streakOpacity(0)).toBe(0);
+    expect(streakLength(.5)).toBeGreaterThan(streakLength(.2));
+    expect(streakLength(2)).toBe(streakLength(1));
+    expect(streakOpacity(2)).toBe(streakOpacity(1));
+    expect(streakOpacity(-1)).toBe(0);
   });
 });
 
@@ -61,12 +55,13 @@ describe("WarpStreaks", () => {
     voyageStore.setScroll(0.1, 1);
     streaks.update(makeFrame({ voyage: voyageStore.getState() }));
 
-    expect(streaks.material.opacity).toBeCloseTo(streakOpacity(1), 5);
+    expect(streaks.material.opacity).toBeGreaterThan(0);
+    expect(streaks.material.opacity).toBeLessThan(streakOpacity(1));
     const pos = streaks.geometry.getAttribute("position") as THREE.BufferAttribute;
     const positions = pos.array as Float32Array;
     const length = positions[5] - positions[2];
     // One frame eases toward the target rather than snapping to it.
-    expect(length).toBeGreaterThan(streakLength(0));
+    expect(length).toBeGreaterThan(0);
     expect(length).toBeLessThan(streakLength(1));
   });
 
@@ -107,110 +102,43 @@ describe("WarpStreaks", () => {
   });
 });
 
-describe("hyperspace curves", () => {
-  it("length starts where the velocity curve rests and ends at the tunnel maximum", () => {
-    // Entry continuity: max(streakLength(v), hyperLength(0)) can never step down.
-    expect(hyperLength(0)).toBeCloseTo(streakLength(0), 10);
-    expect(hyperLength(1)).toBeCloseTo(HYPER_LENGTH_MAX, 5);
-    expect(hyperLength(-1)).toBeCloseTo(streakLength(0), 10);
-    expect(hyperLength(2)).toBeCloseTo(HYPER_LENGTH_MAX, 5);
-    expect(hyperLength(0.5)).toBeGreaterThan(hyperLength(0.25));
-    expect(hyperLength(0.5)).toBeLessThan(hyperLength(0.75));
-  });
-
-  it("opacity is zero at both ends and peaks mid-beat", () => {
-    expect(hyperOpacity(0)).toBeCloseTo(0, 10);
-    expect(hyperOpacity(1)).toBeCloseTo(0, 10);
-    expect(hyperOpacity(0.5)).toBeCloseTo(HYPER_OPACITY_PEAK, 10);
-    expect(hyperOpacity(-1)).toBeCloseTo(0, 10);
-    expect(hyperOpacity(2)).toBeCloseTo(0, 10);
-  });
-
-  it("convergence grows monotonically and clamps", () => {
-    expect(hyperConverge(0)).toBeCloseTo(0, 10);
-    expect(hyperConverge(1)).toBeCloseTo(HYPER_CONVERGE_MAX, 10);
-    expect(hyperConverge(-1)).toBeCloseTo(0, 10);
-    expect(hyperConverge(2)).toBeCloseTo(HYPER_CONVERGE_MAX, 10);
-    expect(hyperConverge(0.75)).toBeGreaterThan(hyperConverge(0.25));
-  });
-});
-
-describe("WarpStreaks — chapter 03", () => {
-  it("stretches at zero scroll velocity inside the Jump", () => {
-    // The regression this pins: a deliberate slow scroll through the 25vh beat has
-    // velocity ~0, so anything keyed off velocity would show no hyperspace at all.
-    const scene = new THREE.Scene();
+describe("velocity-led Jump", () => {
+  it("settles after a pause at the midpoint instead of retaining a progress-driven burst", () => {
     const streaks = new WarpStreaks();
-    streaks.build(scene, "mid");
-    voyageStore.setScroll(0.21, 0);
-    const cp = voyageStore.getState().chapterProgress;
-    expect(voyageStore.getState().chapter.id).toBe("jump");
-    streaks.update(makeFrame());
-
-    const positions = streaks.geometry.getAttribute("position").array as Float32Array;
-    // 3 places: the buffer is Float32, and the length is read back as a difference of two
-    // world-space z values around -100.
-    const length = positions[5] - positions[2];
-    expect(length).toBeCloseTo(hyperLength(cp), 3);
-    expect(length).toBeGreaterThan(streakLength(1));
-    expect(streaks.material.opacity).toBeCloseTo(hyperOpacity(cp), 5);
+    streaks.build(new THREE.Scene(), "mid");
+    voyageStore.setScroll(.21, 1);
+    for (let i = 0; i < 30; i++) streaks.update(makeFrame());
+    const moving = streaks.material.opacity;
+    expect(moving).toBeGreaterThan(0);
+    voyageStore.setScroll(.21, 0);
+    for (let i = 0; i < 24; i++) streaks.update(makeFrame());
+    expect(streaks.material.opacity).toBeLessThan(moving * .01);
+    expect([...streaks.geometry.getAttribute("position").array].every(Number.isFinite)).toBe(true);
+    streaks.dispose();
   });
-
-  it("converges the far end of each streak toward the flight axis", () => {
-    const scene = new THREE.Scene();
-    const streaks = new WarpStreaks();
-    streaks.build(scene, "mid");
-    voyageStore.setScroll(0.215, 0);
-    const cp = voyageStore.getState().chapterProgress;
-    streaks.update(makeFrame());
-
-    const p = streaks.geometry.getAttribute("position").array as Float32Array;
-    const headR = Math.hypot(p[0], p[1]);
-    const tailR = Math.hypot(p[3], p[4]);
-    expect(tailR).toBeGreaterThan(0);
-    expect(headR / tailR).toBeCloseTo(1 - hyperConverge(cp), 5);
+  it("has equivalent settling at 30 and 120fps", () => {
+    const run = (fps: number) => {
+      const streaks = new WarpStreaks(); streaks.build(new THREE.Scene(), "mid");
+      voyageStore.setScroll(.21, 1);
+      for (let i = 0; i < fps; i++) streaks.update(makeFrame({ dt: 1 / fps }));
+      voyageStore.setScroll(.21, 0);
+      for (let i = 0; i < fps / 2; i++) streaks.update(makeFrame({ dt: 1 / fps }));
+      const opacity = streaks.material.opacity; streaks.dispose(); return opacity;
+    };
+    expect(run(30)).toBeCloseTo(run(120), 8);
   });
-
-  it("floors the tunnel with the velocity curves rather than replacing them", () => {
-    // Entering the band at speed: max() must keep the velocity values, which are the larger
-    // pair this early in the beat. A bare assignment of the hyperspace curves steps them
-    // down — every other jump-band test here runs at velocity 0, where max() and a plain
-    // assignment are bit-identical, so this is the only test that can tell them apart.
-    const scene = new THREE.Scene();
-    const streaks = new WarpStreaks();
-    streaks.build(scene, "mid");
-    voyageStore.setScroll(0.2005, 1); // chapterProgress 0.025
-    streaks.update(makeFrame());
-
-    expect(streaks.material.opacity).toBeCloseTo(streakOpacity(1), 5); // 0.65, not 0.0706
-    const p = streaks.geometry.getAttribute("position").array as Float32Array;
-    expect(p[5] - p[2]).toBeCloseTo(0.4 + (streakLength(1) - 0.4) * 0.1, 3); // 1.76, not 0.5099
+  it("suppresses programmatic travel even if a caller passes nonzero velocity", () => {
+    const streaks = new WarpStreaks(); streaks.build(new THREE.Scene(), "mid");
+    streaks.update(makeFrame({ voyage: { ...voyageStore.getState(), velocity: 1, programmatic: true } }));
+    expect(streaks.material.opacity).toBe(0);
+    streaks.dispose();
   });
-
-  it("fades the tunnel with the ignition curtain", () => {
-    // The new ctx.ignite multiplier on the hyperspace opacity is unreachable from every other
-    // test here, because makeFrame() defaults to ignite: 1 — dropping it would leave the suite
-    // green while the tunnel blazed at full brightness behind the ignition curtain.
-    const scene = new THREE.Scene();
-    const streaks = new WarpStreaks();
-    streaks.build(scene, "mid");
-    voyageStore.setScroll(0.21, 0);
-    const cp = voyageStore.getState().chapterProgress;
-    streaks.update(makeFrame({ ignite: 0.5 }));
-    expect(streaks.material.opacity).toBeCloseTo(hyperOpacity(cp) * 0.5, 5);
-  });
-
-  it("leaves the Approach range exactly as it was", () => {
-    // Guards WarpStreaks.test.ts's existing velocity assertions from the new branch.
-    const scene = new THREE.Scene();
-    const streaks = new WarpStreaks();
-    streaks.build(scene, "mid");
-    voyageStore.setScroll(0.1, 1);
-    expect(voyageStore.getState().chapter.id).toBe("approach");
-    streaks.update(makeFrame());
-
-    expect(streaks.material.opacity).toBeCloseTo(streakOpacity(1), 5);
-    const p = streaks.geometry.getAttribute("position").array as Float32Array;
-    expect(Math.hypot(p[0], p[1])).toBeCloseTo(Math.hypot(p[3], p[4]), 5);
+  it("varies brightness and fades each additive streak endpoint", () => {
+    const streaks = new WarpStreaks(); streaks.build(new THREE.Scene(), "mid");
+    const colors = streaks.geometry.getAttribute("color");
+    expect(colors.getX(0)).toBe(0);
+    expect(colors.getX(1)).toBeGreaterThan(0);
+    expect(colors.getX(1)).not.toBe(colors.getX(3));
+    streaks.dispose();
   });
 });

@@ -6,7 +6,6 @@ import { CHAPTERS, type ChapterId } from "@/scene/camera/flightPath";
 import { useVoyage } from "@/scene/scroll/useVoyage";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { getAudioEngine } from "@/lib/audio/AudioEngine";
-import { createDockController } from "./dockController";
 import CallToAction from "./CallToAction";
 
 export const DOCK_LINKS: readonly { label: string; chapter: ChapterId }[] = [
@@ -16,7 +15,6 @@ export const DOCK_LINKS: readonly { label: string; chapter: ChapterId }[] = [
   { label: "About", chapter: "pilot" },
 ];
 
-const DOCK_OPTIONS = { proximity: 122, spring: 0.19, damping: 0.7, widthGrowth: 17, heightGrowth: 10, drop: 2.5 };
 
 function startOf(id: ChapterId): number {
   return CHAPTERS.find((c) => c.id === id)!.start + 0.001;
@@ -33,15 +31,10 @@ export default function Dock({ visible }: DockProps) {
   // Focus moves to the sheet's close button on open and back to the menu button on close.
   const menuRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const s = useVoyage();
   const compact = s.progress > 0.05;
-
-  useEffect(() => {
-    const root = capsuleRef.current;
-    if (!root || !visible) return;
-    return createDockController(root, () => DOCK_OPTIONS);
-  }, [visible]);
 
   // Escape closes the mobile sheet; listener only exists while it is open.
   useEffect(() => {
@@ -51,6 +44,17 @@ export default function Dock({ visible }: DockProps) {
     const menu = menuRef.current;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
+      if (e.key === "Tab") {
+        const controls = sheetRef.current?.querySelectorAll<HTMLButtonElement>("button:not([disabled])");
+        if (!controls?.length) return;
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        const outside = !sheetRef.current?.contains(document.activeElement);
+        if (outside || (e.shiftKey ? document.activeElement === first : document.activeElement === last)) {
+          e.preventDefault();
+          (e.shiftKey ? last : first).focus();
+        }
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     // RAF so the close button exists after AnimatePresence has mounted the sheet.
@@ -80,7 +84,7 @@ export default function Dock({ visible }: DockProps) {
       className="dock"
       data-dock-frame
       data-compact={compact ? "true" : "false"}
-      initial={{ y: -40, opacity: 0 }}
+      initial={false}
       animate={{ y: visible ? 0 : -40, opacity: visible ? 1 : 0 }}
       transition={{ duration: 0.6, ease: [0.2, 0.7, 0.2, 1] }}
     >
@@ -104,7 +108,7 @@ export default function Dock({ visible }: DockProps) {
           ))}
         </nav>
         <div className="dock__cta">
-          <CallToAction label="Book a call" onClick={book} />
+          <CallToAction label="Discuss a project" onClick={book} />
         </div>
         <button ref={menuRef} type="button" className="dock__menu" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="dock-sheet" aria-label={open ? "Close menu" : "Open menu"}>
           <span /><span />
@@ -114,6 +118,7 @@ export default function Dock({ visible }: DockProps) {
       <AnimatePresence>
         {open && (
           <motion.div
+            ref={sheetRef}
             className="dock__sheet"
             id="dock-sheet"
             role="dialog"
@@ -133,7 +138,7 @@ export default function Dock({ visible }: DockProps) {
                 {l.label}
               </button>
             ))}
-            <CallToAction label="Book a call" onClick={book} />
+            <CallToAction label="Discuss a project" onClick={book} />
           </motion.div>
         )}
       </AnimatePresence>

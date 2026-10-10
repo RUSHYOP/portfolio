@@ -7,13 +7,13 @@ import { voyageStore } from "@/scene/scroll/voyageStore";
 import { chapterIndex, decideJumpBeat } from "./jumpBeat";
 
 /**
- * Chapter 03's edge detector: returns whether the Jump letterbox should be down.
+ * Chapter 03's edge detector: returns the Jump hold used to gate premature chapter labels.
  *
  * Subscribes to the store rather than re-rendering per frame, and holds the only two
  * pieces of state the store cannot carry — the previous emit's chapter/flag, and the
  * current hold deadline. Every decision is made by the pure decideJumpBeat().
  *
- * The 250ms idle `tick` in VoyageScroll is load-bearing in both directions: inside the band
+ * The 50ms idle `tick` in VoyageScroll is load-bearing in both directions: inside the band
  * it is what renews the hold, so a slow or keyboard pass cannot lift the bars mid-burst;
  * outside it, it re-evaluates and releases the hold once the reader has stopped scrolling.
  */

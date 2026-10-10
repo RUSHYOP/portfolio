@@ -1,7 +1,7 @@
 import { CHAPTERS, chapterAt, distanceAU, type Chapter } from "@/scene/camera/flightPath";
 
 export interface VoyageState {
-  /** 0..1 normalized scroll through the whole voyage. */
+  /** Canonical 0..1 story progress; measured geometry maps physical page scroll. */
   progress: number;
   /** 0..1 normalized scroll speed (sign-less). */
   velocity: number;
@@ -39,6 +39,7 @@ export const PROGRAMMATIC_TIMEOUT_MS = 2000;
 
 let programmaticTarget: number | null = null;
 let programmaticDeadlineMs = 0;
+let lastMovementMs = 0;
 
 function resolveProgrammatic(progress: number): boolean {
   if (programmaticTarget === null) return false;
@@ -83,9 +84,11 @@ export const voyageStore = {
 
   setScroll(progress: number, velocity01: number): void {
     const p = clamp01(progress);
-    const v = clamp01(velocity01);
+    const wasProgrammatic = state.programmatic;
+    if (p !== state.progress) lastMovementMs = Date.now();
     // A target or timeout can clear the flag even when progress and velocity match.
     const programmatic = resolveProgrammatic(p);
+    const v = wasProgrammatic || programmatic ? 0 : clamp01(velocity01);
     if (p === state.progress && v === state.velocity && programmatic === state.programmatic) return;
     const { chapter, chapterProgress } = chapterAt(p);
     state = { ...state, progress: p, velocity: v, chapter, chapterProgress, distanceAU: distanceAU(p), programmatic };
@@ -96,7 +99,7 @@ export const voyageStore = {
     // NaN/Infinity deltas (a stalled or mis-timed interval) would poison elapsedMs permanently.
     if (!Number.isFinite(dtMs) || dtMs <= 0) return;
     // Scroll events may stop before the deadline; the clock still clears a stale trip.
-    state = { ...state, elapsedMs: state.elapsedMs + dtMs, programmatic: resolveProgrammatic(state.progress) };
+    state = { ...state, velocity: Date.now() - lastMovementMs >= 100 ? 0 : state.velocity, elapsedMs: state.elapsedMs + dtMs, programmatic: resolveProgrammatic(state.progress) };
     emit();
   },
 
@@ -128,7 +131,7 @@ export const voyageStore = {
     programmaticTarget = p;
     programmaticDeadlineMs = Date.now() + PROGRAMMATIC_TIMEOUT_MS;
     if (!state.programmatic) {
-      state = { ...state, programmatic: true };
+      state = { ...state, programmatic: true, velocity: 0 };
       emit();
     }
     scroller(p);
@@ -141,5 +144,6 @@ export const voyageStore = {
     scroller = null;
     programmaticTarget = null;
     programmaticDeadlineMs = 0;
+    lastMovementMs = 0;
   },
 };

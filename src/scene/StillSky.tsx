@@ -7,11 +7,11 @@ const STARS = (() => {
     seed = (seed * 16807) % 2147483647;
     return seed / 2147483647;
   };
-  return Array.from({ length: 160 }, () => ({
+  return Array.from({ length: 80 }, () => ({
     cx: (rand() * 100).toFixed(2),
     cy: (rand() * 100).toFixed(2),
     r: (0.05 + rand() * 0.18).toFixed(3),
-    o: (0.35 + rand() * 0.65).toFixed(2),
+    o: (0.1 + rand() * 0.25).toFixed(2),
   }));
 })();
 
@@ -23,9 +23,8 @@ export default function StillSky() {
         {stars.map((s, i) => (
           <circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill="#fff" opacity={s.o} />
         ))}
-        <circle cx="72" cy="66" r="1.1" fill="#f2b35c" opacity="0.95" />
-        <circle cx="72" cy="66" r="3.5" fill="#f2b35c" opacity="0.18" />
       </svg>
+      <div className="voyage-still__destination" />
     </div>
   );
 }

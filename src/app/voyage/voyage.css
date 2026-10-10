@@ -78,17 +78,18 @@
 }
 
 /* ====== Launch ====== */
-.launch { max-width: 62rem; }
+.launch { max-width: 58rem; }
+.launch__word { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
 .launch__title {
   font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
-  font-size: clamp(3.5rem, 8vw, 8rem); font-weight: 500;
-  letter-spacing: -0.02em; line-height: 0.95; margin: 0 0 1.5rem;
+  font-size: clamp(2.625rem, 6.4vw, 5.75rem); font-weight: 500;
+  letter-spacing: -0.02em; line-height: 1.06; margin: 0 0 1.5rem;
   /* Keeps the fallback font from orphaning the last word when Styrene A is unavailable. */
   text-wrap: balance;
 }
 .launch__sub {
-  font-weight: 300; font-size: clamp(1.05rem, 1.4vw, 1.35rem); line-height: 1.7;
-  color: var(--gray-light); max-width: 62ch; margin: 0 0 2.5rem;
+  font-weight: 400; font-size: clamp(1rem, 1.3vw, 1.125rem); line-height: 1.7;
+  color: var(--gray-light); max-width: 51ch; margin: 0 0 2.5rem;
 }
 .launch__ctas { display: flex; gap: 1rem; flex-wrap: wrap; }
 .launch__hint {
@@ -105,105 +106,33 @@
 }
 @keyframes hintPulseMobile { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
 
-/* ====== Approach Vector (ch. 02) ====== */
-/* The pose arrives as four custom properties; this media query, not JS, decides which two
-   of them are in force. Desktop: a staggered arc. Mobile: one panel at a time. */
-.services { display: flex; align-items: stretch; gap: clamp(1rem, 2vw, 1.75rem); width: 100%; }
+/* ====== Services: authored, intrinsic editorial flow in every tier ====== */
+.chapter--approach .chapter__pin {
+  position: relative; height: auto; min-height: 0;
+  max-width: 1440px; margin: 0 auto;
+  padding-top: clamp(7rem, 12vh, 9rem); padding-bottom: clamp(4rem, 8vh, 7rem);
+}
+.chapter--approach .chapter__label { margin-bottom: 3rem; }
+.services { width: 100%; }
 .service-panel {
-  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
-  padding: clamp(1.25rem, 2vw, 2rem);
-  opacity: var(--dock);
-  transform: translateY(calc((1 - var(--dock)) * 48px - var(--arc) * 26px))
-             rotate(calc(var(--tilt) * 1.1deg));
-  will-change: transform, opacity;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: clamp(2rem, 6vw, 7rem); padding: 3rem 0 3.5rem;
+  border-top: 1px solid rgba(255,255,255,.16);
 }
-.service-panel:focus-visible { outline: 2px solid var(--white); outline-offset: 3px; }
-@media (min-width: 768px) {
-  /* Keyboard focus can reach a panel before its scroll dock has begun. Reveal that panel
-     for the duration of focus so its content and focus ring are readable. */
-  .service-panel:focus-visible {
-    opacity: 1; transform: none;
-  }
-}
-.service-panel__index {
-  font-family: var(--font-jetbrains-mono), monospace; font-size: 0.62rem; letter-spacing: 0.2em;
-  color: var(--gray-dark); margin: 0 0 0.9rem;
-}
-.service-panel__title {
-  font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
-  font-size: clamp(1.15rem, 1.8vw, 1.6rem); font-weight: 500; letter-spacing: -0.01em;
-  line-height: 1.15; margin: 0 0 0.75rem;
-}
-.service-panel__promise {
-  font-size: 0.95rem; line-height: 1.6; color: var(--gray-light); margin: 0 0 1.25rem;
-}
-.service-panel__outcomes {
-  list-style: none; padding: 0; margin: 0 0 1.25rem;
-  display: flex; flex-direction: column; gap: 0.5rem;
-}
-.service-panel__outcomes li {
-  position: relative; padding-left: 1rem; font-size: 0.88rem; line-height: 1.5; color: var(--gray-mid);
-}
-.service-panel__outcomes li::before {
-  content: ""; position: absolute; left: 0; top: 0.65em; width: 6px; height: 1px;
-  background: rgba(255, 255, 255, 0.45);
-}
-.service-panel__engagement {
-  margin: auto 0 0; font-family: var(--font-jetbrains-mono), monospace;
-  font-size: 0.66rem; letter-spacing: 0.12em; color: var(--gray-dark);
-}
-.service-panel__engagement span {
-  display: block; margin-bottom: 0.3rem; opacity: 0.6; text-transform: uppercase;
-}
-
-/* Mobile: a 64vh pin is stationary for 86vh of the 150vh section — chapterProgress 0..0.573,
-   which is where servicesLayout's replacement windows end. Three full panels cannot stack
-   inside one phone viewport, so they replace one another in place.
-
-   The pin keeps .chapter__pin's `top: 0`, so the panel sits in the upper two-thirds with
-   empty track beneath it. Do NOT add a `top` offset to compensate: the sticky hold is
-   `section − top − height`, so `top: 18vh` would cut it from 86vh to 68vh (chapterProgress
-   0.453) and push the replacement windows' 0.56 end outside the pin. Adjust the panel's own
-   internal padding instead. */
+.service-panel__index { font-family: var(--font-jetbrains-mono), monospace; font-size: .75rem; color: #a3a3a3; margin: 0 0 1.2rem; }
+.service-panel__title { font-family: "Styrene A", sans-serif; font-size: clamp(1.6rem, 2.7vw, 2.5rem); font-weight: 500; line-height: 1.16; letter-spacing: -.035em; max-width: 18ch; margin: 0; overflow-wrap: anywhere; }
+.service-panel__detail { max-width: 58ch; min-width: 0; }
+.service-panel__promise { font-size: clamp(1rem, 1.3vw, 1.125rem); line-height: 1.7; color: #dedbd6; margin: 0 0 1.5rem; overflow-wrap: anywhere; }
+.service-panel__outcomes { list-style: none; padding: 0; margin: 0; display: grid; gap: .65rem; }
+.service-panel__outcomes li { padding-left: 1rem; position: relative; font-size: .95rem; line-height: 1.6; color: #bcb9b4; overflow-wrap: anywhere; }
+.service-panel__outcomes li::before { content: ""; position: absolute; top: .8em; left: 0; width: 4px; height: 1px; background: currentColor; }
+.service-panel__engagement { margin: 1.75rem 0 0; font-size: .875rem; line-height: 1.6; color: #c6c2bc; overflow-wrap: anywhere; }
+.service-panel__engagement span { display: block; font-size: .75rem; color: #a9a6a1; margin-bottom: .3rem; }
 @media (max-width: 767px) {
-  .chapter--approach .chapter__pin { height: 64vh; }
-  .services { position: relative; flex: 1 1 auto; }
-  .service-panel {
-    position: absolute; inset: 0; overflow-y: auto;
-    opacity: var(--solo); transform: none;
-  }
-  /* Fully faded panels still overlap the active panel. Hide them from pointer and keyboard
-     navigation, and stop sampling their backdrop blur. The focused, visible panel remains
-     keyboard scrollable when its content is taller than the pin. */
-  .service-panel[data-solo-off="true"] {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    visibility: hidden;
-    pointer-events: none;
-  }
-}
-
-/* Reduced motion / still tier: no pin, no scroll-derived motion — the panels just flow.
-   The section height stays a fixed 150vh on every tier (VoyageScroll derives progress and
-   drives scrollTo from `scrollHeight − innerHeight`, so `height: auto` here would land every
-   dock and rail link after Approach short). 2rem of padding rather than 6rem keeps the
-   stacked column inside 150vh at 390x844 for the current seed. A larger CMS count will
-   require the measured section height planned for Slice 4. */
-.chapter--approach[data-static="true"] .chapter__pin {
-  position: static; height: auto; min-height: 100vh;
-  padding-top: 2rem; padding-bottom: 2rem;
-}
-.chapter--approach[data-static="true"] .service-panel {
-  position: static; inset: auto; opacity: 1; transform: none;
-  visibility: visible; pointer-events: auto;
-}
-@media (max-width: 767px) {
-  .chapter--approach[data-static="true"] .services { flex-direction: column; }
-  /* Animated cards need an internal scroll region in the 64vh pin; static cards should
-     take their natural height so all content flows in the document. */
-  .chapter--approach[data-static="true"] .service-panel {
-    flex: none; overflow: visible;
-  }
+  .service-panel { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; padding: 2rem 0 2.75rem; }
+  .service-panel__title { max-width: 22ch; font-size: 1.75rem; }
+  .service-panel__index { margin-bottom: .8rem; }
+  .chapter--approach .chapter__label { margin-bottom: 2rem; }
 }
 
 /* ====== CTA ====== */
@@ -218,7 +147,7 @@
 .cta--primary:hover { filter: brightness(1.08); }
 .cta--ghost { background: transparent; color: var(--white); border: 1px solid rgba(255, 255, 255, 0.22); }
 .cta--ghost:hover { border-color: rgba(255, 255, 255, 0.6); }
-.cta__arrow { display: inline-block; transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.cta__arrow { display: inline-block; margin-left: .6rem; transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
 .cta:hover .cta__arrow { transform: translateX(4px); }
 
 /* ====== Dock ====== */
@@ -267,7 +196,7 @@
   color: var(--white); font-size: 1.5rem; line-height: 1;
 }
 @media (max-width: 767px) {
-  .dock__links, .dock__cta { display: none; }
+  .dock__links { display: none; }
   .dock__menu {
     display: grid; gap: 5px; place-content: center; width: 36px; height: 36px; border-radius: 50%;
     background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); cursor: pointer;
@@ -335,4 +264,60 @@
 @media (prefers-reduced-motion: reduce) {
   .launch__hint { animation: none; }
   .rail__dot { transition: none; }
+}
+
+/* Shared chrome is secondary to the reading edge. */
+.chapter--launch .chapter__pin { min-height: 100svh; height: auto; padding-top: 8rem; padding-bottom: 8rem; }
+.launch__hint { display: none; }
+.dock { top: 16px; }
+.dock__capsule { border-radius: 12px; box-shadow: none; background: rgba(12,12,12,.9); padding: .4rem; }
+.dock[data-compact="true"] .dock__capsule { transform: none; }
+.dock__mono { background: transparent; color: #ddd9d2; border-radius: 6px; }
+.dock__link { text-transform: none; font-family: inherit; font-size: .85rem; letter-spacing: 0; }
+.dock__link.is-active { text-shadow: none; }
+.cta { border-radius: 6px; font-family: inherit; font-size: .9rem; letter-spacing: 0; text-transform: none; }
+.dock__cta .cta { font-size: .8rem; padding: .65rem .9rem; }
+.voyage-audio { position: fixed; bottom: 24px; right: 28px; z-index: 9300; display: flex; align-items: center; gap: .6rem; background: #111; border: 1px solid #333; border-radius: 6px; padding: .6rem .75rem; color: #bbb; font-size: .75rem; cursor: pointer; }
+.voyage-audio .audio-visualizer { width: 24px; }
+.rail { opacity: .45; }
+.rail__dot { background: #bbb; box-shadow: none; width: 5px; height: 5px; margin: -2.5px; }
+.voyage-root[data-jump="true"] .chapter__label--placeholder { visibility: hidden; }
+@media (max-width: 767px) {
+  .chapter--launch .chapter__pin { padding-top: 8.5rem; padding-bottom: 5rem; }
+  .launch__title { font-size: clamp(2.3rem, 11.5vw, 3rem); letter-spacing: -.035em; }
+  .launch__sub { margin-bottom: 2rem; }
+  .dock { left: 16px; right: 16px; }
+  .dock__capsule { width: 100%; justify-content: space-between; gap: .25rem; flex-wrap: wrap; }
+  .dock__menu { width: 40px; height: 40px; }
+  .voyage-audio { bottom: 16px; right: 16px; }
+}
+
+@media (max-width: 767px) {
+  .dock__capsule { display: grid; grid-template-columns: 36px minmax(0, 1fr) 40px; }
+  .dock__cta { min-width: 0; justify-self: center; max-width: 100%; }
+  .dock__cta .cta { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .dock__cta .cta > span { max-width: 100%; }
+}
+
+.voyage-still__destination {
+  position: absolute; left: 84%; top: 51%; width: 44px; height: 44px;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle, rgba(242,179,92,.75) 0%, rgba(242,179,92,.25) 7%, rgba(242,179,92,.08) 23%, transparent 65%);
+}
+.ignition { padding: 24px; box-sizing: border-box; max-width: 100vw; }
+.ignition__title, .ignition__sub { max-width: 100%; text-align: center; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+  .dock { width: calc(100vw - 32px); max-width: calc(100vw - 32px); right: auto; }
+  .dock__capsule { box-sizing: border-box; max-width: 100%; }
+  .voyage-still__destination { top: 14%; width: 32px; height: 32px; }
+}
+/* Mobile layout viewports can retain a transient text-zoom width. Fixed atmosphere
+   must follow the CSS viewport, never perpetuate that expanded scrollable width. */
+.voyage-scene, .letterbox, .dock__sheet,
+body:has(.voyage-root) .film-grain, body:has(.voyage-root) .vignette {
+  width: 100vw; max-width: 100vw; right: auto; overflow: clip;
+}
+.voyage-audio { right: auto; left: calc(100vw - 28px); transform: translateX(-100%); }
+@media (max-width: 767px) {
+  .voyage-audio { left: calc(100vw - 16px); max-width: calc(100vw - 32px); }
 }

@@ -4,15 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Settings } from "@/lib/data";
 import type { Item } from "@/lib/collections/defineCollection";
-import { CHAPTERS, VOYAGE_SCROLL_VH, VOYAGE_TAIL_VH, sectionHeightVh } from "@/scene/camera/flightPath";
+import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import VoyageScroll from "@/scene/scroll/VoyageScroll";
 import { detectEnv, selectTier, probeDemote, runFpsProbe, type Tier } from "@/scene/quality";
 import { logClient } from "@/lib/clientLog";
 import { useAudio } from "@/hooks/useAudio";
-import { FloatingControls } from "@/components/ThemeToggle";
+import AudioVisualizer from "@/components/AudioVisualizer";
 import StillSky from "@/scene/StillSky";
-import Telemetry from "./Telemetry";
 import Letterbox from "./Letterbox";
 import FlightRail from "./FlightRail";
 import Dock from "@/components/dock/Dock";
@@ -62,7 +61,7 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
   // Scroll velocity → audio filter, only while unmuted.
   useEffect(() => {
     if (state.muted) return;
-    return voyageStore.subscribe((s) => engine.setScrollEnergy(s.velocity));
+    return voyageStore.subscribe((s) => engine.setScrollEnergy(s.programmatic ? 0 : s.velocity));
   }, [engine, state.muted]);
 
   // FPS probe after ignition; demote one tier if it can't hold 45fps.
@@ -86,11 +85,7 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [ignited, tier]);
 
-  // The voyage is dark-only; the theme toggle is removed in slice 8. Keyed on `tier` because
-  // FloatingControls (which writes the stored/OS theme on mount) only mounts once `tier` is
-  // resolved — so this effect must re-run in that same commit to win over it.
-  // The audio engine keys its voicing off the theme too, and FloatingControls sets it from
-  // the stored/OS theme on mount — so pin it here in the same commit, not just the attribute.
+  // Dark-only scene and audio voicing share the same theme.
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "dark");
     engine.setTheme("dark");
@@ -108,28 +103,24 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
     [],
   );
 
-  // Compute before the early return so the hook below is never called conditionally.
+  // Content is always rendered; quality selection only enhances its background.
   const animated = tier !== null && tier !== "still";
   const jumpLetterbox = useJumpBeat(animated);
 
-  if (tier === null) return <div className="voyage-root voyage-root--booting" />;
-
   return (
-    <div className="voyage-root" data-tier={tier}>
+    <div className="voyage-root" data-tier={tier ?? "pending"} data-jump={jumpLetterbox ? "true" : undefined}>
       <VoyageScroll smooth={animated} />
-      {tier !== "still" ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
+      {tier && tier !== "still" ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
 
       {/* Ignition clears its own state on finish, independently from the Jump hold. */}
-      <Letterbox active={animated && (letterbox || jumpLetterbox)} />
-      <Telemetry />
+      <Letterbox active={animated && letterbox} />
       <FlightRail />
-      <Dock visible={ignited} />
+      <Dock visible />
 
-      <Ignition enabled={animated} onComplete={onIgnitionComplete} onLetterbox={setLetterbox} />
+      {tier && <Ignition enabled={animated} onComplete={onIgnitionComplete} onLetterbox={setLetterbox} />}
 
-      {/* Track height = scrollable range + the final section's tail viewport, so that
-          `scrollHeight - innerHeight` equals VOYAGE_SCROLL_VH — the store's denominator. */}
-      <main className="voyage-track" style={{ minHeight: `${VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH}vh` }}>
+      {/* Measured child sections determine travel; Surface includes one final viewport tail. */}
+      <main className="voyage-track">
         <Launch headline={settings.heroHeadline} subheadline={settings.heroSubheadline} ready={ignited} />
         <Services services={services} animated={animated} />
         {/* Chapter 03 carries 25vh of scroll and nothing else: no pin, label or aria-label. */}
@@ -156,7 +147,11 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
         ))}
       </main>
 
-      <FloatingControls muted={state.muted} onToggleMute={toggleMuted} />
+      <button type="button" className="voyage-audio" onClick={toggleMuted}
+        aria-label={state.muted ? "Enable audio" : "Mute audio"} aria-pressed={!state.muted}>
+        <AudioVisualizer active={!state.muted} />
+        <span>Sound {state.muted ? "off" : "on"}</span>
+      </button>
     </div>
   );
 }

@@ -96,3 +96,10 @@ Spec §8, chapters 02/03: desktop and mobile panels/Jump were reachable and legi
 ### Next
 
 Slice 4: Orbit / process ring. Carry forward the tuned Topology offsets (X 0, Y −9, Z −34) and the 64vh Approach pin/mobile solo window. `Launch.tsx` still lacks a `useReducedMotion()` guard (GAP-3), and Playwright integration tests remain deferred to Slice 8 (spec §7). Slice 8 also owns measured chapter 02/03 frame cost, final device performance, root asset/preload cleanup and the brief still-Ignition exit fade. Whole-change review and remote delivery follow the remaining slices; this branch has not been pushed yet.
+
+
+## 2026-09-30 — Visual gate reopened: restrained cinematic correction (Codex)
+
+The user's visual rejection superseded the Slice 3 arc, mobile replacement, decorative graph and progress-held white burst. Earlier acceptance and “carry forward 64vh” notes above are historical, not current approval. The correction introduces intrinsic editorial Services in every tier, a measured physical/canonical scroll bridge, readable SSR foreground, smaller Launch hierarchy, mobile inquiry action, quieter navigation and one subdued scene. No CMS records or dependencies were added.
+
+Focused tests were first made red for the missing geometry module and fixed-height N=1/6/10 Services; those now pass. New bridge integration tests cover native/Lenis navigation after reflow, exact arrival suppression and native idle settling. Frame tests cover delta-time-independent decay, programmatic suppression and projected orb bounds. Production screenshots, full verification and remaining gate status are recorded in `.superpowers/sdd/codex-recovery/design-correction-report.md`. The visual gate remains reopened until controller browser and independent reviewer approval; later chapters must integrate the measured layout rather than restore fixed reservations.

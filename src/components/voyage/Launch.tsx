@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
 import { useVoyage } from "@/scene/scroll/useVoyage";
 import { voyageStore } from "@/scene/scroll/voyageStore";
@@ -18,7 +17,6 @@ const chapter = CHAPTERS.find((c) => c.id === "launch")!;
 const landing = CHAPTERS.find((c) => c.id === "landing")!;
 const approach = CHAPTERS.find((c) => c.id === "approach")!;
 
-const EASE = [0.2, 0.7, 0.2, 1] as const;
 
 // Module scope: stable onClick identities across the per-frame useVoyage() re-renders.
 const book = () => {
@@ -41,26 +39,21 @@ export default function Launch({ headline, subheadline, ready }: LaunchProps) {
     <section
       id="launch"
       className="chapter chapter--launch"
-      style={{ height: `${sectionHeightVh(chapter)}vh` }}
+      style={{ minHeight: `${sectionHeightVh(chapter)}vh` }}
       aria-label="Launch"
     >
       <div className="chapter__pin">
-        <motion.div
-          className="launch"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: ready ? 1 : 0, y: ready ? 0 : 12 }}
-          transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
-        >
+        <div className="launch">
           <p className="chapter__label">
             {chapter.index} / {chapter.label}
           </p>
-          <h1 className="launch__title">{headline}</h1>
+          <h1 className="launch__title">{headline.split(/(\s+)/).map((word, i) => word.includes("-") ? <span className="launch__word" key={i}>{word}</span> : word)}</h1>
           <p className="launch__sub">{subheadline}</p>
           <div className="launch__ctas">
-            <CallToAction label="Book a call" onClick={book} />
-            <CallToAction label="See the work" variant="ghost" onClick={seeWork} />
+            <CallToAction label="Discuss a project" onClick={book} />
+            <CallToAction label="Explore services" variant="ghost" onClick={seeWork} />
           </div>
-        </motion.div>
+        </div>
         {/* Gated on ready: the hint must not appear before the hero fades up. */}
         <p className="launch__hint" style={{ opacity: ready ? hintOpacity : 0 }} aria-hidden="true">
           SCROLL TO DEPART ↓

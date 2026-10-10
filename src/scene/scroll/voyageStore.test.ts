@@ -223,3 +223,20 @@ describe("voyageStore.programmatic", () => {
     expect(voyageStore.getState().programmatic).toBe(false);
   });
 });
+
+// Native scrolling emits no final velocity=0 event. The clock must settle that sample.
+it("clears native idle velocity and suppresses the programmatic arrival frame", () => {
+  vi.useFakeTimers();
+  try {
+    voyageStore.reset();
+    voyageStore.setScroll(.21, 1);
+    vi.advanceTimersByTime(150);
+    voyageStore.tick(50);
+    expect(voyageStore.getState().velocity).toBe(0);
+    voyageStore.registerScroller(() => {});
+    voyageStore.scrollTo(.5);
+    voyageStore.setScroll(.5, 1);
+    expect(voyageStore.getState().programmatic).toBe(false);
+    expect(voyageStore.getState().velocity).toBe(0);
+  } finally { vi.useRealTimers(); voyageStore.reset(); }
+});

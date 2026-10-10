@@ -49,3 +49,12 @@ Reviews, observations, and lessons — not task tracking (see `worklog.md`).
 - Crossing detection reads chapter indices. A native-scroll emit can jump from Approach to Orbit and never report Jump as the current chapter.
 - Programmatic `scrollTo` needs epsilon and timeout clearing because a Lenis lerp tail can stall, and a no-op guard because scrolling to the current position emits nothing. Without those exits, later organic Jump beats can stay suppressed.
 - Browser review exposed a compiled CSS ordering problem: writing the prefixed `backdrop-filter` last left Chrome without the standard declaration and therefore without glass blur. The restored blur changed graph visibility, prompting its offset retune. The same review found static mobile cards clipping their copy under flex shrink and inner overflow; intrinsic height fixed that. No additional browser finding remains unrecorded here or in the Task 10 report.
+
+
+## 2026-09-30 — Correction after visual rejection (Codex)
+
+- The earlier 64vh/150vh timing and arbitrary-N arc guidance is superseded. Intrinsic service rows make reading height a consequence of actual CMS content; measured physical-to-canonical mapping keeps navigation and the camera aligned without a global document-height denominator.
+- A passing pose test cannot establish composition. Tests that insisted on a full burst at zero velocity codified the rejected behavior; frame invariants now check settling and bounds, with rendered screenshots as a separate review gate.
+- Native scroll emits no guaranteed zero-velocity event. Clear stale movement on the existing clock, and suppress both in-flight and arrival velocity for programmatic travel; otherwise the last frame can flash or drive audio.
+- SSR text in the DOM is insufficient when a client-only dismissal overlay covers it. Gate Ignition on resolved tier and enabled motion, and inspect actual no-JS screenshots as well as server markup.
+- Protected hyphenated headline tokens still need emergency wrapping at narrow widths and enlarged text. Mobile navigation needs a minmax(0,1fr) content column so a visible inquiry action can wrap without widening the page.

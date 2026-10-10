@@ -85,96 +85,40 @@ describe("jumpGlare", () => {
   });
 });
 
-describe("EnergyOrb — chapter 03 flare", () => {
-  it("drives uGlare from chapterProgress inside the Jump", () => {
-    const scene = new THREE.Scene();
-    const orb = new EnergyOrb();
-    orb.build(scene, "mid");
-    voyageStore.setScroll(0.21, 0);
-    const cp = voyageStore.getState().chapterProgress;
-    expect(voyageStore.getState().chapter.id).toBe("jump");
-    orb.update(makeFrame());
-    expect(orb.material.uniforms.uGlare.value).toBeCloseTo(jumpGlare(cp), 6);
-    expect(orb.material.uniforms.uGlare.value).toBeGreaterThan(0.99);
+describe("contained Jump destination", () => {
+  it("rests quietly at the midpoint and suppresses programmatic flare", () => {
+    const orb = new EnergyOrb(); orb.build(new THREE.Scene(), "mid");
+    voyageStore.setScroll(.21, 1);
+    for (let i = 0; i < 30; i++) orb.update(makeFrame());
+    expect(orb.material.uniforms.uGlare.value).toBeGreaterThan(0);
+    voyageStore.setScroll(.21, 0);
+    for (let i = 0; i < 24; i++) orb.update(makeFrame());
+    expect(orb.material.uniforms.uGlare.value).toBeLessThan(.003);
+    orb.update(makeFrame({ voyage: { ...voyageStore.getState(), programmatic: true, velocity: 1 } }));
+    expect(orb.material.uniforms.uGlare.value).toBe(0);
+    orb.dispose();
   });
-
-  it("combines with setGlare by max, so neither driver can cancel the other", () => {
-    const scene = new THREE.Scene();
-    const orb = new EnergyOrb();
-    orb.build(scene, "mid");
-    // chapterProgress 0 → jumpGlare 0, so the manual control wins.
-    voyageStore.setScroll(0.2, 0);
-    orb.setGlare(1);
-    orb.update(makeFrame());
-    expect(orb.material.uniforms.uGlare.value).toBeCloseTo(1, 6);
-    // Mid-ramp with two sub-1 drivers: max picks the larger, a sum (clamped or not) does not.
-    // At chapterProgress 0.25 the drivers are 0.7071… and 0.2 — max gives 0.7071, a plain sum
-    // 0.9071, a clamped sum 0.9071. A probe at the peak could not tell any of them apart.
-    voyageStore.setScroll(0.205, 0); // chapterProgress 0.25 → jumpGlare 0.7071067811865451
-    orb.setGlare(0.2);
-    orb.update(makeFrame());
-    expect(orb.material.uniforms.uGlare.value)
-      .toBeCloseTo(jumpGlare(voyageStore.getState().chapterProgress), 6);
-  });
-
-  it("leaves every other chapter on setGlare alone", () => {
-    const scene = new THREE.Scene();
-    const orb = new EnergyOrb();
-    orb.build(scene, "mid");
-    voyageStore.setScroll(0.1, 0);
-    orb.setGlare(0.25);
-    orb.update(makeFrame());
-    expect(orb.material.uniforms.uGlare.value).toBeCloseTo(0.25, 6);
-  });
-
-  it("keeps the burst inside the document guard, so a node build stays a single child", () => {
-    // The burst — and therefore its ctx.ignite multiplier — is unreachable under vitest's
-    // global `node` environment: makeBurstTexture() calls canvas.getContext("2d"), which is
-    // null even under jsdom without the optional `canvas` package. This pins the guard and
-    // the frame path around it; the sprite's only regression net is Task 10's p21 captures.
-    const scene = new THREE.Scene();
-    const orb = new EnergyOrb();
-    orb.build(scene, "mid");
-    voyageStore.setScroll(0.21, 0);
-    expect(() => orb.update(makeFrame({ ignite: 0.5 }))).not.toThrow();
-    expect(orb.object?.children).toHaveLength(1);
-    // uGlare is deliberately NOT gated by ignite — the burst's opacity is.
-    expect(orb.material.uniforms.uGlare.value)
-      .toBeCloseTo(jumpGlare(voyageStore.getState().chapterProgress), 6);
-  });
-
-  it("gates burst opacity and scale by ignition", () => {
+  it.each([390 / 844, 1440 / 900])("bounds core and halo in projection at aspect %f", aspect => {
     const gradient = { addColorStop: vi.fn() };
-    const context = {
-      createRadialGradient: vi.fn(() => gradient),
-      fillRect: vi.fn(),
-      fillStyle: null as CanvasGradient | string | CanvasPattern | null,
-    };
-    vi.stubGlobal("document", {
-      createElement: vi.fn(() => ({
-        width: 0,
-        height: 0,
-        getContext: vi.fn(() => context),
-      })),
-    });
-
-    const scene = new THREE.Scene();
+    vi.stubGlobal("document", { createElement: () => ({ width: 0, height: 0,
+      getContext: () => ({ createRadialGradient: () => gradient, fillRect: vi.fn(), fillStyle: "" }) }) });
     const orb = new EnergyOrb();
     try {
-      orb.build(scene, "mid");
-      voyageStore.setScroll(0.21, 0);
-      const burst = orb.object?.children[2] as THREE.Sprite;
-
-      orb.update(makeFrame({ ignite: 0.5 }));
-      expect((burst.material as THREE.SpriteMaterial).opacity).toBeCloseTo(0.5, 6);
-      expect(burst.scale.x).toBeGreaterThan(0);
-
-      orb.update(makeFrame({ ignite: 0 }));
-      expect((burst.material as THREE.SpriteMaterial).opacity).toBe(0);
-      expect(burst.scale.x).toBe(0);
-    } finally {
-      orb.dispose();
-      vi.unstubAllGlobals();
-    }
+      orb.build(new THREE.Scene(), "mid");
+      const camera = new THREE.PerspectiveCamera(60, aspect);
+      camera.position.set(STAR_POSITION.x, STAR_POSITION.y, STAR_POSITION.z + 6);
+      camera.updateMatrixWorld();
+      voyageStore.setScroll(.21, 1);
+      orb.update(makeFrame({ camera, audioEnergy: 1 }));
+      const group = orb.object!;
+      const viewHeight = 12 * Math.tan(Math.PI / 6);
+      for (const sprite of group.children.slice(1)) {
+        const projectedHeight = sprite.scale.x * group.scale.x / viewHeight;
+        expect(projectedHeight).toBeLessThanOrEqual(Math.min(.09, aspect * .16) + 1e-6);
+      }
+      expect(2 * group.scale.x / viewHeight).toBeLessThan(.04);
+      orb.update(makeFrame({ camera, ignite: 0 }));
+      expect((group.children[2] as THREE.Sprite).material.opacity).toBe(0);
+    } finally { orb.dispose(); vi.unstubAllGlobals(); }
   });
 });

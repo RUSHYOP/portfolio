@@ -10,14 +10,11 @@ const CORRIDOR_Z_NEAR = 20;
 const CORRIDOR_Z_FAR = -220;
 const CORRIDOR_RADIUS = 45;
 const BASE_SIZE = 0.14;
-const BASE_OPACITY = 0.85;
+const BASE_OPACITY = 0.4;
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
-/* Focus-pull window over Approach's chapterProgress (spec §3: "when a chapter panel pins,
- * background particles behind it soften"). Approach's section is 150vh and .chapter__pin is
- * 100vh, so the pin is stationary only for chapterProgress 0..1/3 — the field is fully soft
- * across that docked frame and releases as the panel block scrolls away. */
+/* Softens the decorative sky during the measured, intrinsic Services interval. */
 const SOFTEN_IN = 0.02;
 const SOFTEN_FULL = 0.22;
 const SOFTEN_HOLD_END = 0.45;

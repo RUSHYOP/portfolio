@@ -56,9 +56,23 @@
 - `npm run lint` — 16 problems (10 errors, 6 warnings), **all pre-existing** in files this branch never touched (`TypewriterText`, `ThemeToggle`, `ThreeBackground`, `CustomCursor`, `CinematicIntro`, `FilmGrain`, `ProjectsClient`, plus `admin/page.tsx:337` which dates to 668dac3). Linting sub-project 2's files alone: 0 problems.
 - Live checks against the dev server: `/api/services` 3, `/api/process` 4, `/api/case-studies` 1 (published only), `/api/testimonials` 0 public / 1 with `?all=1` authenticated; `/api/inquiries` 401 unauthenticated, 2 items authenticated; `/work/pricing-engine` 200, `/work/nope` 404; honeypot POST 201 with the inquiry count unchanged; a 5 KB body 413. Unpublishing `pricing-engine` dropped the public list to 0 and `/work/pricing-engine` to 404; restored afterwards.
 
-### Sub-project 2 complete — pending whole-branch review
-- All 14 tasks done on `feat/consulting-cms`; whole-branch review + merge to `master` is the next gate (deferred minors in `.superpowers/sdd/progress.md`).
+### Sub-project 2 merged (2026-09-15)
+- Whole-branch review → 12-item fix wave → re-review "Ready to merge" → merged into `master` (fast-forward to 063e2d5), 313 tests + typecheck + production build verified on the merged result, pushed. Post-merge follow-ups recorded in `.superpowers/sdd/final-review.md`.
+
+## 2026-09-18
+
+### Slice 3 — Approach Vector + Jump (branch `feat/voyage-slice-3`, planning)
+- Understand phase as a workflow: six parallel subsystem readers (scene core, set pieces, camera/scroll, DOM, audio, data/tests) → synthesized map `.superpowers/sdd/slice3-map.md` (497 lines) → completeness critic (verified ~60 claims against source; 4 corrections; verdict sufficient). Key facts: waypoints/geometry for chapters 02/03 already exist (approach 0.08–0.20 = 150vh, jump 0.20–0.22 = 25vh); `Starfield.setSoften`, `EnergyOrb.setGlare`, `WarpStreaks` velocity curves exist but are uncalled; no whoosh asset (the synth `playWhoosh` already sweeps upward); `getVoyageContent()` has zero callers.
+- User decisions: services panels data-driven N tuned for 3, CMS rendered as-is; Jump beat fires on forward organic crossings every time, never backward, suppressed during programmatic `scrollTo`; polish = additive sprites + existing whoosh (no bloom pipeline, no ambient sweep); Playwright integration tests deferred to slice 8 (spec §7 deviation).
+- Plan written by an Opus agent from the map + decisions (`docs/superpowers/plans/2026-09-18-voyage-slice-3.md`, 11 tasks). It caught an arithmetic error in the controller's docking windows — a 100vh sticky pin inside a 150vh section holds for only 50vh (chapterProgress 0→⅓) — and re-derived the dock timing (desktop by 0.28; mobile 64vh pin with one-panel-at-a-time replacement over [0.04, 0.56]).
+- Plan review as a workflow: five lenses (signature fidelity, test breakage, decision compliance, format rigour, cinematic/perf/a11y) → two adversarial skeptics per Important → synthesis. Result: 1 Critical (a plan test asserting `arc: 0` for a lone panel while the code returned 1), 8 Important (incl. a `void services;` bridge conditioned on a fact no subagent holds; letterbox lifting mid-burst on slow scroll; inactive mobile glass panels still paying an 18px backdrop blur; nine wrong test counts), 15 Minor; 2 refuted; 7 deferred to execution review. Hit the Opus session limit mid-run; resumed from cache after the reset.
+
+- Plan fixes applied (24 items, +270 lines) and verified by a second Opus agent that replayed four tasks' RED phases empirically — eight quoted vitest error strings were wrong and were replaced with the measured ones. Plan committed; execution starts at Task 1.
+
+### 2026-09-30 — reverted Codex attempt (recorded 2026-10-09)
+- Forty commits implemented slice 3 and part of Orbit outside this workflow, then `revert: undo Codex Voyage changes` restored the tree to 063e2d5 (diff empty). Decision 2026-10-09: ignore it and execute the reviewed plan from scratch; the reverted commits remain in history as reference only.
+- Environment had lapsed after three weeks: `node_modules` gone, the Mongo container gone, dev server down. Restored with `npm ci`, a fresh `mongo:7` on 27018 + `npm run seed`, `npm run dev`; baseline re-established at 313/313, typecheck 0.
 
 ### Next
-- Whole-branch review of `feat/consulting-cms`, then merge to `master`.
-- Plan slice 3 (Approach Vector + Jump) carrying forward the tuned constants (`STAR_SCALE_MAX = 2.4`, `LAUNCH_LOOK_OFFSET = (-28, 18, 0)`, `GLOW_MIN = 3.5`); slice 3 wires `getVoyageContent()` into `VoyageRoot`.
+- Execute Tasks 1–11 sequentially (one Opus implementer at a time, independent review after each; controller runs the browser review at 1440×900 and 390×844 with screenshots to `screenshots/voyage/slice-3/`).
+- Then: whole-branch review → merge; slice 4 (Orbit) plan; Resend key rotation still offered.

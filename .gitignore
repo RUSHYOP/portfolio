@@ -42,3 +42,6 @@ next-env.d.ts
 # downloaded credential exports — never commit
 api-keys*.csv
 *.pem
+
+# Playwright MCP session cache (console/page snapshots)
+.playwright-mcp/

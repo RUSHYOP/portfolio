@@ -17,7 +17,7 @@ Recovered from the project Claude transcript, 112 project session-summary record
 - [ ] Slice 4: Orbit process ring and step panels.
 - [ ] Slice 5: Worlds with authored case studies and distinguishing planet features.
 - [ ] Slice 6: Belt, Dark Passage and interactive project Constellation; skip empty proof chapters with consistent camera/scroll geometry.
-- [ ] Slice 7: Pilot, Landing inquiry form/scheduler and Surface relaunch.
+- [ ] Slice 7: Pilot, Landing Resend inquiry form and Surface relaunch.
 - [ ] Slice 8: remove legacy navigation/theme/typewriter paths, finish route wiring, integration/accessibility/performance checks.
 - [ ] Resolve applicable deferred CMS review findings and repository lint backlog.
 - [ ] Final whole-change review, fixes, production build and delivery.
@@ -38,6 +38,6 @@ Resend key rotation was offered previously, not completed or newly authorized. E
 
 The latest user instruction is **“follow the claudes plan.”** Full completion of the remaining redesign remains requested. The original approved Claude design (`docs/superpowers/specs/2026-09-14-voyage-redesign-design.md`) and recovered Claude Slice 3 plan are the visual authority. September 30 Slice 4/completion documents are Codex-authored follow-on execution plans applying that design; they are not original Claude-authored artifacts.
 
-This supersedes the earlier editorial visual direction and the `d0ffb8a` amendment. The correction commits `6a87eed`/`0602e4b` and their captures remain historical evidence, not the visual baseline for future chapters. Restore planned glass/arc/topology/hyperspace/typography/chrome and continue Orbit/Worlds/Belt/Constellation/Pilot/Landing/Surface in the original design. Restoration is selective: retain measured geometry, visible server/no-JS content, tier/ignition gating, one scene, programmatic suppression, dark-only audio, keyboard/focus and text-zoom fixes. Current restoration work and engineering checks must finish before the next chapter gate.
+This supersedes the earlier editorial visual direction and the `d0ffb8a` amendment. The correction commits `6a87eed`/`0602e4b` and their captures remain historical evidence, not the visual baseline for future chapters. Restore planned glass/arc/topology/hyperspace/typography/chrome and continue Orbit/Worlds/Belt/Constellation/Pilot/Landing/Surface in the original design. Restoration is selective: retain measured geometry, visible server/no-JS content, tier/ignition gating, one scene, programmatic suppression, dark-only audio, keyboard/focus and text-zoom fixes. Restoration completed in `7dc05ee` plus static count fix `0f0014e`, independently approved after desktop/mobile/static checks. Captures are in `screenshots/voyage/claude-restoration/`; continue Slice 4 next.
 
 The explicit Resend selection remains: use the established inquiry backend as the primary contact flow. No calendar/provider URL exists; add no scheduler configuration or iframe. Original “Book a call” may request a call through the real inquiry form without claiming instant scheduling. The execution checklist above remains the controller's progress ledger and is unchanged by this direction update.

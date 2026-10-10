@@ -103,7 +103,7 @@ The cinematic consulting page (noindex until launch) is one scroll-driven camera
 
 - **Scroll → state.** `VoyageScroll` (Lenis, with a native fallback) writes normalised progress into `voyageStore` (`src/scene/scroll/voyageStore.ts`), which derives `chapter` / `chapterProgress` from `CHAPTERS` in `flightPath.ts`. DOM reads it via `useVoyage()`; the scene reads it once per frame as `ctx.voyage`. Each chapter is a `<section>` whose height comes from `sectionHeightVh(chapter)`, so the scroll track and the flight path share one parameterisation.
 - **One WebGL context.** `SceneRoot` owns the only renderer and a flat `pieces` array of `SetPiece`s (`build(scene, tier)` / `update(ctx)` / `dispose()`): `Starfield`, `WarpStreaks`, `Topology`, `EnergyOrb`. There is no post-processing composer.
-- **Tiers.** `quality.ts` picks `high` / `mid` / `still` from the environment (mobile → `mid`; reduced motion or no WebGL → `still`), and a once-per-load FPS probe can demote one tier. Per-tier counts live in `TierSettings`. `still` renders `StillSky` instead of `SceneRoot`, and every DOM chapter receives `animated = false`.
+- **Tiers.** `quality.ts` picks `high` / `mid` / `still` from the environment (mobile → `mid`; reduced motion or no WebGL → `still`), and a once-per-load FPS probe can demote one tier. Per-tier counts live in `TierSettings`. `still` renders `StillSky` instead of `SceneRoot`; `Services` receives `animated = false` and `Ignition` is disabled, while `Launch` predates the prop and has no reduced-motion guard yet (GAP-3 follow-up).
 
 ### Approach Vector and Jump (chapters 02–03, slice 3)
 

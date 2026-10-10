@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { voyageStore, normalizeVelocity, VELOCITY_NORMALIZER } from "./voyageStore";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { voyageStore, normalizeVelocity, VELOCITY_NORMALIZER, PROGRAMMATIC_EPS, PROGRAMMATIC_TIMEOUT_MS } from "./voyageStore";
 
 beforeEach(() => voyageStore.reset());
 
@@ -108,5 +108,90 @@ describe("normalizeVelocity", () => {
     expect(normalizeVelocity(-VELOCITY_NORMALIZER / 2)).toBe(0.5);
     expect(normalizeVelocity(1000)).toBe(1);
     expect(normalizeVelocity(NaN)).toBe(0);
+  });
+});
+
+// Fake timers mock Date by default in vitest, which is why the store reads Date.now()
+// and not performance.now() — the timeout exit has to be drivable from a test.
+afterEach(() => vi.useRealTimers());
+
+describe("voyageStore.programmatic", () => {
+  it("is false at rest", () => {
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
+  it("scrollTo arms the flag and setScroll clears it within EPS of the target", () => {
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.5);
+    expect(voyageStore.getState().programmatic).toBe(true);
+
+    // Still travelling: nowhere near the target.
+    voyageStore.setScroll(0.3, 0.6);
+    expect(voyageStore.getState().programmatic).toBe(true);
+
+    // Landed (within PROGRAMMATIC_EPS).
+    voyageStore.setScroll(0.5 - PROGRAMMATIC_EPS / 2, 0.1);
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
+  it("clears on the wall-clock timeout when the scroller never reaches the target", () => {
+    vi.useFakeTimers();
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.9);
+    voyageStore.setScroll(0.3, 0.6);
+    expect(voyageStore.getState().programmatic).toBe(true);
+
+    vi.advanceTimersByTime(PROGRAMMATIC_TIMEOUT_MS + 1);
+    voyageStore.setScroll(0.31, 0.6);
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
+  it("a later scrollTo replaces the target", () => {
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.5);
+    voyageStore.scrollTo(0.84);
+    // The first target is reached, but it is no longer the target.
+    voyageStore.setScroll(0.5, 0.4);
+    expect(voyageStore.getState().programmatic).toBe(true);
+    voyageStore.setScroll(0.84, 0.05);
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
+  it("does not arm without a registered scroller (nothing will move)", () => {
+    voyageStore.scrollTo(0.5);
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
+  it("does not arm when the reader is already at the target", () => {
+    // The dock's Process link clicked while already in Approach: no movement means no scroll
+    // event, which means no setScroll, which means nothing could ever clear the flag — and a
+    // genuine organic flick through the Jump band would be suppressed for the full 2s.
+    const scroller = vi.fn();
+    voyageStore.registerScroller(scroller);
+    voyageStore.scrollTo(voyageStore.getState().progress);
+    expect(voyageStore.getState().programmatic).toBe(false);
+    // The scroller is still called — the position is re-asserted, it is only the flag that
+    // is skipped.
+    expect(scroller).toHaveBeenCalledTimes(1);
+  });
+
+  it("emits the flag to subscribers", () => {
+    const cb = vi.fn();
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.subscribe(cb);
+    voyageStore.scrollTo(0.5);
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb.mock.calls[0][0].programmatic).toBe(true);
+    voyageStore.setScroll(0.5, 0);
+    expect(cb.mock.calls[1][0].programmatic).toBe(false);
+  });
+
+  it("reset() disarms a scroll in flight", () => {
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.5);
+    voyageStore.reset();
+    expect(voyageStore.getState().programmatic).toBe(false);
+    voyageStore.setScroll(0.3, 0.2);
+    expect(voyageStore.getState().programmatic).toBe(false);
   });
 });

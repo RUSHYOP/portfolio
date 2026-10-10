@@ -11,6 +11,9 @@ export interface VoyageState {
   distanceAU: number;
   /** Wall-clock ms since the voyage mounted (drives the T+ readout). */
   elapsedMs: number;
+  /** True while a voyageStore.scrollTo() is still travelling to its target. Chapter-edge
+   *  detectors read it so a CTA that scrolls *through* a micro-beat does not fire it. */
+  programmatic: boolean;
 }
 
 type Listener = (state: VoyageState) => void;
@@ -29,6 +32,28 @@ export function normalizeVelocity(pxPerFrame: number): number {
   return clamp01(Math.abs(pxPerFrame) / VELOCITY_NORMALIZER);
 }
 
+/** How close a settled scroll must land to the programmatic target before the flag clears. */
+export const PROGRAMMATIC_EPS = 0.002;
+
+/** Hard ceiling on one programmatic scroll. Lenis animates for 1.4s (VoyageScroll.tsx:39)
+ *  and its lerp tail can stall short of the target; without this exit an interrupted
+ *  scrollTo would suppress the Jump beat for the rest of the session. */
+export const PROGRAMMATIC_TIMEOUT_MS = 2000;
+
+let programmaticTarget: number | null = null;
+let programmaticDeadlineMs = 0;
+
+/** Three exits: within EPS of the target, past the deadline, or replaced by a later
+ *  scrollTo (which simply overwrites the target and the deadline). */
+function resolveProgrammatic(p: number): boolean {
+  if (programmaticTarget === null) return false;
+  if (Math.abs(p - programmaticTarget) < PROGRAMMATIC_EPS || Date.now() >= programmaticDeadlineMs) {
+    programmaticTarget = null;
+    return false;
+  }
+  return true;
+}
+
 function initialState(): VoyageState {
   return {
     progress: 0,
@@ -37,6 +62,7 @@ function initialState(): VoyageState {
     chapterProgress: 0,
     distanceAU: distanceAU(0),
     elapsedMs: 0,
+    programmatic: false,
   };
 }
 
@@ -63,9 +89,12 @@ export const voyageStore = {
   setScroll(progress: number, velocity01: number): void {
     const p = clamp01(progress);
     const v = clamp01(velocity01);
-    if (p === state.progress && v === state.velocity) return;
+    // Resolved before the no-change guard: the emit that lands on the target is often
+    // bit-identical to the previous one, and the flag still has to clear on it.
+    const prog = resolveProgrammatic(p);
+    if (p === state.progress && v === state.velocity && prog === state.programmatic) return;
     const { chapter, chapterProgress } = chapterAt(p);
-    state = { ...state, progress: p, velocity: v, chapter, chapterProgress, distanceAU: distanceAU(p) };
+    state = { ...state, progress: p, velocity: v, chapter, chapterProgress, distanceAU: distanceAU(p), programmatic: prog };
     emit();
   },
 
@@ -87,7 +116,18 @@ export const voyageStore = {
   },
 
   scrollTo(progress: number): void {
-    scroller?.(clamp01(progress));
+    // No scroller means nothing will move, so there is no programmatic travel to suppress.
+    if (!scroller) return;
+    const p = clamp01(progress);
+    // Already there: no scroll event will fire, so nothing would ever clear the flag.
+    if (Math.abs(p - state.progress) < PROGRAMMATIC_EPS) { scroller(p); return; }
+    programmaticTarget = p;
+    programmaticDeadlineMs = Date.now() + PROGRAMMATIC_TIMEOUT_MS;
+    if (!state.programmatic) {
+      state = { ...state, programmatic: true };
+      emit();
+    }
+    scroller(p);
   },
 
   /** Test-only: clears listeners as well as state. */
@@ -95,5 +135,8 @@ export const voyageStore = {
     state = initialState();
     listeners.clear();
     scroller = null;
+    // Disarm any programmatic scroll in flight so it cannot leak into the next test.
+    programmaticTarget = null;
+    programmaticDeadlineMs = 0;
   },
 };

@@ -198,7 +198,12 @@
   position: static; inset: auto; opacity: 1; transform: none;
 }
 @media (max-width: 767px) {
-  .chapter--approach[data-static="true"] .services { flex-direction: column; }
+  .chapter--approach[data-static="true"] .services { flex-direction: column; flex: 0 0 auto; }
+  /* Stacked still-tier panels size to their content: the animated rules' `flex: 1 1 0` +
+     `overflow-y: auto` would split the box three ways and clip every panel mid-sentence
+     (browser review, mobile-still). The pin is already height: auto, and 3 panels fit inside
+     the section's fixed 150vh, so the scroll identity is unaffected. */
+  .chapter--approach[data-static="true"] .service-panel { flex: 0 0 auto; height: auto; overflow: visible; }
 }
 
 /* ====== CTA ====== */

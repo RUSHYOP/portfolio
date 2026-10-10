@@ -2,24 +2,27 @@
 // Only this file needs a DOM; the rest of the voyage suite stays on the global `node` env.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup } from "@testing-library/react";
+import { useReducedMotion } from "framer-motion";
 import type { Item } from "@/lib/collections/defineCollection";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import Services from "./Services";
 
+// useReducedMotion is mocked (default: motion allowed) so one test can flip it to true.
+// This also replaces the old window.matchMedia stub, which jsdom needed only for the real hook.
+vi.mock("framer-motion", async (orig) => ({
+  ...(await orig<typeof import("framer-motion")>()),
+  useReducedMotion: vi.fn(() => false),
+}));
+
 beforeEach(() => {
-  // framer-motion's useReducedMotion reads window.matchMedia, which jsdom does not implement.
-  vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: false, media: query, onchange: null,
-    addEventListener: () => {}, removeEventListener: () => {},
-    addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false,
-  }));
   voyageStore.reset();
 });
 
 // vitest.config.mts has no `globals: true`, so RTL's auto-cleanup hook never registers.
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
+  // Restore the default so the reduced-motion override cannot leak into later tests.
+  vi.mocked(useReducedMotion).mockReturnValue(false);
 });
 
 const svc = (id: string, extra: Record<string, unknown> = {}): Item =>
@@ -61,7 +64,8 @@ describe("Services", () => {
       <Services animated services={[svc("a", { title: 42, promise: null, outcomes: "nope", engagement: 7 })]} />,
     );
     const [panel] = panels(container);
-    expect(panel.querySelector("h2")?.textContent).toBe("");
+    // A missing title renders no heading at all (an empty <h2> is an a11y violation).
+    expect(panel.querySelector("h2")).toBeNull();
     expect(panel.querySelector(".service-panel__outcomes")).toBeNull();
     expect(panel.querySelector(".service-panel__engagement")).toBeNull();
   });
@@ -97,6 +101,39 @@ describe("Services", () => {
     for (const panel of panels(container)) expect(cssVar(panel, "--dock")).toBe(1);
     // Mobile: only the middle panel is up at this point.
     expect(panels(container).map((p) => cssVar(p, "--solo"))).toEqual([0, 1, 0]);
+  });
+
+  it("lays the desktop arc out left to right at the docked frame", () => {
+    voyageStore.setScroll(0.12, 0);
+    const { container } = render(
+      <Services animated services={[svc("a"), svc("b"), svc("c")]} />,
+    );
+    const ps = panels(container);
+    [0, 1, 0].forEach((v, i) => expect(cssVar(ps[i], "--arc")).toBeCloseTo(v));
+    [-1, 0, 1].forEach((v, i) => expect(cssVar(ps[i], "--tilt")).toBeCloseTo(v));
+  });
+
+  it("renders every panel fully visible when the reader prefers reduced motion", () => {
+    vi.mocked(useReducedMotion).mockReturnValue(true);
+    voyageStore.setScroll(0.09, 0);                  // early Approach: animated poses would be dark
+    const { container } = render(
+      <Services animated services={[svc("a"), svc("b"), svc("c")]} />,
+    );
+    expect(container.querySelector("#approach")?.getAttribute("data-static")).toBe("true");
+    for (const panel of panels(container)) {
+      expect(cssVar(panel, "--dock")).toBe(1);
+      expect(cssVar(panel, "--solo")).toBe(1);
+    }
+  });
+
+  it("keeps list semantics on the outcomes and hides the decorative index", () => {
+    const { container } = render(
+      <Services animated services={[svc("a", { outcomes: ["Ship it"] })]} />,
+    );
+    const [panel] = panels(container);
+    // `list-style: none` drops list semantics in Safari/VoiceOver unless the role is explicit.
+    expect(panel.querySelector(".service-panel__outcomes")?.getAttribute("role")).toBe("list");
+    expect(panel.querySelector(".service-panel__index")?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("keeps the panels dark before the chapter is reached", () => {

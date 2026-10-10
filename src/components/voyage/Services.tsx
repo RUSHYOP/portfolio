@@ -18,7 +18,9 @@ const chapter = CHAPTERS.find((c) => c.id === "approach")!;
 
 /** CSS custom properties are not part of React's CSSProperties, so the pose is handed to
  *  CSS through this widened record. The media query — not JS — picks which of the four it
- *  uses, so there is no matchMedia listener and no hydration mismatch. */
+ *  uses, so there is no JS breakpoint (no matchMedia listener). Server/client parity is not
+ *  guaranteed by that, though: useReducedMotion() can differ between them, and it holds only
+ *  because VoyageRoot never server-renders Services (its `tier === null` boot gate). */
 type PoseStyle = CSSProperties & Record<"--dock" | "--arc" | "--tilt" | "--solo", number>;
 
 const poseStyle = (p: PanelPose): PoseStyle => ({
@@ -78,11 +80,14 @@ export default function Services({ services, animated }: ServicesProps) {
                 // out of the accessibility tree — the blur is what costs, so gate only that.
                 data-solo-off={pose.solo < 0.005 ? "true" : undefined}
               >
-                <p className="service-panel__index">{String(i + 1).padStart(2, "0")}</p>
-                <h2 className="service-panel__title">{title}</h2>
+                {/* Decorative ordinal: hidden so it is not read before every title. */}
+                <p className="service-panel__index" aria-hidden="true">{String(i + 1).padStart(2, "0")}</p>
+                {/* No heading for a missing CMS title — an empty <h2> is an a11y violation. */}
+                {title !== "" && <h2 className="service-panel__title">{title}</h2>}
                 <p className="service-panel__promise">{promise}</p>
                 {outcomes.length > 0 && (
-                  <ul className="service-panel__outcomes">
+                  // Explicit role: `list-style: none` drops list semantics in Safari/VoiceOver.
+                  <ul className="service-panel__outcomes" role="list">
                     {/* Chips can repeat, so the index is part of the key. */}
                     {outcomes.map((o, oi) => (
                       <li key={`${o}-${oi}`}>{o}</li>

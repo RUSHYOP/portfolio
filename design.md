@@ -97,6 +97,35 @@ sfxBus (clicks, whooshes, impacts, keystrokes)┘
 
 `ThreeBackground.tsx` — a mouse-reactive particle starfield (`THREE.Points`), rendered on a dedicated canvas behind all content. Performance-conscious by construction: capped device-pixel-ratio (1.5 desktop / 1 mobile), `antialias: false`, no stencil/depth buffers, and it fades in (`igniteRef`) only after the intro completes rather than rendering immediately.
 
+## Voyage architecture (`/voyage`)
+
+The cinematic consulting page (noindex until launch) is one scroll-driven camera flight, built in slices per `docs/superpowers/specs/2026-09-14-voyage-redesign-design.md`. The pieces that every chapter builds on:
+
+- **Scroll → state.** `VoyageScroll` (Lenis, with a native fallback) writes normalised progress into `voyageStore` (`src/scene/scroll/voyageStore.ts`), which derives `chapter` / `chapterProgress` from `CHAPTERS` in `flightPath.ts`. DOM reads it via `useVoyage()`; the scene reads it once per frame as `ctx.voyage`. Each chapter is a `<section>` whose height comes from `sectionHeightVh(chapter)`, so the scroll track and the flight path share one parameterisation.
+- **One WebGL context.** `SceneRoot` owns the only renderer and a flat `pieces` array of `SetPiece`s (`build(scene, tier)` / `update(ctx)` / `dispose()`): `Starfield`, `WarpStreaks`, `Topology`, `EnergyOrb`. There is no post-processing composer.
+- **Tiers.** `quality.ts` picks `high` / `mid` / `still` from the environment (mobile → `mid`; reduced motion or no WebGL → `still`), and a once-per-load FPS probe can demote one tier. Per-tier counts live in `TierSettings`. `still` renders `StillSky` instead of `SceneRoot`, and every DOM chapter receives `animated = false`.
+
+### Approach Vector and Jump (chapters 02–03, slice 3)
+
+**Data path.** `src/app/voyage/page.tsx` (server, ISR 5m) calls `getVoyageContent()` once and passes only `services` (plus `settings`) to `VoyageRoot`, and from there to `<Services services animated>`. `Item` is untyped past its base fields, so the narrowing happens at the leaf: `Services.tsx`'s `readService()` turns each field into a string or a string array (`typeof x === "string" ? x : ""`, `Array.isArray(...)`). The client imports `Item` type-only, so no Mongoose code reaches the bundle. Later slices thread their own prop instead of carrying unused ones.
+
+**Pose as CSS custom properties.** `servicesLayout.ts`'s pure `panelPose(index, count, chapterProgress)` returns four numbers, all of them unit-tested: `dock`, `arc`, `tilt` (the desktop arc, docked by chapterProgress 0.28 inside the 100vh pin's hold) and `solo` (mobile one-at-a-time replacement over `[0.04, 0.56]` inside a 64vh pin). `Services` writes all four onto each panel as `--dock` / `--arc` / `--tilt` / `--solo`, and `voyage.css` decides which ones are used: the desktop rules translate and rotate from `--dock` / `--arc` / `--tilt`, and the `@media (max-width: 767px)` block uses only `--solo`. Because the media query makes the choice, there is no `matchMedia` listener in JS, no resize state, and no hydration mismatch between the server and client render. Inactive mobile panels get `data-solo-off`, which drops their backdrop blur and their pointer events. `still` / reduced motion uses `STATIC_POSE` and `data-static`: no pin, and every panel flows inside the same fixed 150vh.
+
+**Set-piece additions.** `Topology` (`src/scene/chapters/Topology.ts`) is a new `SetPiece` in the existing `pieces` array. It has its own `mulberry32` seed and a `topologyNodes` count per tier (42 / 22 / 0), assembles node by node via `setDrawRange`, and is placed camera-relative behind the middle panel. Chapter 02/03 behaviour was added to the existing pieces as chapter-gated branches:
+- `Starfield`: `approachSoften` during Approach, combined with `setSoften` by `max`.
+- `WarpStreaks`: hyperspace length, opacity and convergence during Jump, combined with the velocity curves by `max`. Convergence eases back out on exit.
+- `EnergyOrb`: `jumpGlare` plus an additive burst sprite during Jump, combined with `setGlare` by `max`.
+
+The rule is that **a piece reads `ctx.voyage.chapter.id` / `chapterProgress` inside its own `update()`**. `SceneRoot` does not drive them per chapter, and there is no DOM → GL channel, so a chapter's visual logic lives with the object it changes and stays unit-testable in node.
+
+**The two-clock Jump beat.** Chapter 03 is a bare 25vh `<section id="jump">`: no pin, no label, no `aria-label`. The beat runs on two clocks:
+- *Scroll clock* (continuous): the set pieces' hyperspace and flare curves read `chapterProgress`, so the tunnel tracks the reader's scroll at any speed.
+- *Event clock* (discrete):
+  - `useJumpBeat(animated)` subscribes to `voyageStore` and hands every emit to the pure `decideJumpBeat()` (`jumpBeat.ts`). It fires on a forward crossing by chapter index (`prev < JUMP_INDEX && next >= JUMP_INDEX`, so an approach → orbit jump in one emit still counts), never backward, and never while the store's `programmatic` flag is set.
+  - When it fires, the hook plays the upward whoosh once and logs `voyage.jump`. It also returns a letterbox flag that `VoyageRoot` ORs with Ignition's. The bars are held for `max(JUMP_HOLD_MS = 900, the rest of the band)`, because the 250 ms idle tick renews the deadline while the store still reports `jump`. The hold uses `performance.now()`.
+  - `voyageStore.scrollTo()` sets `programmatic` until the scroll lands within `PROGRAMMATIC_EPS`, or `PROGRAMMATIC_TIMEOUT_MS` passes, or a later `scrollTo` replaces it. It does not arm at all when the target is the current position. This is how dock and CTA navigation pass through the band without the beat.
+  - In `still` the hook returns early and the letterbox is gated on `animated`. The section keeps its 25vh, so the scroll identity is the same on every tier.
+
 ## Routes
 
 | Route | Rendering | Purpose |

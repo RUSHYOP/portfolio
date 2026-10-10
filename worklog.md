@@ -78,6 +78,76 @@
 - Merged in order 2, 5, 6, 7, 4, 3 with the suite green after each (371 tests / 33 files, typecheck 0). Git identity switched to RUSHYOP (the machine had been left on a different account; 43 local commits re-authored) and the branch pushed.
 - Cross-task catches recorded for Task 9/10: native `scrollTo` animates (not instant) because `globals.css` sets `html { scroll-behavior: smooth }`; the letterbox hold only renews while live, so a ≥900 ms emit gap while parked in the band lifts the bars.
 
+## Slice 3 — Approach Vector + Jump (feat/voyage-slice-3)
+
+Executed 2026-10-10 from the reviewed plan `docs/superpowers/plans/2026-09-18-voyage-slice-3.md`. Tasks 2–8 ran in parallel Opus worktrees per user directive (weekly quota reset), each independently reviewed; Task 1 was reviewed alongside them; Task 9 ran sequentially; Task 10 was the controller's browser pass. Shas below are the ones on this branch (the 43 pre-push commits were re-authored to RUSHYOP, so worktree reports quote older shas for Task 1).
+
+### Per task
+- **Task 1 — `voyageStore` programmatic flag** (`be538a0`). `VoyageState.programmatic`, `PROGRAMMATIC_EPS = 0.002`, `PROGRAMMATIC_TIMEOUT_MS = 2000`; three exits (within ε, past the `Date.now()` deadline, replaced by a later `scrollTo`); `scrollTo` is a no-op without a scroller and does not arm when already within ε. 8 new tests.
+- **Task 2 — `decideJumpBeat`** (`c724603`). Pure decision function in `src/components/voyage/jumpBeat.ts`: forward crossing by chapter *index* (`prev < JUMP_INDEX && next >= JUMP_INDEX`), never backward, suppressed when either emit is programmatic, `JUMP_HOLD_MS = 900` minimum hold renewed while the store still reports `jump`. 14 new tests.
+- **Task 3 — WarpStreaks hyperspace** (`d621644`, fix `3813b73`). `hyperLength` / `hyperOpacity` / `hyperConverge` over the Jump's chapterProgress, combined with the velocity curves by `Math.max`. One fix pass: `converge` was a per-frame local and snapped ~0.55 → 0 on the first Orbit frame while streaks were still ~60 units long; it is now an eased field with a same-instance exit test. 8 + 1 new tests.
+- **Task 4 — EnergyOrb Jump flare** (`2dfdc63`). `jumpGlare(t) = sin(π·t)` combined with `setGlare` by `max`; additive burst sprite (`BURST_WORLD = 26`). Implementer followed the brief's design note (`opacity = jump × ignite`) over its snippet; reviewer upheld. 6 new tests.
+- **Task 5 — Starfield focus pull** (`40c3c40`). `approachSoften` (rise 0.02→0.22, hold to 0.45, fall to 0.65) eased into a second `chapterSoften` field, combined with `setSoften` by `max`. 6 new tests.
+- **Task 6 — Topology set piece** (`264bfaf`). `src/scene/chapters/Topology.ts`, own `mulberry32` seed, `TierSettings.topologyNodes` 42 / 22 / 0, node-by-node assembly via `setDrawRange` with nearest-previous-neighbour edges, camera-relative placement, joined `SceneRoot`'s `pieces` array. 13 new tests + 2 `quality.test.ts` assertions.
+- **Task 7 — data wiring** (`8a4360b`). `/voyage` reads `getVoyageContent()` and threads `services` to `VoyageRoot`; thin `data.voyage.test.ts` (characterisation test, green on first run; the real red was `tsc`). 2 new tests.
+- **Task 8 — service panels** (`9bfba92`, fix `08599eb`). `servicesLayout.ts` (`panelPose`, `STATIC_POSE`), `Services.tsx`, Approach CSS (desktop arc docked by chapterProgress 0.28; mobile 64vh pin with one-panel replacement over `[0.04, 0.56]`). One fix pass: the crossfade width is now `min(SOLO_CROSSFADE × slot, SOLO_START)` (`SOLO_CROSSFADE = 0.18`; the cap only bites for N < 3), so a lone panel is dark before the chapter, and `data-solo-off` panels get `pointer-events: none`. 12 + 3 layout tests, 9 component tests.
+- **Task 9 — VoyageRoot wiring** (`f90dbd8`). `<Services>` + a bare 25vh `<section id="jump">` (no pin, no label, no `aria-label`), `useJumpBeat(animated)` OR'd into `<Letterbox>`, whoosh + `voyage.jump` log on fire, `voyage.jump` added to `LOG_EVENTS`. Hook uses `performance.now()` (controller instruction) and clears the letterbox on cleanup. 1 new test.
+- **Task 10 — browser review** (controller; baselines `1fec812` + recapture `a2c6b1c`). Desktop 1440×900 at p08 / p10 / p12 / p16 / p195 / p21 / p23; mobile 390×844 (true device emulation via DevTools `emulate`, tier `mid`) at p08 / p10 / p12 / p14 / p16 / p195 / p21 / p23; `mobile-still.png` (reduced motion → tier `still`, stacked panels). All in `screenshots/voyage/slice-3/`.
+- **Task 11 — docs + closing verification** (this section, `insights.md`, `design.md`).
+
+### Browser review verdicts
+- **FPS probe** (Launch-window sample only — it cannot see chapter 02/03 frame cost): desktop 120–121 fps, `high → high`; mobile emulation 121 fps, `mid → mid`. Baseline tier held through Launch on both.
+- **lookAt swing** p21 → p23: reads as a **cut** behind the bars, not a smear. No one-frame pose copy / lerp override needed.
+- Checklist: panels legible at both sizes, no horizontal overflow (`scrollWidth` 390); the arc reads (middle lifted 26 px, outer tilted); the topology reads behind the middle panel after the retune; starfield soften visible at p12; Jump = letterbox → tunnel → flare verified at p21 on both tiers, flare absent at p23; console: zero app errors/warnings (only Next's dev `<link rel=preload>` warning).
+- Smoke cases: A backward orbit → jump never fires; B "Book a call" CTA sweep 0 → 0.841 never drops the bars; C reload at Landing and the `/voyage#orbit` deep-link never fire; D a 40 px arrow-style pass drops the bars after the crossing and holds ≥ 0.9 s past the band. `voyage.jump` log lines: 4, all genuine forward organic crossings.
+- Not verified: the audio whoosh by ear (headless, the engine starts muted) — the fire path is proven by the log line. p23 captures landed after the hold had lifted (MCP round-trip ≈ 1.4 s) — accepted; the bars-down state is p21. First load renders the Space Grotesk fallback (Styrene A is `font-display: optional`); baselines are in the cached-font state.
+
+### Retuned in the browser review (each its own commit)
+| Commit | Constant / rule | Old | New | Why |
+|---|---|---|---|---|
+| `c979e44` | `backdrop-filter` declaration order, `voyage.css` (4 sites) | `backdrop-filter` then `-webkit-backdrop-filter` | `-webkit-backdrop-filter` then `backdrop-filter` | lightningcss drops the standard property when the prefixed one follows, and Chrome ignores the prefixed alias — **no `.glass` panel or the dock had ever blurred since slice 1** |
+| `49f0eba` | `Topology.OFFSET_Z` | −34 | −24 | with the glass now blurring, the graph vanished behind the middle panel |
+| `49f0eba` | `Topology.OFFSET_X` | −2.6 | −0.9 | at −24 the graph projected left of the middle panel |
+| `80d31d4` | mobile Approach pin `padding-top` | none | 4.5rem | the dock pill overlapped the panel header; inner padding keeps the sticky hold (a `top` offset would shorten it) |
+| `8e79bef` | still-tier mobile `.service-panel` | inherited `flex: 1 1 0; overflow-y: auto` | `flex: 0 0 auto; height: auto; overflow: visible` (+ `.services` `flex: 0 0 auto`) | three 355 px panels were split to 235 px each and clipped mid-sentence |
+
+### Plan amendments made during execution
+- Task 3: Jump-exit convergence is eased (`private converge`), not a per-frame local.
+- Task 4: burst `opacity = jump × ignite` (design note over snippet).
+- Task 8: crossfade capped at `SOLO_START`; controller accepted the mobile fade-out ending at chapterProgress 0.60 — 0.027 past the 64vh pin's release at 0.573, while the block is already moving.
+- Task 9: `performance.now()` instead of `Date.now()` for the hold clock; cleanup resets the letterbox.
+- `.superpowers/sdd/slice3-decisions.md` (gitignored, amended on disk only): line 18 now records the **64vh** Approach pin (86vh of hold → chapterProgress [0, 0.573], no change to `sectionHeightVh` / offset identity / `VOYAGE_SCROLL_VH`); line 31 now records the `[0.04, 0.56]` replacement window with an 18%-of-slot crossfade and the mobile p10 / p12 / p14 captures (p18 would photograph an empty pin). No new binding decision was added for these constants.
+
+### Closing verification (2026-10-10, HEAD `a2c6b1c`)
+- `npm run typecheck` — 0 errors.
+- `npm test` — **396 passed / 35 files** (baseline 313 / 30 at `063e2d5`: +83 tests, +5 files).
+- `npm run lint` — 16 problems (10 errors, 6 warnings), the pre-existing repo baseline in files this branch never touched (errors: `TypewriterText` ×4, `ThemeToggle`, `ThreeBackground`, `CustomCursor`, `CinematicIntro`, `FilmGrain`, `admin/page.tsx:357`; warnings: `ProjectsTab.tsx` ×3, `ProjectsClient`, `src/lib/auth.ts:71`, `src/lib/mongodb.ts:9`).
+- `npx eslint src/scene src/components/voyage src/lib src/app/voyage` — 0 errors, 2 warnings, both in pre-existing untouched files (`auth.ts:71`, `mongodb.ts:9`). `npx eslint` over exactly the 26 `src` files this slice changed — **0 errors, 0 warnings** (its one output line is the 'file ignored' notice for `voyage.css`, which ESLint does not lint).
+- `npm run build` — succeeds (`.env.local` supplied `MONGODB_URI`); `/voyage` listed as static, revalidate 5m.
+
+### Spec §8 check — chapters 02 and 03 only
+| Criterion | Verdict | Evidence |
+|---|---|---|
+| Reachable and legible on desktop and mobile | PASS | 7 desktop + 8 mobile captures in `screenshots/voyage/slice-3/`; no clipped copy, `scrollWidth` 390 at 390×844 |
+| Exactly one WebGL context for the scene | PASS | `SceneRoot.tsx:46` is the only renderer on `/voyage`; `Topology` joined `pieces` (`SceneRoot.tsx:65`); no `EffectComposer` anywhere in `src`. (`ThreeBackground` is `/` only; `quality.ts` `hasWebGL()` releases its probe context immediately.) |
+| ≥ 55 fps desktop at `high` / ≥ 45 fps mid-tier phone | PASS (scoped) | Baseline tier held through Launch: desktop 120–121 fps `high → high`, mobile *emulation on a desktop GPU* 121 fps `mid → mid`. Chapter 02/03 frame cost and real-phone fps are measured at slice 8 (spec §7). |
+| Zero console errors | PASS | Zero app errors/warnings; only Next's dev `<link rel=preload>` warning (framework, dev-only). |
+| Reduced-motion path usable end to end | PASS | `quality.ts:26` → `still`; `VoyageRoot` renders `StillSky` instead of `SceneRoot`; `Services` sets `data-static` and drops the pin, every panel flows (`mobile-still.png`, after `8e79bef`); `useJumpBeat` returns early and `<Letterbox>` is gated on `animated`; the Jump section keeps its 25vh (`sectionHeightVh(jumpChapter)` is unconditional). |
+| LCP / CLS / Lighthouse a11y | Not in scope | Slice 8 (spec §7 perf pass). |
+
+No criterion failed.
+
+### Deferred / follow-ups
+- `globals.css:2443-2444` has the same `backdrop-filter` declaration-order bug (outside this slice).
+- `favicon.ico` 404 — no favicon in the repo.
+- At 390 portrait the star sits just off the right edge at p195 — lookAt framing for slice 4.
+- `jumpBeat.ts` doc comments still say "wall-clock" though the hook uses `performance.now()`.
+- Task 10 item 9 (judder) was judged only on scripted passes.
+- Reviewer minors collected for the whole-branch review in `.superpowers/sdd/slice3-final-deferrals.md`.
+
 ### Next
-- Task 8 review → merge → Task 9 (VoyageRoot wiring, sequential) → Task 10 browser pass (controller) → Task 11 docs → whole-branch review → merge to master.
-- Then: whole-branch review → merge; slice 4 (Orbit) plan; Resend key rotation still offered.
+- Whole-branch review of `feat/voyage-slice-3` → fix wave → merge to `master`.
+- **Slice 4 — Orbit (process ring).** Carry forward the tuned constants: `Topology.OFFSET_Z = −24`, `OFFSET_X = −0.9`; mobile Approach pin `64vh` + `padding-top: 4.5rem`; `DOCK_END = 0.28`; `SOLO_START = 0.04`, `SOLO_END = 0.56`, `SOLO_CROSSFADE = 0.18` (capped at `SOLO_START`); `JUMP_HOLD_MS = 900`; `HYPER_LENGTH_MAX = 60`, `HYPER_OPACITY_PEAK = 0.9`, `HYPER_CONVERGE_MAX = 0.55`; `BURST_WORLD = 26`; `topologyNodes` 42 / 22 / 0; and the prefixed-first `backdrop-filter` order for any new glass.
+- Open follow-up: `Launch.tsx` has no `useReducedMotion()` guard (GAP-3, deliberately not retrofitted in slice 3).
+- Open follow-up: Playwright integration tests are deferred to slice 8 (spec §7 deviation, user decision Q4).
+- Still offered: Resend key rotation.

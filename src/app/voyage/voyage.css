@@ -246,7 +246,7 @@
 .process__static li { padding:2rem 0; }
 
 /* Server markup reserves the same chapter track while the browser chooses a scene tier. */
-.voyage-root[data-tier="pending"] #launch { height:var(--reserve-launch)!important; }
+.voyage-root[data-tier="pending"] #launch { height:auto!important; min-height:var(--reserve-launch)!important; }
 .voyage-root[data-tier="pending"] #approach { height:var(--reserve-approach)!important; }
 .voyage-root[data-tier="pending"] #jump { height:var(--reserve-jump)!important; }
 .voyage-root[data-tier="pending"] #orbit { height:var(--reserve-orbit)!important; }

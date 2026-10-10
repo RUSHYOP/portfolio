@@ -1,5 +1,9 @@
 # Voyage Redesign — Slice 4 Orbit Implementation Plan
 
+## Authoritative visual amendment — 2026-09-30
+
+The user rejected the earlier visual result. Follow `.superpowers/sdd/codex-recovery/design-correction-brief.md` and its accepted restrained cinematic correction. An editorial foreground and meaningful real CMS content dominate. Do not default to equal glass cards; rings, planets and graphs are secondary sparse scene cues, with no invented project relationships. Decorative sample CSS, glass/blur prescriptions and old pinned-reader styling below are subordinate to the corrected tokens and composition. Visual review may simplify or decrease decoration. Keep pinned interaction only where a chapter needs it and all content remains accessible; Services uses intrinsic natural flow on every tier, authored order, no arc/150vh/card-strip treatment. Do not restore overlapping animated mobile service cards. Functional camera, data, navigation and accessibility contracts remain mandatory.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Execute sequentially after Slice 3 and its browser gate finish. Current Codex attribution applies; historical Claude model/trailer instructions do not apply.
 
 **Goal:** Present the CMS process as an orbital ring whose luminous nodes rotate to the front alongside readable process panels, with every step accessible in the still tier.
@@ -14,13 +18,13 @@
 
 - “One persistent vanilla Three.js scene with scroll-driven camera”.
 - “All 3D elements (starfield, warp streaks, nebula haze, topology lines, planets) render monochrome white-on-black.” Orbit has no amber material.
-- “The camera never reverses direction”. Keep `CHAPTERS`, camera waypoints, star scale, and existing tuned constants unchanged.
+- “The camera never reverses direction”. Keep canonical `CHAPTERS` and forward camera travel; preserve the visual correction’s tuned scene rather than restoring rejected constants.
 - “DOM does small ones: fade-up 12px, 0.5s, ease [0.2, 0.7, 0.2, 1]. Nothing bounces.”
 - “Glass panels”: 1px rgba(255,255,255,.08) border, rgba(10,10,10,.55) background, 18px backdrop blur, 20px radius, existing `.glass` top highlight.
 - “prefers-reduced-motion”: particles freeze, SFX off, opacity-only DOM reveals, fixed FOV, no focus pulls. Orbit's still presentation is an ordinary ordered list with no pinned or hidden steps.
 - “Server/client split unchanged.” Fetch through `getVoyageContent`; import `Item` using `import type` only in client modules. No client imports of collection implementations.
 - “Each ends with a browser review before the next begins”: 1440×900 and 390×844, at least five positions, logged FPS, committed screenshots.
-- Build on the completed Slice 3 registry and scroll-programmatic flag; preserve its Topology, Jump, audio, and focus-pull behavior. Do not replace entire shared files from this plan's pre-Slice-3 snapshot.
+- Build on the completed Slice 3 registry and scroll-programmatic flag; preserve corrected Topology/Jump behavior and functional audio/navigation suppression. Do not replace entire shared files from this plan's pre-Slice-3 snapshot.
 - No new package, WebGL context, canvas texture, postprocessing, audio beat, CMS schema, or Playwright test suite. Follow Slice 3's deferred-suite decision and browser review workflow.
 
 ---
@@ -55,224 +59,17 @@ For N steps, Orbit local progress covers N+1 viewports; step phase uses `chapter
 | `src/app/voyage/voyage.css` | Process layout, mobile readable panel |
 | `worklog.md`, `insights.md`, `screenshots/voyage/slice-4/` | Validation evidence |
 
-## Task 1: Preserve chapter alignment with variable physical lengths
+## Task 1: Verify and integrate geometry delivered by the visual correction
 
-**Files:** Create `src/scene/scroll/scrollGeometry.ts`, `src/scene/scroll/scrollGeometry.test.ts`; create `src/scene/scroll/scrollGeometry.dom.test.ts`; modify `src/scene/scroll/VoyageScroll.tsx`, `src/components/voyage/VoyageRoot.tsx`, and allocation comments in `src/scene/camera/flightPath.ts` / `src/scene/scroll/voyageStore.ts`.
+**Moved work:** The design correction implements measured physical/canonical mapping, intrinsic Services and removal of the root track minimum before this slice. The preserved implementation reference is `.superpowers/sdd/codex-recovery/design-correction-geometry-reference.md`; its historical decorative Services instructions are explicitly superseded. Do not recreate the bridge or restore old layouts.
 
-**Interfaces:** `ScrollSegment { startPx; endPx; start; end }`; `toVoyage(y, segments): number`; `toScroll(progress, segments): number`. DOM IDs remain chapter IDs. Store, camera, rail and dock keep their current public interfaces.
+**Files:** Existing `scrollGeometry.ts`, its pure/DOM tests, `VoyageScroll.tsx`, `VoyageRoot.tsx`, `flightPath.ts` and `voyageStore.ts` comments; edit only for demonstrated integration gaps.
 
-- [ ] Write the failing tests:
-
-```ts
-import { describe, expect, it } from "vitest";
-import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
-import { toScroll, toVoyage, type ScrollSegment } from "./scrollGeometry";
-
-function fixture(orbitHeight: number): ScrollSegment[] {
-  let y = 0;
-  return CHAPTERS.map(c => {
-    const height = c.id === "orbit" ? orbitHeight : sectionHeightVh(c);
-    const segment = { startPx: y, endPx: y + height - (c.id === "surface" ? 100 : 0), start: c.start, end: c.end };
-    y += height;
-    return segment;
-  });
-}
-describe("physical/canonical geometry", () => {
-  it.each([150, 500, 875])("round trips a %ivh Orbit and lands every chapter", height => {
-    const segments = fixture(height);
-    for (const s of segments) {
-      expect(toScroll(s.start, segments)).toBeCloseTo(s.startPx, 8);
-      expect(toVoyage(s.startPx, segments)).toBeCloseTo(s.start, 8);
-    }
-    let previous = -1;
-    for (let i = 0; i <= 1000; i++) {
-      const p = i / 1000;
-      const y = toScroll(p, segments);
-      expect(y).toBeGreaterThanOrEqual(previous);
-      expect(toVoyage(y, segments)).toBeCloseTo(p, 8);
-      previous = y;
-    }
-    expect(toVoyage(999999, segments)).toBe(1);
-    expect(toScroll(-1, segments)).toBe(0);
-  });
-  it("keeps Jump physically 25vh when Orbit grows", () => {
-    const segments = fixture(500);
-    expect(toScroll(.22, segments) - toScroll(.20, segments)).toBeCloseTo(25);
-  });
-  it("handles empty and nonfinite inputs", () => {
-    expect(toVoyage(NaN, fixture(500))).toBe(0);
-    expect(toScroll(Infinity, fixture(500))).toBe(fixture(500).at(-1)!.endPx);
-    expect(toVoyage(5, [])).toBe(0);
-  });
-});
-```
-
-- [ ] Run `npx vitest run src/scene/scroll/scrollGeometry.test.ts`; expect missing-module failure. Implement the complete module:
-
-```ts
-import type { Chapter } from "@/scene/camera/flightPath";
-export interface ScrollSegment { startPx: number; endPx: number; start: number; end: number }
-function map(value: number, segments: readonly ScrollSegment[], inverse: boolean): number {
-  if (!segments.length) return 0;
-  const input = Number.isNaN(value) ? 0 : value;
-  const from = (s: ScrollSegment) => inverse ? s.start : s.startPx;
-  const to = (s: ScrollSegment) => inverse ? s.end : s.endPx;
-  const outputFrom = (s: ScrollSegment) => inverse ? s.startPx : s.start;
-  const outputTo = (s: ScrollSegment) => inverse ? s.endPx : s.end;
-  const first = segments[0], last = segments[segments.length - 1];
-  if (input <= from(first)) return outputFrom(first);
-  if (input >= to(last)) return outputTo(last);
-  const s = segments.find(s => input < to(s)) ?? last;
-  const span = to(s) - from(s);
-  const t = span > 0 ? Math.max(0, Math.min(1, (input - from(s)) / span)) : 1;
-  return outputFrom(s) + t * (outputTo(s) - outputFrom(s));
-}
-export const toVoyage = (y: number, segments: readonly ScrollSegment[]) => map(y, segments, false);
-export const toScroll = (p: number, segments: readonly ScrollSegment[]) => map(p, segments, true);
-export function measureScrollSegments(track: HTMLElement | null, chapters: readonly Chapter[], scrollY: number, viewportHeight: number): ScrollSegment[] {
-  return chapters.flatMap(c => {
-    const element = track?.querySelector<HTMLElement>(`#${c.id}`);
-    if (!element) return [];
-    const rect = element.getBoundingClientRect();
-    const startPx = rect.top + scrollY;
-    return [{ startPx, endPx: startPx + rect.height - (c.id === "surface" ? viewportHeight : 0), start: c.start, end: c.end }];
-  });
-}
-```
-
-- [ ] Add `src/scene/scroll/scrollGeometry.dom.test.ts`. This tests the actual measurement helper at two viewport heights, with a nonzero document origin and restored scroll, including an intrinsic one-step still section shorter than its old allocation:
-
-```ts
-// @vitest-environment jsdom
-import { afterEach, expect, it, vi } from "vitest";
-import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
-import { measureScrollSegments, toScroll, toVoyage } from "./scrollGeometry";
-afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); });
-it.each([900, 844])("measures boundaries and the Surface tail at viewport height %i", viewport => {
-  for (const orbitPx of [150 * viewport / 100, 500 * viewport / 100, 180]) {
-    const track = document.createElement("main");
-    track.className = "voyage-track";
-    document.body.replaceChildren(track);
-    const restoredY = 333;
-    let offset = 37;
-    for (const chapter of CHAPTERS) {
-      const section = document.createElement("section"); section.id = chapter.id;
-      const height = chapter.id === "orbit" ? orbitPx : sectionHeightVh(chapter) * viewport / 100;
-      const documentTop = offset;
-      vi.spyOn(section, "getBoundingClientRect").mockReturnValue(new DOMRect(0, documentTop - restoredY, 390, height));
-      track.appendChild(section); offset += height;
-    }
-    const actualDocumentScrollLimit = offset - viewport;
-    const segments = measureScrollSegments(track, CHAPTERS, restoredY, viewport);
-    for (const segment of segments) {
-      expect(toScroll(segment.start, segments)).toBeCloseTo(segment.startPx, 8);
-      expect(toVoyage(segment.startPx, segments)).toBeCloseTo(segment.start, 8);
-      const navTarget = toScroll(segment.start + .001, segments);
-      expect(navTarget).toBeGreaterThan(segment.startPx);
-      expect(navTarget).toBeLessThan(segment.endPx);
-    }
-    expect(segments.at(-1)!.endPx).toBeCloseTo(actualDocumentScrollLimit, 8);
-    expect(toVoyage(actualDocumentScrollLimit, segments)).toBe(1);
-    expect(toScroll(1, segments)).toBeCloseTo(actualDocumentScrollLimit, 8);
-  }
-});
-it("reclassifies an exact measured boundary as the next chapter", () => {
-  const track = document.createElement("main");
-  const orbit = document.createElement("section"); orbit.id = "orbit";
-  const worlds = document.createElement("section"); worlds.id = "worlds";
-  track.append(orbit, worlds);
-  vi.spyOn(orbit, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 200, 390, 4220));
-  vi.spyOn(worlds, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 4420, 390, 1899));
-  const segments = measureScrollSegments(track, CHAPTERS.filter(c => c.id === "orbit" || c.id === "worlds"), 100, 844);
-  expect(toVoyage(4520, segments)).toBe(.34);
-  expect(toScroll(.34, segments)).toBe(4520);
-  expect(toScroll(.221, segments)).toBeCloseTo(300 + 4220 * (.001 / .12), 8);
-});
-```
-
-Run `npx vitest run src/scene/scroll/scrollGeometry.test.ts src/scene/scroll/scrollGeometry.dom.test.ts`; expect pass after implementation. The mocked DOM test verifies measurement math; Task 5 separately verifies the real browser document scroll limit so CSS trailing space cannot hide behind the fixture.
-
-- [ ] Integrate into the existing bridge, preserving Slice 3's programmatic completion logic. Add imports for `CHAPTERS`, `toScroll`, `toVoyage`, `measureScrollSegments`, `ScrollSegment`. At the top of the existing effect, before Lenis/native branch selection, insert:
-
-```ts
-const track = document.querySelector<HTMLElement>(".voyage-track");
-let segments: ScrollSegment[] = [];
-const measure = () => {
-  segments = measureScrollSegments(track, CHAPTERS, window.scrollY, window.innerHeight);
-  voyageStore.setScroll(toVoyage(window.scrollY, segments), 0);
-};
-measure();
-const observer = new ResizeObserver(measure);
-if (track) {
-  observer.observe(track);
-  track.querySelectorAll<HTMLElement>(":scope > section").forEach(section => observer.observe(section));
-}
-window.addEventListener("resize", measure);
-const cleanupGeometry = () => {
-  observer.disconnect();
-  window.removeEventListener("resize", measure);
-};
-```
-
-Replace these expressions only (do not remove existing guards or onComplete handlers):
-
-```ts
-// Initial restoration:
-voyageStore.setScroll(toVoyage(window.scrollY, segments), 0);
-// Lenis callback, after the existing limit/finiteness guards:
-voyageStore.setScroll(toVoyage(e.scroll, segments), normalizeVelocity(e.velocity));
-// Native callback's progress calculation:
-const progress = toVoyage(y, segments);
-// Lenis scroll target (retain Slice 3 options):
-lenis.scrollTo(toScroll(p, segments), { duration: 1.4 });
-// Native scroll target:
-window.scrollTo({ top: toScroll(p, segments), behavior: "auto" });
-```
-
-Call `cleanupGeometry()` in both existing branch cleanup functions. Remove `maxScroll()` if now unused. Keep actual physical velocity unchanged; only the timeline mapping changes. The measure callback reseeds canonical state on resize/content reflow. It must not call `scrollTo`, arm programmatic navigation, or restart Lenis.
-
-- [ ] Now that measured mapping exists, remove Slice 3's deliberate fixed-height limitation for still Services. In `Services.tsx` use `style={still ? undefined : { height: `${sectionHeightVh(chapter)}vh` }}` on the Approach section. Keep the existing `data-static` selector's intrinsic `.chapter__pin` rules. Update its obsolete fixed-150vh comment to say the bridge measures intrinsic still content. Add `tabIndex={still ? 0 : undefined}` to its static reader wrapper when pending SSR bounds its overflow. Animated Approach geometry stays unchanged.
-
-Add a Services DOM test with six real-shaped Item fixtures and maximum legal title/promise/outcomes/engagement: still Approach has `style.height === ""`, all six titles occur once, and none is hidden/inert. In the browser, with N=6 and long text at 390×844/200% zoom, compare `approach.getBoundingClientRect().bottom` with the next section top (within 2px); no overflow may cover Jump/Orbit. Also verify the **active animated mobile** service panel is focusable/scrollable for full long copy and every inactive overlapping panel uses the controller’s Slice 3 `visibility:hidden` gate, which removes it from keyboard/pointer access and the accessibility tree; inert is an alternative, not an additional requirement.
-
-- [ ] Preserve readable desktop Services for legal large arrays. Keep the approved shallow arc when N≤3. For N>3 choose one bounded horizontal strip with readable-width cards on both screen sizes: add `const many = services.length > 3`, `data-many={many ? "true" : undefined}` to Approach, and use `STATIC_POSE` when `still || many`. The `.services` wrapper gets `role={many ? "region" : undefined}`, `aria-label={many ? "Services" : undefined}`, `tabIndex={many ? 0 : undefined}`. Preserve Slice 3’s existing `tabIndex={0}` on animated service cards for both N≤3 and many; static-card tabindex is optional; no solo visibility/pointer suppression applies in many mode. Ordinary N≤3 keeps the controller's active-mobile-panel gates. Add:
-
-```css
-.chapter--approach:not([data-static="true"])[data-many="true"] .services { display:flex; flex-wrap:nowrap; gap:1.25rem; overflow-x:auto; align-items:stretch; }
-.chapter--approach:not([data-static="true"])[data-many="true"] .service-panel { position:relative; inset:auto; flex:0 0 min(80vw,380px); min-width:min(80vw,320px); max-height:52vh; overflow-y:auto; opacity:1; transform:none; pointer-events:auto; }
-.chapter--approach[data-static="true"] .services { display:grid; grid-template-columns:1fr; }
-.chapter--approach .services:focus-visible, .chapter--approach .service-panel:focus-visible { outline:2px solid white; outline-offset:3px; }
-```
-
-Add N=6 and N=10 long-copy browser cases at 1440×900 and 390×844: every title remains readable at ≥320px card width on desktop, horizontally offscreen cards scroll into view when tab-focused, long body text scrolls within the active card, and no record is dropped. N=3 retains the original arc and its browser baseline. Still N=6/N=10 remains a natural vertical list and downstream chapter bounds do not overlap.
-
-- [ ] Remove the fixed minimum from the root track **in this task**, before any intrinsic-height Process is wired. Replace only its opening element:
-
-```tsx
-<main className="voyage-track">
-```
-
-Remove `VOYAGE_SCROLL_VH` and `VOYAGE_TAIL_VH` imports from VoyageRoot if no other references remain. Keep every default chapter allocation, including Surface's tail. Replace the old root track comment with `Measured child sections determine document travel; Surface includes one final viewport tail.` Do not add an equivalent CSS min-height: N=1 still content can be shorter than the former allocation and must not create blank travel after Surface.
-
-Update the two allocation comments in `flightPath.ts` (constants/function bodies unchanged):
-
-```ts
-/** Default physical scroll allocation in vh. With only default section heights,
- *  the track is this allocation plus VOYAGE_TAIL_VH. Chapters with intrinsic or
- *  extended heights are mapped through measured scroll segments; voyage progress
- *  is canonical and is not generally scrollY / document scroll limit. */
-export const VOYAGE_SCROLL_VH = 1250;
-
-/** The final section includes one extra viewport so its measured end minus this
- *  tail equals the true document scroll limit. Default section offsets equal
- *  chapter.start * VOYAGE_SCROLL_VH only when all default allocations are used;
- *  measured geometry is authoritative once any section differs. */
-export const VOYAGE_TAIL_VH = 100;
-```
-
-Also update the `sectionHeightVh` docstring to `Default DOM allocation in vh; variable chapters may use intrinsic/extended height. The final chapter carries the tail.` The existing default-allocation unit tests remain valid and should retain that explicit scope in their comments.
-
-- [ ] Run `npx vitest run src/scene/scroll/scrollGeometry.test.ts src/scene/scroll/scrollGeometry.dom.test.ts src/scene/scroll/voyageStore.test.ts src/scene/camera/flightPath.test.ts` and `npm run typecheck`; expect pass. Record in the source comment that measured mapping supersedes raw normalized progress for non-default allocations. Commit only these files with `feat: map voyage progress to measured chapter layout`.
+- [ ] Read the corrected source and evidence. Verify `toVoyage`/`toScroll` and root-local measurement remain compatible with variable Orbit heights. Canonical ranges remain stable; actual positive-height section offsets define visible identity. Native and Lenis paths share the mapping and programmatic velocity/audio suppression.
+- [ ] Extend tests with Orbit N=1/4/6 and intrinsic Approach N=1/3/6/10. Cover exact boundaries, monotone travel, round trips, +.001 mapped navigation, resize/content reflow and Surface true scroll limit reaching progress 1 with its intentional tail counted once. No fixed root minimum or extra trailing blank.
+- [ ] Verify each Services record occurs once in authored order in every tier. Long mobile copy reads through natural page scrolling; no horizontal strip, overlapping hidden panels or 150vh reservation. Check next section top meets Approach bottom without overlap at 390px/200% zoom.
+- [ ] Keep geometry inside the bridge effect, not server-global mutable state. Preserve current omission support if already introduced; otherwise empty chapters retain the explicitly temporary policy until completion Task 3. Do not regress retained chapter mapping.
+- [ ] Run `npx vitest run src/scene/scroll/scrollGeometry.test.ts src/scene/scroll/scrollGeometry.dom.test.ts src/scene/scroll/voyageStore.test.ts src/scene/camera/flightPath.test.ts` and `npm run typecheck`. Add only missing integration tests/fixes; no redundant implementation commit if verification passes unchanged.
 
 ## Task 2: Data-driven process panels and shared orbital phase
 
@@ -508,9 +305,11 @@ Do not move Process outside ordered map or remove Approach/Jump branches. Task 1
 
 - [ ] Run both new tests, `npm run typecheck`, and lint the touched files; expect no new touched-file problems. Run `npm run lint` separately and compare against the recorded 10-error/6-warning baseline. Commit these files with `feat: add accessible data-driven Orbit process panels`.
 
-## Task 3: Content-first server rendering with stable initial reservations
+## Task 3: Integrate Process with the corrected content-first server root
 
-**Files:** Modify `src/components/voyage/VoyageRoot.tsx`, `Launch.tsx`, `Process.tsx`, the completed Services static wrapper, and `src/app/voyage/voyage.css`; create `src/components/voyage/serverContent.test.tsx`.
+**Correction dependency:** The visual correction already removes the tier-null empty root and hidden Launch. Verify and extend that implementation for Process; do not replace it or clamp intrinsic Services.
+
+**Files:** Modify `src/components/voyage/VoyageRoot.tsx`, `Launch.tsx`, `Process.tsx`, and `src/app/voyage/voyage.css`; create `src/components/voyage/serverContent.test.tsx`.
 
 **Interfaces:** `data-tier="pending"` describes server/hydration markup. `animated` is false until a high/mid tier is resolved. Server emits the actual hero, services and all process text in one section tree. The pending CSS reserves the same physical chapter dimensions that enhancement will use; reduced-motion CSS renders intrinsic content from the first paint. SceneRoot only mounts for high/mid.
 
@@ -533,11 +332,10 @@ Use these opening/scene elements and keep the existing children/order:
 
 The excerpt is an insertion contract, not replacement of the full root: preserve Slice 3/4's actual SceneRoot props when editing the scene element. Track style contains reservation custom properties only, **no minHeight**. Do not mount Ignition while tier is null: wrap its existing element in `tier !== null && ...`, so the disabled-state completion effect cannot prematurely finish session ignition. Once tier resolves it may overlay content; it must never hide server text. In Launch invocation pass `ready={true}`. In `Launch.tsx` change the motion wrapper `initial` to `false` and keep `animate={{opacity:1,y:0}}`; remove the no-longer-used readiness prop if desired by updating its one caller in the same edit. Hint opacity still derives from chapter progress. No inline server opacity:0 or transform may hide the H1/body/CTAs.
 
-- [ ] Add reservation CSS. It applies only before tier resolution; the actual enhanced section heights remain component-owned. Surface retains its final tail. Each pending static content wrapper gets a keyboard-focusable bounded reader (`tabIndex={0}` on Services' static wrapper and Process `.process__static`); all actual text is rendered, with no duplicated sections or headings:
+- [ ] Add reservation CSS. It applies only before tier resolution; the actual enhanced section heights remain component-owned. Surface retains its final tail. Process gets a keyboard-focusable bounded reader when needed (`tabIndex={0}` on `.process__static`); intrinsic Services remains normal page flow with no reservation or clamp; all actual text is rendered, with no duplicated sections or headings:
 
 ```css
 .voyage-root[data-tier="pending"] #launch { height:var(--reserve-launch)!important; }
-.voyage-root[data-tier="pending"] #approach { height:var(--reserve-approach)!important; }
 .voyage-root[data-tier="pending"] #jump { height:var(--reserve-jump)!important; }
 .voyage-root[data-tier="pending"] #orbit { height:var(--reserve-orbit)!important; }
 .voyage-root[data-tier="pending"] #worlds { height:var(--reserve-worlds)!important; }
@@ -547,18 +345,16 @@ The excerpt is an insertion contract, not replacement of the full root: preserve
 .voyage-root[data-tier="pending"] #pilot { height:var(--reserve-pilot)!important; }
 .voyage-root[data-tier="pending"] #landing { height:var(--reserve-landing)!important; }
 .voyage-root[data-tier="pending"] #surface { height:var(--reserve-surface)!important; }
-.voyage-root[data-tier="pending"] .process__static,
-.voyage-root[data-tier="pending"] .chapter--approach[data-static="true"] > .chapter__pin { max-height:100vh; overflow:auto; }
+.voyage-root[data-tier="pending"] .process__static { max-height:100vh; overflow:auto; }
 @media (prefers-reduced-motion:reduce) {
   .voyage-root[data-tier="pending"] .chapter:not(#surface) { height:auto!important; min-height:0!important; }
   .voyage-root[data-tier="pending"] #jump { display:none; }
-  .voyage-root[data-tier="pending"] .process__static,
-  .voyage-root[data-tier="pending"] .chapter--approach[data-static="true"] > .chapter__pin { max-height:none; overflow:visible; }
-  .voyage-root[data-tier="pending"] .chapter__pin { position:relative; height:auto; min-height:100vh; }
+  .voyage-root[data-tier="pending"] .process__static { max-height:none; overflow:visible; }
+  .voyage-root[data-tier="pending"] .chapter:not(#approach) .chapter__pin { position:relative; height:auto; min-height:100vh; }
 }
 ```
 
-The Services selectors match Slice 3’s `chapter--approach` / `data-static="true"` contract; do not introduce a duplicate Services tree. Future Slice 5–7 tasks must extend the reservation values to their real variable heights and render each newly added chapter/form in this same server tree.
+Services retains the corrected intrinsic structure unchanged; do not introduce a duplicate tree or pending reservation. Future Slice 5–7 tasks must extend the reservation values to their real variable heights and render each newly added chapter/form in this same server tree.
 
 - [ ] Add server rendering test using `react-dom/server` against Launch and Process (no browser/WebGL required):
 
@@ -780,3 +576,5 @@ After settling, verify actual scrollY equals the reported scrollLimit within 2px
 - The physical/canonical mapping has round-trip and boundary tests; existing camera forward/distance tests remain authoritative. Geometry is never persisted in server-global state.
 - The general empty-chapter removal and reduced-motion micro-beat deletion are settled temporary/shared-scope deferrals to Slice 6, not silently claimed as complete.
 - Actual Slice 3 file edits may land after this plan; all shared integration steps are surgical additions, not full-file replacements. Only this plan document was written during planning.
+
+**Visual regression gate:** Compare with the accepted correction, not the rejected Slice 3 cards. Services remains natural page flow for all N and tiers. Orbit remains subordinate to readable process content; simplify ring brightness, glass and pin styling where needed.

@@ -1,5 +1,9 @@
 # Voyage Redesign — Slices 5–8 Completion Implementation Plan
 
+## Authoritative visual amendment — 2026-09-30
+
+The user rejected the earlier visual result. Follow `.superpowers/sdd/codex-recovery/design-correction-brief.md` and its accepted restrained cinematic correction. An editorial foreground and meaningful real CMS content dominate. Do not default to equal glass cards; rings, planets and graphs are secondary sparse scene cues, with no invented project relationships. Decorative sample CSS, glass/blur prescriptions and old pinned-reader styling below are subordinate to the corrected tokens and composition. Visual review may simplify or decrease decoration. Keep pinned interaction only where a chapter needs it and all content remains accessible; Services uses intrinsic natural flow on every tier, authored order, no arc/150vh/card-strip treatment. Do not restore overlapping animated mobile service cards. Functional camera, data, navigation and accessibility contracts remain mandatory.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Execute sequentially; finish each slice's browser gate before starting the next. Current Codex attribution applies. No historical Claude model/trailer rules apply.
 
 **Goal:** Complete the approved proof-to-arrival voyage, connect its existing CMS and inquiry backend, launch it at `/`, and remove the replaced experience without fabricating proof or configuration.
@@ -26,7 +30,7 @@
 ## Settled decisions and external dependencies
 
 1. Slice 4's measured mapping, N process records, and original geometric implementation are approved. Empty Orbit is temporary until Task 3 here.
-2. **Scheduler public URL is not present in the inspected Settings model.** Add one validated blank-by-default CMS field. Render the real inquiry form as primary until the user supplies an actual public booking/embed URL. Never invent a provider/account or claim scheduling works without a verified URL. A generic iframe `load` event cannot prove a cross-origin scheduler is usable; keep a permanent direct booking link and a prominent form from first render; promote the form after 4s regardless of iframe load unless a real provider-specific readiness contract is later implemented.
+2. **Contact settlement:** Resend-backed inquiry form is primary. No booking URL is supplied; do not add scheduler configuration, provider iframe or a blank scheduling column. An already-existing verified link may remain secondary; scheduling is not a launch dependency.
 3. `POST /api/inquiries` already validates, rate-limits, stores, and sends best-effort Resend notifications. Deployment needs working MongoDB, `INQUIRY_IP_SALT`, and the environment values read by `src/lib/mail.ts`. Storage success is a real success even when notification fails; existing backend records notification failure for admin follow-up.
 4. Current Settings can truthfully supply portrait, heading, biography, location, manifesto and footer links. It has **no verified credential strip model**. Show location and CMS skills only. Do not hardcode IEEE/degree/years merely because the visual spec lists them. Verified extra credentials remain content-dependent.
 5. `/work/[slug]` already sanitizes markdown, handles unknown/unpublished slugs as 404, and renders no scene. Enhance navigation/metadata at launch; do not rebuild it.
@@ -43,7 +47,7 @@
 | 6 / 5 | `projectGraph.ts`, `Constellation.tsx`, scene Constellation | Shared-tech graph + keyboard-equivalent project detail |
 | 6 / 6 | screenshots, notes | Journey/browser gate |
 | 7 / 7 | `Pilot.tsx`, `Horizon.ts`, `Surface.tsx`, scene/root | Truthful arrival, horizon, relaunch |
-| 7 / 8 | `schedulerUrl.ts`, settings layers, `Landing.tsx` and tests | Configurable booking + real inquiry form |
+| 7 / 8 | `Landing.tsx` and tests | Primary Resend-backed inquiry form |
 | 7 / 9 | screenshots, notes | Arrival/browser gate |
 | 8 / 10 | rate limiter, logs, preview DTO, cache headers | Public launch hardening |
 | 8 / 11 | `/page.tsx`, collection specs, legacy components/audio/theme | Home launch, invalidation, removals |
@@ -859,64 +863,11 @@ For short/mobile screens, disable scroll-hidden Pilot opacity to keep full natur
 
 - [ ] Run arrival tests, add Pilot still test verifying exact supplied paragraphs/location and no synthetic IEEE/degree string, add Surface alias safety test, scene lifecycle tests, typecheck and touched lint. Commit `feat: add truthful Pilot arrival and Surface relaunch`.
 
-### Task 8: Booking configuration and real inquiry submission
+### Task 8: Primary Resend-backed inquiry submission
 
-**Files:** Create `src/lib/schedulerUrl.ts`, `.test.ts`, `src/components/voyage/Landing.tsx`, `Landing.test.tsx`; modify `src/lib/models.ts`, `src/lib/data.ts`, admin `types.ts`, `ContentTab.tsx`, settings API/test, root/CSS.
+**Files:** Create `src/components/voyage/Landing.tsx`, `Landing.test.tsx`; modify root/CSS only as needed. Reuse existing `/api/inquiries` and Resend mail service. No scheduler Settings/schema/admin/API additions, validator, provider iframe or empty scheduling column. No real booking URL is currently supplied. An already-existing verified booking link may remain secondary if discovered; do not invent or configure one.
 
-**Interfaces:** Settings `schedulerUrl:string` defaults `""`; `schedulerUrl(value:unknown):string|null` returns valid public HTTPS URL or null (blank is valid absence `""`). `Landing({schedulerUrl:string,animated:boolean})`. Existing endpoint exact payload: `{name,email,building,budget,timeline,website}`. No internal fields sent.
-
-- [ ] Write validator test, run red, then implement:
-
-```ts
-// schedulerUrl.test.ts
-import {expect,it} from "vitest";
-import {schedulerUrl} from "./schedulerUrl";
-it("accepts blank and public https URLs only",()=>{expect(schedulerUrl("")).toBe("");expect(schedulerUrl("https://booking.example.com/purav")).toBe("https://booking.example.com/purav");for(const value of ["javascript:alert(1)","http://example.com","https://user:pass@example.com","https://localhost/","https://127.0.0.1/",4])expect(schedulerUrl(value)).toBeNull();});
-// schedulerUrl.ts
-export function schedulerUrl(value:unknown):string|null {
- if(typeof value!=="string")return null;const trimmed=value.trim();if(!trimmed)return "";if(trimmed.length>2048)return null;
- try{const url=new URL(trimmed);const host=url.hostname.toLowerCase();
-  if(url.protocol!=="https:"||url.username||url.password||!host.includes(".")||host.endsWith(".local")||host.endsWith(".localhost")||host==="localhost"||/^[\d.]+$/.test(host)||host.includes(":"))return null;
-  return url.href;
- }catch{return null;}
-}
-```
-
-This URL is rendered only in the browser; no server fetch, no SSRF proxy. Domain checks are usability restrictions for a public booking address, not a claim to resolve DNS or identify a provider.
-
-- [ ] Thread one field through the existing settings layers, with exact additions:
-
-```ts
-// ISettings in src/lib/models.ts; Settings in data.ts; admin Settings type:
-schedulerUrl: string;
-// SettingsSchema:
-schedulerUrl: { type:String, default:"", trim:true, maxlength:2048 },
-// docToSettings:
-schedulerUrl: typeof doc.schedulerUrl === "string" ? doc.schedulerUrl : "",
-// admin EMPTY_SETTINGS and ContentTab form initializer:
-schedulerUrl: "", // EMPTY_SETTINGS
-schedulerUrl: s.schedulerUrl || "", // ContentTab initializer
-```
-
-Add schedulerUrl to settings editable whitelist. Before updateSettings in PUT:
-
-```ts
-if(Object.prototype.hasOwnProperty.call(updates,"schedulerUrl")){
- const url=schedulerUrl(updates.schedulerUrl);
- if(url===null)return NextResponse.json({error:"Scheduler URL must be a public HTTPS URL"},{status:400});
- updates.schedulerUrl=url;
-}
-```
-
-Import validator as `schedulerUrl` (the property name does not shadow this function). Add text input to ContentTab near contact settings:
-
-```tsx
-<label htmlFor="schedulerUrl">Public booking URL</label>
-<input id="schedulerUrl" type="url" value={contentForm.schedulerUrl} onChange={e=>updateForm({schedulerUrl:e.target.value})} placeholder="https://" />
-<p>Leave blank to make the inquiry form primary. Use your actual public booking or embed URL.</p>
-```
-
-Add schedulerUrl to ContentForm type and every settings test fixture TypeScript requires. Settings route test mocks verify invalid scheme returns 400 and no update, blank clears, valid string persists and revalidates both routes. Do not populate database with an invented URL.
+**Interfaces:** `Landing({animated:boolean})`. Exact existing endpoint payload `{name,email,building,budget,timeline,website}`; no internal fields. CTA says “Discuss a project”/“Send inquiry”; success confirms receipt, not an appointment or unverified reply deadline.
 
 - [ ] Add full Landing form implementation:
 
@@ -924,15 +875,11 @@ Add schedulerUrl to ContentForm type and every settings test fixture TypeScript 
 "use client";
 import {useEffect,useRef,useState,type FormEvent} from "react";
 import {BUDGET_OPTIONS,TIMELINE_OPTIONS} from "@/lib/collections/specs/inquiries";
-import {schedulerUrl as normalizeUrl} from "@/lib/schedulerUrl";
 import {getAudioEngine} from "@/lib/audio/AudioEngine";
-export default function Landing({schedulerUrl,animated}:{schedulerUrl:string;animated:boolean}){
- const url=normalizeUrl(schedulerUrl)||"";
- const [embedState,setEmbedState]=useState<"loading"|"failed">("loading");
+export default function Landing({animated}:{animated:boolean}){
  const [state,setState]=useState<"idle"|"sending"|"success"|"error">("idle");
  const [error,setError]=useState("");const busy=useRef(false);const request=useRef<AbortController|null>(null);
  const status=useRef<HTMLParagraphElement>(null);const mounted=useRef(true);
- useEffect(()=>{if(!url)return;const timer=window.setTimeout(()=>setEmbedState("failed"),4000);return()=>window.clearTimeout(timer);},[url]);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;request.current?.abort();};},[]);
  useEffect(()=>{if(state==="success"||state==="error")status.current?.focus();},[state]);
  async function submit(event:FormEvent<HTMLFormElement>){
@@ -956,16 +903,11 @@ export default function Landing({schedulerUrl,animated}:{schedulerUrl:string;ani
    if(!mounted.current)return;setError(reason instanceof Error&&reason.name!=="AbortError"?reason.message:"We could not confirm delivery. Please check your connection before trying again.");setState("error");
   }finally{window.clearTimeout(timeout);busy.current=false;request.current=null;}
  }
- const primary=!url||embedState==="failed";
  return <section id="landing" className="chapter landing" aria-labelledby="landing-title">
   <div className="voyage-static"><p className="chapter__label">10 / LANDING</p><h2 id="landing-title">You’ve arrived. Let’s talk about what you’re building.</h2>
-   <div className={`landing__grid ${primary?"landing__grid--form-primary":""}`}>
-    {url&&<div className="glass landing__scheduler"><h3>Book a call</h3><a href={url} target="_blank" rel="noopener noreferrer">Open booking page ↗</a>
-     {embedState!=="failed"?<iframe key={url} title="Book a call" src={url} onError={()=>setEmbedState("failed")} referrerPolicy="strict-origin-when-cross-origin"/>:<p>The booking view is unavailable. Open the booking page or send an inquiry below.</p>}
-     <button type="button" onClick={()=>setEmbedState("failed")}>Use the inquiry form</button>
-    </div>}
-    <form className="glass landing__form" autoComplete="on" onSubmit={submit} aria-busy={state==="sending"}>
-     <h3>{primary?"Tell me what you’re building":"Send an inquiry"}</h3>
+   <div className="landing__grid">
+    <form className="landing__form" autoComplete="on" onSubmit={submit} aria-busy={state==="sending"}>
+     <h3>Tell me what you’re building</h3>
      <label htmlFor="inquiry-name">Name</label><input id="inquiry-name" name="name" autoComplete="name" required maxLength={120}/>
      <label htmlFor="inquiry-email">Email</label><input id="inquiry-email" name="email" type="email" autoComplete="email" required maxLength={200}/>
      <label htmlFor="inquiry-building">What are you building?</label><textarea id="inquiry-building" name="building" required maxLength={2000} rows={6}/>
@@ -973,7 +915,7 @@ export default function Landing({schedulerUrl,animated}:{schedulerUrl:string;ani
      <label htmlFor="inquiry-timeline">Timeline</label><select id="inquiry-timeline" name="timeline" required defaultValue=""><option value="" disabled>Select a timeline</option>{TIMELINE_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
      <div className="landing__honeypot" aria-hidden="true"><label htmlFor="inquiry-website">Website</label><input id="inquiry-website" name="website" type="text" tabIndex={-1} autoComplete="off" data-lpignore="true" data-1p-ignore="true"/></div>
      <button className="landing__submit" type="submit" disabled={state==="sending"}>{state==="sending"?"Sending…":"Send inquiry →"}</button>
-     <p ref={status} tabIndex={-1} role={state==="error"?"alert":"status"}>{state==="success"?"SIGNAL RECEIVED · I reply within 24h":error}</p>
+     <p ref={status} tabIndex={-1} role={state==="error"?"alert":"status"}>{state==="success"?"Inquiry received. Thank you for getting in touch.":error}</p>
     </form>
    </div>
   </div>
@@ -981,71 +923,60 @@ export default function Landing({schedulerUrl,animated}:{schedulerUrl:string;ani
 }
 ```
 
-Key `<Landing key={settings.schedulerUrl} ...>` at root to reset embed state when configuration changes. The iframe eagerly loads so its timeout measures an attempted load, rather than an offscreen lazy frame that never started; do not claim the timeout identifies the reason for failure. Better provider-specific deferred loading is not required without a real URL. Keep a direct booking link for CSP/X-Frame-Options cases; onLoad alone does not prove success.
+Mount `<Landing animated={animated} />` in the ordered root. The form is prominent from the first server render.
 
-The mounted ref prevents post-unmount state updates. An abort does not mean the server failed to store, so retain the cautious timeout message and never retry automatically. Use native constraint validation for required/email fields; retain input values on failure. Success only after HTTP 2xx for the human payload whose website is explicitly empty, never on click. The server’s bot/honeypot behavior remains unchanged; a browser autofill value is cleared only for this human form submission. There is no scheduler-success bell until a real provider contract exists.
+The mounted ref prevents post-unmount state updates. An abort does not mean the server failed to store, so retain the cautious timeout message and never retry automatically. Use native constraint validation for required/email fields; retain input values on failure. Success only after HTTP 2xx for the human payload whose website is explicitly empty, never on click. The server’s bot/honeypot behavior remains unchanged; a browser autofill value is cleared only for this human form submission.
 
 - [ ] Add failing/passing form tests using jsdom and mocked fetch. Required core:
 
 ```tsx
 // @vitest-environment jsdom
-import {act,render,screen,fireEvent,waitFor,cleanup} from "@testing-library/react";
+import {render,screen,fireEvent,waitFor,cleanup} from "@testing-library/react";
 import {afterEach,expect,it,vi} from "vitest";
 import Landing from "./Landing";
 afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.useRealTimers();});
 function fill(){fireEvent.change(screen.getByLabelText("Name"),{target:{value:"Test"}});fireEvent.change(screen.getByLabelText("Email"),{target:{value:"test@example.com"}});fireEvent.change(screen.getByLabelText("What are you building?"),{target:{value:"A project"}});fireEvent.change(screen.getByLabelText("Budget range"),{target:{value:"undecided"}});fireEvent.change(screen.getByLabelText("Timeline"),{target:{value:"exploring"}});}
-it("posts exact public fields and reports stored success",async()=>{const fetch=vi.fn().mockResolvedValue(new Response('{"ok":true}',{status:201}));vi.stubGlobal("fetch",fetch);render(<Landing schedulerUrl="" animated={false}/>);fill();fireEvent.submit(screen.getByRole("button",{name:/Send inquiry/}).closest("form")!);await waitFor(()=>expect(screen.getByRole("status").textContent).toContain("SIGNAL RECEIVED"));const payload=JSON.parse(fetch.mock.calls[0][1].body);expect(Object.keys(payload).sort()).toEqual(["budget","building","email","name","timeline","website"]);expect(fetch.mock.calls[0][0]).toBe("/api/inquiries");});
-it("retains input after a server failure",async()=>{vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response('{}',{status:500})));render(<Landing schedulerUrl="" animated={false}/>);fill();fireEvent.submit(screen.getByRole("button",{name:/Send inquiry/}).closest("form")!);await screen.findByRole("alert");expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Test");});
+it("posts exact public fields and reports stored success",async()=>{const fetch=vi.fn().mockResolvedValue(new Response('{"ok":true}',{status:201}));vi.stubGlobal("fetch",fetch);render(<Landing animated={false}/>);fill();fireEvent.submit(screen.getByRole("button",{name:/Send inquiry/}).closest("form")!);await waitFor(()=>expect(screen.getByRole("status").textContent).toContain("Inquiry received"));const payload=JSON.parse(fetch.mock.calls[0][1].body);expect(Object.keys(payload).sort()).toEqual(["budget","building","email","name","timeline","website"]);expect(fetch.mock.calls[0][0]).toBe("/api/inquiries");});
+it("retains input after a server failure",async()=>{vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response('{}',{status:500})));render(<Landing animated={false}/>);fill();fireEvent.submit(screen.getByRole("button",{name:/Send inquiry/}).closest("form")!);await screen.findByRole("alert");expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Test");});
 ```
 
 Add these exact cases before the remaining form checks:
 
 ```tsx
-it("promotes inquiry after four seconds even when iframe load fires",()=>{
- vi.useFakeTimers();render(<Landing schedulerUrl="https://booking.example.com/actual" animated={false}/>);
- fireEvent.load(screen.getByTitle("Book a call"));
- expect(screen.getByLabelText("Name")).toBeTruthy();
- act(()=>vi.advanceTimersByTime(4000));
- expect(document.querySelector(".landing__grid--form-primary")).not.toBeNull();
- expect(screen.getByRole("link",{name:/Open booking page/}).getAttribute("href")).toBe("https://booking.example.com/actual");
-});
 it("clears unexpected browser autofill from the human honeypot payload",async()=>{
  const fetch=vi.fn().mockResolvedValue(new Response('{"ok":true}',{status:201}));vi.stubGlobal("fetch",fetch);
- render(<Landing schedulerUrl="" animated={false}/>);fill();
+ render(<Landing animated={false}/>);fill();
  fireEvent.change(document.getElementById("inquiry-website")!,{target:{value:"autofilled.example"}});
  fireEvent.submit(screen.getByRole("button",{name:/Send inquiry/}).closest("form")!);
  await waitFor(()=>expect(fetch).toHaveBeenCalledOnce());expect(JSON.parse(fetch.mock.calls[0][1].body).website).toBe("");
 });
 ```
 
-Also verify fake-timer case for iframe load event (including a provider error page)→4000ms→primary form, invalid URL has no iframe, repeated submits while pending only call fetch once, and 429 produces useful retry copy. Reuse existing API POST tests for validation/storage/email failures; browser tests intercept POST and do not deliver mail.
+Also verify no iframe or scheduling placeholder is rendered, repeated submits while pending only call fetch once, and 429 produces useful retry copy. Reuse existing API POST tests for validation/storage/email failures; browser tests intercept POST and do not deliver mail.
 
 - [ ] Add CSS and branch:
 
 ```css
 .landing {min-height:150vh;background:radial-gradient(ellipse at 50% 100%,rgba(242,179,92,.06),transparent 55%);}
-.landing__grid {display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-top:3rem;}
-.landing__grid--form-primary {grid-template-columns:minmax(0,760px);justify-content:center;}
-.landing__grid--form-primary .landing__scheduler {order:2;}
-.landing__form,.landing__scheduler {padding:clamp(1.25rem,3vw,2.5rem);}
+.landing__grid {display:grid;grid-template-columns:minmax(0,760px);gap:2rem;margin-top:3rem;}
+.landing__form {padding:clamp(1.25rem,3vw,2.5rem);}
 .landing__form {display:grid;gap:.75rem;order:-1;border-color:rgba(242,179,92,.35);}
 .landing__form label {font-family:var(--font-jetbrains-mono);text-transform:uppercase;letter-spacing:.12em;font-size:.7rem;margin-top:.6rem;}
 .landing__form input,.landing__form textarea,.landing__form select {width:100%;border:1px solid #444;background:#0a0a0a;color:white;border-radius:10px;padding:.8rem;font:inherit;}
 .landing__form :focus-visible {outline:2px solid #f2b35c;outline-offset:3px;}
 .landing__submit {background:#f2b35c;color:#000;border:0;border-radius:99px;padding:1rem;margin-top:1rem;font-family:var(--font-jetbrains-mono);}
 .landing__submit:disabled {opacity:.6;}
-.landing__scheduler iframe {display:block;border:0;width:100%;height:650px;margin-top:1.5rem;background:white;border-radius:12px;}
 .landing__honeypot {position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden;}
-@media(max-width:767px){.landing__grid{grid-template-columns:1fr}.landing__scheduler iframe{height:600px}.landing{min-height:0}}
+@media(max-width:767px){.landing__grid{grid-template-columns:1fr}.landing{min-height:0}}
 ```
 
-Run new form/settings tests and existing inquiry API/mail tests, typecheck and touched lint. Commit `feat: connect Landing inquiries and configurable booking`.
+Run new form tests and existing inquiry API/mail tests, typecheck and touched lint. Commit `feat: connect primary Landing inquiry form`.
 
 ### Task 9: Arrival browser gate
 
 - [ ] Execute common gate with Pilot entry/glare/resolve, Landing form, Surface and Relaunch, both dimensions. Confirm actual biography/portrait content; omit unsupported credentials. Verify no context rebuild on relaunch, first-visit session state remains intact, star re-ignites only at Launch, and no backward camera motion except deliberately scrolling back through the journey.
-- [ ] Test missing scheduler config as form-primary. With a temporary local fixture URL and intercepted frame, verify blocked/error/slow frame promotes form after four seconds and direct booking link remains. Do not mistake mocked availability for verified real provider integration. Intercept inquiry POST for 201/400/429/500/network timeout; no external message is sent.
-- [ ] Verify still, WebGL loss, 200% zoom, mobile keyboard open, complete long biography/form, focus and status announcement. Save `screenshots/voyage/slice-7/*`, notes/logs; explicitly record missing real booking URL/configuration. Commit `docs: record arrival and inquiry review`.
+- [ ] Verify the primary inquiry form renders immediately with no scheduler placeholder/iframe. Intercept inquiry POST for 201/400/429/500/network timeout; no external message is sent.
+- [ ] Verify still, WebGL loss, 200% zoom, mobile keyboard open, complete long biography/form, focus and status announcement. Save `screenshots/voyage/slice-7/*`, notes/logs; record deployed mail configuration status without claiming live delivery from mocked responses. Commit `docs: record arrival and inquiry review`.
 
 ## Slice 8 — launch, removals, integration and performance
 
@@ -1265,7 +1196,7 @@ Delete legacy `PageClient.tsx`, `Navbar.tsx`, `ThemeToggle.tsx`, `TypewriterText
 
 GlobalOverlays changes `isVoyage` to `pathname === "/" || pathname?.startsWith("/voyage")`; still exclude `/admin`, and keep scene absent on `/work/*`. No top progress strip on `/`. Existing standalone `/projects` can keep its ordinary progress indicator unless the user wants all public progress removed; this is distinct from the deleted top navigation.
 
-- [ ] Preserve Slice 4's now-established content-first SSR contract. Do not reintroduce a tier-null empty root or hidden hero. Extend its pending reservation custom properties when adding variable chapter lengths (`worlds=(1.5*N+1)*100vh`, Belt 160vh, Passage 60vh, Constellation 180vh when present, Pilot 200vh, Landing at least 150vh, Surface default+tail). All chapters—including the inquiry form—must be in the server HTML exactly once. Intrinsic content taller than reservation must use accessible bounded internal scrolling while pending, so hydration does not shift downstream section boundaries. Reduced-motion CSS uses intrinsic static content from the first paint. Keep SceneRoot high/mid-only.
+- [ ] Preserve Slice 4's now-established content-first SSR contract. Do not reintroduce a tier-null empty root or hidden hero. Extend its pending reservation custom properties when adding variable chapter lengths (`worlds=(1.5*N+1)*100vh`, Belt 160vh, Passage 60vh, Constellation 180vh when present, Pilot 200vh, Landing at least 150vh, Surface default+tail). All chapters—including the inquiry form—must be in the server HTML exactly once. Intrinsic Services is excluded from reservations and remains normal flow before and after hydration. Other cinematic content taller than its reservation must use accessible bounded internal scrolling while pending, so hydration does not shift downstream section boundaries. Reduced-motion CSS uses intrinsic static content from the first paint. Keep SceneRoot high/mid-only.
 
 Run actual HTTP response/no-JS checks again at launch; require current hero, each authored body, and form inputs with no duplicate IDs. Record real buffered CLS at both target viewports and require <0.05. This is a regression gate on the concrete Slice 4 implementation, not a deferred architecture choice.
 
@@ -1450,14 +1381,14 @@ test("keyboard and contrast audit has no serious/critical violations",async({pag
 });
 ```
 
-Resolve typing differences against installed Playwright APIs; no `any` suppressions. Add actual integration cases for context loss (`WEBGL_lose_context` when available), dock target→active rail, scheduler blocked/4s form-primary using a test settings fixture isolated from production DB, unknown/unpublished case 404, no canvas on `/work/*` and `/admin`, Relaunch and keyboard project details. A missing scheduler URL is verified as missing config, not bypassed to claim blocked-provider integration coverage.
+Resolve typing differences against installed Playwright APIs; no `any` suppressions. Add actual integration cases for context loss (`WEBGL_lose_context` when available), dock target→active rail, primary inquiry form without a scheduler placeholder, unknown/unpublished case 404, no canvas on `/work/*` and `/admin`, Relaunch and keyboard project details.
 
-- [ ] Add actual response/no-JS assertions: request `/` and confirm current CMS hero/process/body/form text in the server payload; open a browser context with `javaScriptEnabled:false`, verify the H1 and named inputs visibly render, and count each chapter ID once. Add keyboard tests to focus/scroll the active mobile Services panel with maximum copy, open/close the Process inline disclosure, navigate combined case/project controls and all Landing inputs in order. Inactive stacked/pinned panels must be excluded from keyboard/pointer access by visibility:hidden (the settled Services gate) or hidden/inert, and absent from Tab order; checking a section rectangle alone is insufficient.
+- [ ] Add actual response/no-JS assertions: request `/` and confirm current CMS hero/process/body/form text in the server payload; open a browser context with `javaScriptEnabled:false`, verify the H1 and named inputs visibly render, and count each chapter ID once. Add keyboard and page-scroll tests to read every intrinsic Services record with maximum copy in authored order, open/close the Process inline disclosure, navigate combined case/project controls and all Landing inputs in order. Any remaining inactive stacked/pinned panels in other chapters must be excluded from keyboard/pointer access by visibility:hidden or hidden/inert, and absent from Tab order; checking a section rectangle alone is insufficient.
 - [ ] Fix the observed production-console defects recorded in `.playwright-mcp/console-2026-09-30T11-42-25-773Z.log`: inspect each rootlayout preload, remove the unsupported MIME `type` or use the browser-supported type for its actual resource (the existing `.otf` font preload should use `type="font/otf"`, not `font/opentype`). Let Next Image own image preloads where applicable; do not preload assets merely to silence warnings. Resolve favicon.ico404 using an existing real brand asset if available (copy/convert to a valid favicon or add metadata icon pointing to that asset); if none exists, record missing brand input instead of inventing a logo. Verify production network/console has no unsupported-preload warning or missing icon request. Distinguish Framer Motion's informational reduced-motion development message from application errors; do not suppress genuine errors to make the gate green.
 - [ ] Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`. Every unexpected failure must be fixed or explicitly block completion. Test logs must identify actual counts, not guessed counts. Check imports do not drag server/Mongoose code into client chunks. Verify no new console errors/hydration warnings in both routes.
 - [ ] Capture production Lighthouse and performance traces at 1440×900 and a realistic mobile profile. Compare to recorded pre-redesign baseline if it exists; if no usable baseline exists, state comparison unavailable and record absolute results. Target LCP ≤2.5s, CLS <0.05, accessibility ≥95, high-tier desktop ≥55fps and mid-tier phone ≥45fps. Record hardware/browser, tier, DPR, throttling, measured frame counts and probe result. Browser emulation is not evidence of real mid-tier phone GPU performance. Missing hardware validation remains a named limitation, not a fabricated pass.
 - [ ] Use Chrome performance/memory tools to profile all set pieces; fix only observed hot paths. No allocations in per-frame graph construction, no orphan event listeners or geometry after navigation, one context maximum. Confirm context-loss demotion cannot leave pins hiding content. Confirm focus pull applies to readability-critical panels without softening still mode; reuse Starfield's non-destructive max-combined control rather than clobbering external settings. Bloom remains absent unless real visual/perf evidence justifies the new compositor scope.
-- [ ] Capture final screenshot sets at all content chapter entries, at least five intermediate positions, every case/process step, mobile menu, still, WebGL fallback, form error/success and actual booking if configured. Personally inspect images, not just file paths. Update final worklog with completed scopes, test evidence, metrics, outstanding scheduler URL/mail/hardware/content dependencies. Commit `test: verify voyage launch accessibility and performance`.
+- [ ] Capture final screenshot sets at all content chapter entries, at least five intermediate positions, every case/process step, mobile menu, still, WebGL fallback, form error/success. Personally inspect images, not just file paths. Update final worklog with completed scopes, test evidence, metrics, outstanding mail/hardware/content dependencies. Commit `test: verify voyage launch accessibility and performance`.
 
 ## Common slice browser gate (Tasks 2, 6, 9; repeat after relevant fixes)
 
@@ -1470,7 +1401,9 @@ Resolve typing differences against installed Playwright APIs; no `any` suppressi
 ## Coverage and honest completion boundaries
 
 - Implemented by plan: data-driven proof/process/quotes/projects; readable static alternatives; skip semantics across physical layout/camera/navigation; no reverse camera; bookable URL configuration; real inquiry API integration; truthful Pilot; Surface relaunch; home launch; CMS invalidation; legacy removal; automated/browser/perf gates.
-- External inputs still required for full product acceptance: actual public scheduler URL and provider embedding permission; verified published case studies/testimonials/credential copy; deployed DB/email settings; target-device performance evidence when unavailable locally.
-- Provider-specific scheduler completion callbacks and appointment-success sound are not implemented without an actual provider contract. Inquiry success sound is implemented on actual stored-success response.
+- External inputs still required for full product acceptance: verified published case studies/testimonials/credential copy; deployed DB/email settings; target-device performance evidence when unavailable locally.
+- No scheduler integration is in scope without an existing real URL. Inquiry success sound follows actual stored-success response; it does not prove email delivery or a booked appointment.
 - Content-first SSR ships and is measured in Slice 4 before its visual gate; Slices 5–8 extend its one-DOM reservations and recheck server/no-JS content and CLS. No blank placeholder or unmeasured hydration counts as a pass.
 - Original geometry is approved. No code is represented as a ThreeUI source port unless its source is actually read and attribution retained.
+
+**Visual regression gate:** Preserve the accepted editorial foreground and correction tokens across all chapters. Review may simplify rings/planets/graphs and sample glass/pinned CSS. Real CMS proof and form readability dominate. Services stays intrinsic natural flow on mobile and desktop; no overlapping mobile cards or horizontal strip regressions.

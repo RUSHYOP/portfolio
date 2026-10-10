@@ -1,0 +1,15 @@
+## Authoritative visual amendment — 2026-09-30
+
+The user rejected the earlier visual result. Follow `.superpowers/sdd/codex-recovery/design-correction-brief.md` and its accepted restrained cinematic correction. An editorial foreground and meaningful real CMS content dominate. Do not default to equal glass cards; rings, planets and graphs are secondary sparse scene cues, with no invented project relationships. Decorative sample CSS, glass/blur prescriptions and old pinned-reader styling below are subordinate to the corrected tokens and composition. Visual review may simplify or decrease decoration. Keep pinned interaction only where a chapter needs it and all content remains accessible; Services uses intrinsic natural flow on every tier, authored order, no arc/150vh/card-strip treatment. Do not restore overlapping animated mobile service cards. Functional camera, data, navigation and accessibility contracts remain mandatory.
+
+## Task 1: Verify and integrate geometry delivered by the visual correction
+
+**Moved work:** The design correction implements measured physical/canonical mapping, intrinsic Services and removal of the root track minimum before this slice. The preserved implementation reference is `.superpowers/sdd/codex-recovery/design-correction-geometry-reference.md`; its historical decorative Services instructions are explicitly superseded. Do not recreate the bridge or restore old layouts.
+
+**Files:** Existing `scrollGeometry.ts`, its pure/DOM tests, `VoyageScroll.tsx`, `VoyageRoot.tsx`, `flightPath.ts` and `voyageStore.ts` comments; edit only for demonstrated integration gaps.
+
+- [ ] Read the corrected source and evidence. Verify `toVoyage`/`toScroll` and root-local measurement remain compatible with variable Orbit heights. Canonical ranges remain stable; actual positive-height section offsets define visible identity. Native and Lenis paths share the mapping and programmatic velocity/audio suppression.
+- [ ] Extend tests with Orbit N=1/4/6 and intrinsic Approach N=1/3/6/10. Cover exact boundaries, monotone travel, round trips, +.001 mapped navigation, resize/content reflow and Surface true scroll limit reaching progress 1 with its intentional tail counted once. No fixed root minimum or extra trailing blank.
+- [ ] Verify each Services record occurs once in authored order in every tier. Long mobile copy reads through natural page scrolling; no horizontal strip, overlapping hidden panels or 150vh reservation. Check next section top meets Approach bottom without overlap at 390px/200% zoom.
+- [ ] Keep geometry inside the bridge effect, not server-global mutable state. Preserve current omission support if already introduced; otherwise empty chapters retain the explicitly temporary policy until completion Task 3. Do not regress retained chapter mapping.
+- [ ] Run `npx vitest run src/scene/scroll/scrollGeometry.test.ts src/scene/scroll/scrollGeometry.dom.test.ts src/scene/scroll/voyageStore.test.ts src/scene/camera/flightPath.test.ts` and `npm run typecheck`. Add only missing integration tests/fixes; no redundant implementation commit if verification passes unchanged.

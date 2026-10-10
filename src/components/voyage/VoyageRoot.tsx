@@ -18,12 +18,17 @@ import FlightRail from "./FlightRail";
 import Dock from "@/components/dock/Dock";
 import Ignition from "./Ignition";
 import Launch from "./Launch";
+import Services from "./Services";
+import { useJumpBeat } from "./useJumpBeat";
 
 const SceneRoot = dynamic(() => import("@/scene/SceneRoot"), { ssr: false });
 
 /** Settle window before the FPS probe samples. On a repeat visit Ignition finishes at
  *  mount, so a shorter delay would sample the warm-up frames it means to exclude. */
 const PROBE_DELAY_MS = 900;
+
+/** Chapter 03 has no component of its own — it is 25vh of scroll and a beat. */
+const jumpChapter = CHAPTERS.find((c) => c.id === "jump")!;
 
 interface VoyageRootProps {
   settings: Settings;
@@ -97,20 +102,25 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
   }, []);
   const onIgnitionComplete = useCallback(() => setIgnited(true), []);
 
-  const placeholders = useMemo(() => CHAPTERS.filter((c) => c.id !== "launch"), []);
+  // Chapters 01–03 own their own sections now; the rest are still placeholders.
+  const placeholders = useMemo(
+    () => CHAPTERS.filter((c) => c.id !== "launch" && c.id !== "approach" && c.id !== "jump"),
+    [],
+  );
+
+  // Compute before the early return so the hook below is never called conditionally.
+  const animated = tier !== null && tier !== "still";
+  const jumpLetterbox = useJumpBeat(animated);
 
   if (tier === null) return <div className="voyage-root voyage-root--booting" />;
-
-  const animated = tier !== "still";
-
-  void services;
 
   return (
     <div className="voyage-root" data-tier={tier}>
       <VoyageScroll smooth={animated} />
-      {animated ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
+      {tier !== "still" ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
 
-      <Letterbox active={animated && letterbox} />
+      {/* Ignition clears its own state on finish, independently from the Jump hold. */}
+      <Letterbox active={animated && (letterbox || jumpLetterbox)} />
       <Telemetry />
       <FlightRail />
       <Dock visible={ignited} />
@@ -121,6 +131,13 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
           `scrollHeight - innerHeight` equals VOYAGE_SCROLL_VH — the store's denominator. */}
       <main className="voyage-track" style={{ minHeight: `${VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH}vh` }}>
         <Launch headline={settings.heroHeadline} subheadline={settings.heroSubheadline} ready={ignited} />
+        <Services services={services} animated={animated} />
+        {/* Chapter 03 carries 25vh of scroll and nothing else: no pin, label or aria-label. */}
+        <section
+          id="jump"
+          className="chapter chapter--micro"
+          style={{ height: `${sectionHeightVh(jumpChapter)}vh` }}
+        />
         {placeholders.map((c) => (
           <section
             key={c.id}

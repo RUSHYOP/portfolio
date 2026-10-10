@@ -65,6 +65,8 @@
   color: var(--gray-mid); margin-bottom: 1.5rem;
 }
 .chapter__label--placeholder { opacity: 0.35; }
+/* Micro-beats (Jump, Dark Passage) are scroll distance and nothing else. */
+.chapter--micro { pointer-events: none; }
 
 /* ====== Glass panel (shared) ====== */
 .glass {

@@ -63,6 +63,7 @@
   font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
   font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--gray-mid); margin-bottom: 1.5rem;
+  overflow-wrap: anywhere;
 }
 .chapter__label--placeholder { opacity: 0.35; }
 /* Micro-beats (Jump, Dark Passage) are scroll distance and nothing else. */
@@ -86,6 +87,7 @@
   letter-spacing: -0.02em; line-height: 1.06; margin: 0 0 1.5rem;
   /* Keeps the fallback font from orphaning the last word when Styrene A is unavailable. */
   text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 .launch__sub {
   font-weight: 400; font-size: clamp(1rem, 1.3vw, 1.125rem); line-height: 1.7;
@@ -279,6 +281,7 @@
 .dock__cta .cta { font-size: .8rem; padding: .65rem .9rem; }
 .voyage-audio { position: fixed; bottom: 24px; right: 28px; z-index: 9300; display: flex; align-items: center; gap: .6rem; background: #111; border: 1px solid #333; border-radius: 6px; padding: .6rem .75rem; color: #bbb; font-size: .75rem; cursor: pointer; }
 .voyage-audio .audio-visualizer { width: 24px; }
+.voyage-audio > span { white-space: nowrap; }
 .rail { opacity: .45; }
 .rail__dot { background: #bbb; box-shadow: none; width: 5px; height: 5px; margin: -2.5px; }
 .voyage-root[data-jump="true"] .chapter__label--placeholder { visibility: hidden; }

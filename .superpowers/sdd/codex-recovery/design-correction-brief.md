@@ -1,3 +1,5 @@
+> **Superseded for visual direction:** The latest user instruction is “follow the claudes plan.” This document records the earlier editorial detour; do not execute its visual recommendations. Follow the original approved spec, current September 30 plans and `claude-restoration-brief.md`. Valid measured geometry, SSR and accessibility engineering remains retained.
+
 # Restrained cinematic correction implementation brief
 
 > Use the existing sequential implementation/review workflow. User rejection of the current visuals supersedes the original decorative arc, card and hyperspace prescriptions. Read `design-correction-audit.md` first. No new dependencies or invented CMS content.

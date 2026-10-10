@@ -1,3 +1,5 @@
+> **Superseded for visual direction:** The latest user instruction is “follow the claudes plan.” This document records the earlier editorial detour; do not execute its visual recommendations. Follow the original approved spec, current September 30 plans and `claude-restoration-brief.md`. Valid measured geometry, SSR and accessibility engineering remains retained.
+
 # Historical geometry reference for the visual correction
 
 Only the measured mapping, native/Lenis bridge, boundaries and tail implementation below remain reference material. The old Services arc/strip/fixed-height instructions are superseded by `design-correction-brief.md`; do not implement them.

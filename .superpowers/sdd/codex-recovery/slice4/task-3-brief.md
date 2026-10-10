@@ -1,12 +1,18 @@
-## Authoritative visual amendment — 2026-09-30
+## Current authority — follow the original Claude plan
 
-The user rejected the earlier visual result. Follow `.superpowers/sdd/codex-recovery/design-correction-brief.md` and its accepted restrained cinematic correction. An editorial foreground and meaningful real CMS content dominate. Do not default to equal glass cards; rings, planets and graphs are secondary sparse scene cues, with no invented project relationships. Decorative sample CSS, glass/blur prescriptions and old pinned-reader styling below are subordinate to the corrected tokens and composition. Visual review may simplify or decrease decoration. Keep pinned interaction only where a chapter needs it and all content remains accessible; Services uses intrinsic natural flow on every tier, authored order, no arc/150vh/card-strip treatment. Do not restore overlapping animated mobile service cards. Functional camera, data, navigation and accessibility contracts remain mandatory.
+Latest user instruction: **“follow the claudes plan.”** The original approved Claude design is `docs/superpowers/specs/2026-09-14-voyage-redesign-design.md`; the recovered Claude Slice 3 execution plan is `docs/superpowers/plans/2026-09-18-voyage-slice-3.md`. This September 30 document is a **Codex-authored follow-on execution plan**, not a recovered Claude-authored plan. It implements that original approved design with reviewed engineering resolutions.
 
-## Task 3: Integrate Process with the corrected content-first server root
+The editorial visual amendment introduced at `d0ffb8a` is superseded. Restore/retain the planned glass panels, shallow service arc, topology, hyperspace beat, original hero typography, capsule dock, telemetry, amber rail marker, orbital ring, case-study planets and shared-technology graph. Do not propagate the editorial service rows, velocity-only Jump or viewport-relative star framing from the detour. Tune for fidelity/readability within the approved design; do not substitute a new art direction. Data remains truthful: no invented case relationships, testimonials or credentials.
 
-**Correction dependency:** The visual correction already removes the tier-null empty root and hidden Launch. Verify and extend that implementation for Process; do not replace it or clamp intrinsic Services.
+Retain valid engineering work: root-local measured physical/canonical mapping, content-first server/no-JS text, tier-gated ignition and SceneRoot, one WebGL context, programmatic navigation/audio suppression, idle velocity decay, dark-only audio, mobile focus trapping/Escape return, reduced-motion/WebGL fallback, text-zoom fixes and prefixed blur ordering. Never restore blank server markup to recover a visual effect. The current app restoration brief is `.superpowers/sdd/codex-recovery/claude-restoration-brief.md`; its task restores Slice 3 visuals before future chapter work. Continue the full remaining redesign after its review gate.
 
-**Files:** Modify `src/components/voyage/VoyageRoot.tsx`, `Launch.tsx`, `Process.tsx`, and `src/app/voyage/voyage.css`; create `src/components/voyage/serverContent.test.tsx`.
+The user's explicit Resend choice remains binding: primary contact is the existing inquiry service, with no invented calendar/provider or new scheduler configuration. Original “Book a call” CTA language may request a call through that inquiry flow; it does not promise a booked appointment. “See the work” uses the real `/projects` reader until Worlds exists, then the retained Worlds target (or safe real fallback when empty).
+
+## Task 3: Extend the existing content-first server root for Process
+
+**Already implemented:** Visible server hero/body, tier-gated ignition/SceneRoot and one DOM tree are retained from the engineering correction. Integrate Process and restored Services into that root; do not reintroduce a tier-null early return, duplicate text or initial opacity zero. Below are reservation/integration contracts, not permission to overwrite newer root logic. Still/no-WebGL Services must remain fully readable, and pending reservations must match the restored enhanced layout rather than the superseded editorial flow. Preserve the current text-zoom/static overflow fix; verify both pending and resolved tiers with long content.
+
+**Files:** Modify `src/components/voyage/VoyageRoot.tsx`, `Launch.tsx`, `Process.tsx`, the completed Services static wrapper, and `src/app/voyage/voyage.css`; create `src/components/voyage/serverContent.test.tsx`.
 
 **Interfaces:** `data-tier="pending"` describes server/hydration markup. `animated` is false until a high/mid tier is resolved. Server emits the actual hero, services and all process text in one section tree. The pending CSS reserves the same physical chapter dimensions that enhancement will use; reduced-motion CSS renders intrinsic content from the first paint. SceneRoot only mounts for high/mid.
 
@@ -29,10 +35,11 @@ Use these opening/scene elements and keep the existing children/order:
 
 The excerpt is an insertion contract, not replacement of the full root: preserve Slice 3/4's actual SceneRoot props when editing the scene element. Track style contains reservation custom properties only, **no minHeight**. Do not mount Ignition while tier is null: wrap its existing element in `tier !== null && ...`, so the disabled-state completion effect cannot prematurely finish session ignition. Once tier resolves it may overlay content; it must never hide server text. In Launch invocation pass `ready={true}`. In `Launch.tsx` change the motion wrapper `initial` to `false` and keep `animate={{opacity:1,y:0}}`; remove the no-longer-used readiness prop if desired by updating its one caller in the same edit. Hint opacity still derives from chapter progress. No inline server opacity:0 or transform may hide the H1/body/CTAs.
 
-- [ ] Add reservation CSS. It applies only before tier resolution; the actual enhanced section heights remain component-owned. Surface retains its final tail. Process gets a keyboard-focusable bounded reader when needed (`tabIndex={0}` on `.process__static`); intrinsic Services remains normal page flow with no reservation or clamp; all actual text is rendered, with no duplicated sections or headings:
+- [ ] Add reservation CSS. It applies only before tier resolution; the actual enhanced section heights remain component-owned. Surface retains its final tail. Each pending static content wrapper gets a keyboard-focusable bounded reader (`tabIndex={0}` on Services' static wrapper and Process `.process__static`); all actual text is rendered, with no duplicated sections or headings:
 
 ```css
 .voyage-root[data-tier="pending"] #launch { height:var(--reserve-launch)!important; }
+.voyage-root[data-tier="pending"] #approach { height:var(--reserve-approach)!important; }
 .voyage-root[data-tier="pending"] #jump { height:var(--reserve-jump)!important; }
 .voyage-root[data-tier="pending"] #orbit { height:var(--reserve-orbit)!important; }
 .voyage-root[data-tier="pending"] #worlds { height:var(--reserve-worlds)!important; }
@@ -42,16 +49,18 @@ The excerpt is an insertion contract, not replacement of the full root: preserve
 .voyage-root[data-tier="pending"] #pilot { height:var(--reserve-pilot)!important; }
 .voyage-root[data-tier="pending"] #landing { height:var(--reserve-landing)!important; }
 .voyage-root[data-tier="pending"] #surface { height:var(--reserve-surface)!important; }
-.voyage-root[data-tier="pending"] .process__static { max-height:100vh; overflow:auto; }
+.voyage-root[data-tier="pending"] .process__static,
+.voyage-root[data-tier="pending"] .chapter--approach[data-static="true"] > .chapter__pin { max-height:100vh; overflow:auto; }
 @media (prefers-reduced-motion:reduce) {
   .voyage-root[data-tier="pending"] .chapter:not(#surface) { height:auto!important; min-height:0!important; }
   .voyage-root[data-tier="pending"] #jump { display:none; }
-  .voyage-root[data-tier="pending"] .process__static { max-height:none; overflow:visible; }
-  .voyage-root[data-tier="pending"] .chapter:not(#approach) .chapter__pin { position:relative; height:auto; min-height:100vh; }
+  .voyage-root[data-tier="pending"] .process__static,
+  .voyage-root[data-tier="pending"] .chapter--approach[data-static="true"] > .chapter__pin { max-height:none; overflow:visible; }
+  .voyage-root[data-tier="pending"] .chapter__pin { position:relative; height:auto; min-height:100vh; }
 }
 ```
 
-Services retains the corrected intrinsic structure unchanged; do not introduce a duplicate tree or pending reservation. Future Slice 5–7 tasks must extend the reservation values to their real variable heights and render each newly added chapter/form in this same server tree.
+The Services selectors match Slice 3’s `chapter--approach` / `data-static="true"` contract; do not introduce a duplicate Services tree. Pending Approach must reserve the restored animated height (150vh default), with all authored Services readable through its keyboard-accessible static reader; there is no editorial intrinsic-height exemption while tier is pending. Reduced-motion/no-WebGL resolved still uses intrinsic section height. Explicitly test no-JS pending N=1/3/6/10 and longest legal copy: every service can be reached without clipping, while pending→animated boundaries remain stable. Preserve the restored mobile static-card overflow fix inside this reader rather than blindly adding a competing inner clamp. Future Slice 5–7 tasks must extend the reservation values to their real variable heights and render each newly added chapter/form in this same server tree.
 
 - [ ] Add server rendering test using `react-dom/server` against Launch and Process (no browser/WebGL required):
 

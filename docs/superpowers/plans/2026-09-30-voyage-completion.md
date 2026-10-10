@@ -1,14 +1,20 @@
 # Voyage Redesign — Slices 5–8 Completion Implementation Plan
 
-## Authoritative visual amendment — 2026-09-30
+## Current authority — follow the original Claude plan
 
-The user rejected the earlier visual result. Follow `.superpowers/sdd/codex-recovery/design-correction-brief.md` and its accepted restrained cinematic correction. An editorial foreground and meaningful real CMS content dominate. Do not default to equal glass cards; rings, planets and graphs are secondary sparse scene cues, with no invented project relationships. Decorative sample CSS, glass/blur prescriptions and old pinned-reader styling below are subordinate to the corrected tokens and composition. Visual review may simplify or decrease decoration. Keep pinned interaction only where a chapter needs it and all content remains accessible; Services uses intrinsic natural flow on every tier, authored order, no arc/150vh/card-strip treatment. Do not restore overlapping animated mobile service cards. Functional camera, data, navigation and accessibility contracts remain mandatory.
+Latest user instruction: **“follow the claudes plan.”** The original approved Claude design is `docs/superpowers/specs/2026-09-14-voyage-redesign-design.md`; the recovered Claude Slice 3 execution plan is `docs/superpowers/plans/2026-09-18-voyage-slice-3.md`. This September 30 document is a **Codex-authored follow-on execution plan**, not a recovered Claude-authored plan. It implements that original approved design with reviewed engineering resolutions.
+
+The editorial visual amendment introduced at `d0ffb8a` is superseded. Restore/retain the planned glass panels, shallow service arc, topology, hyperspace beat, original hero typography, capsule dock, telemetry, amber rail marker, orbital ring, case-study planets and shared-technology graph. Do not propagate the editorial service rows, velocity-only Jump or viewport-relative star framing from the detour. Tune for fidelity/readability within the approved design; do not substitute a new art direction. Data remains truthful: no invented case relationships, testimonials or credentials.
+
+Retain valid engineering work: root-local measured physical/canonical mapping, content-first server/no-JS text, tier-gated ignition and SceneRoot, one WebGL context, programmatic navigation/audio suppression, idle velocity decay, dark-only audio, mobile focus trapping/Escape return, reduced-motion/WebGL fallback, text-zoom fixes and prefixed blur ordering. Never restore blank server markup to recover a visual effect. The current app restoration brief is `.superpowers/sdd/codex-recovery/claude-restoration-brief.md`; its task restores Slice 3 visuals before future chapter work. Continue the full remaining redesign after its review gate.
+
+The user's explicit Resend choice remains binding: primary contact is the existing inquiry service, with no invented calendar/provider or new scheduler configuration. Original “Book a call” CTA language may request a call through that inquiry flow; it does not promise a booked appointment. “See the work” uses the real `/projects` reader until Worlds exists, then the retained Worlds target (or safe real fallback when empty).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Execute sequentially; finish each slice's browser gate before starting the next. Current Codex attribution applies. No historical Claude model/trailer rules apply.
 
 **Goal:** Complete the approved proof-to-arrival voyage, connect its existing CMS and inquiry backend, launch it at `/`, and remove the replaced experience without fabricating proof or configuration.
 
-**Architecture:** Build on completed Slices 3/4, including Slice 4 Task 3 content-first SSR, stable initial reservations and its measured CLS gate, and the root-local measured scroll geometry. Preserve canonical chapter ranges, but omit empty sections and filter camera waypoints and navigation together; physical mapping skips the resulting canonical gaps. Keep one scene, CMS-derived DOM, accessible static counterparts, and small pure helpers shared between DOM and set pieces.
+**Architecture:** Build on restored Slices 3/4 and retained measured scroll geometry/content-first SSR. Slice 4 Task 3 extends the existing server root for Process and rechecks reservations/CLS after restoration. Preserve canonical chapter ranges, but omit empty sections and filter camera waypoints and navigation together; physical mapping skips the resulting canonical gaps. Keep one scene, CMS-derived DOM, accessible static counterparts, and small pure helpers shared between DOM and set pieces.
 
 **Tech Stack:** Existing Next.js 16, React 19, Three.js 0.169, Framer Motion 12, Lenis 1.3, Vitest 5, Mongo/Mongoose, and Resend. Add Playwright and axe test tooling only in the final verification task if absent.
 
@@ -30,7 +36,7 @@ The user rejected the earlier visual result. Follow `.superpowers/sdd/codex-reco
 ## Settled decisions and external dependencies
 
 1. Slice 4's measured mapping, N process records, and original geometric implementation are approved. Empty Orbit is temporary until Task 3 here.
-2. **Contact settlement:** Resend-backed inquiry form is primary. No booking URL is supplied; do not add scheduler configuration, provider iframe or a blank scheduling column. An already-existing verified link may remain secondary; scheduling is not a launch dependency.
+2. **Contact settlement:** Existing Resend-backed inquiry form is primary. No public booking URL exists; do not add a scheduler field, provider iframe or empty booking column. Scheduling is not a launch dependency. An already-existing verified booking link may remain secondary if discovered; do not invent one.
 3. `POST /api/inquiries` already validates, rate-limits, stores, and sends best-effort Resend notifications. Deployment needs working MongoDB, `INQUIRY_IP_SALT`, and the environment values read by `src/lib/mail.ts`. Storage success is a real success even when notification fails; existing backend records notification failure for admin follow-up.
 4. Current Settings can truthfully supply portrait, heading, biography, location, manifesto and footer links. It has **no verified credential strip model**. Show location and CMS skills only. Do not hardcode IEEE/degree/years merely because the visual spec lists them. Verified extra credentials remain content-dependent.
 5. `/work/[slug]` already sanitizes markdown, handles unknown/unpublished slugs as 404, and renders no scene. Enhance navigation/metadata at launch; do not rebuild it.
@@ -867,7 +873,7 @@ For short/mobile screens, disable scroll-hidden Pilot opacity to keep full natur
 
 **Files:** Create `src/components/voyage/Landing.tsx`, `Landing.test.tsx`; modify root/CSS only as needed. Reuse existing `/api/inquiries` and Resend mail service. No scheduler Settings/schema/admin/API additions, validator, provider iframe or empty scheduling column. No real booking URL is currently supplied. An already-existing verified booking link may remain secondary if discovered; do not invent or configure one.
 
-**Interfaces:** `Landing({animated:boolean})`. Exact existing endpoint payload `{name,email,building,budget,timeline,website}`; no internal fields. CTA says “Discuss a project”/“Send inquiry”; success confirms receipt, not an appointment or unverified reply deadline.
+**Interfaces:** `Landing({animated:boolean})`. Exact existing endpoint payload `{name,email,building,budget,timeline,website}`; no internal fields. The original “Book a call” CTA leads to this inquiry/call-request flow; submit says “Send inquiry”; success confirms receipt, not an appointment or unverified reply deadline.
 
 - [ ] Add full Landing form implementation:
 
@@ -906,7 +912,7 @@ export default function Landing({animated}:{animated:boolean}){
  return <section id="landing" className="chapter landing" aria-labelledby="landing-title">
   <div className="voyage-static"><p className="chapter__label">10 / LANDING</p><h2 id="landing-title">You’ve arrived. Let’s talk about what you’re building.</h2>
    <div className="landing__grid">
-    <form className="landing__form" autoComplete="on" onSubmit={submit} aria-busy={state==="sending"}>
+    <form className="glass landing__form" autoComplete="on" onSubmit={submit} aria-busy={state==="sending"}>
      <h3>Tell me what you’re building</h3>
      <label htmlFor="inquiry-name">Name</label><input id="inquiry-name" name="name" autoComplete="name" required maxLength={120}/>
      <label htmlFor="inquiry-email">Email</label><input id="inquiry-email" name="email" type="email" autoComplete="email" required maxLength={200}/>
@@ -975,8 +981,8 @@ Run new form tests and existing inquiry API/mail tests, typecheck and touched li
 ### Task 9: Arrival browser gate
 
 - [ ] Execute common gate with Pilot entry/glare/resolve, Landing form, Surface and Relaunch, both dimensions. Confirm actual biography/portrait content; omit unsupported credentials. Verify no context rebuild on relaunch, first-visit session state remains intact, star re-ignites only at Launch, and no backward camera motion except deliberately scrolling back through the journey.
-- [ ] Verify the primary inquiry form renders immediately with no scheduler placeholder/iframe. Intercept inquiry POST for 201/400/429/500/network timeout; no external message is sent.
-- [ ] Verify still, WebGL loss, 200% zoom, mobile keyboard open, complete long biography/form, focus and status announcement. Save `screenshots/voyage/slice-7/*`, notes/logs; record deployed mail configuration status without claiming live delivery from mocked responses. Commit `docs: record arrival and inquiry review`.
+- [ ] Verify inquiry form is primary from server render, with no scheduler placeholder or iframe. Intercept inquiry POST for 201/400/429/500/network timeout; no external message is sent.
+- [ ] Verify still, WebGL loss, 200% zoom, mobile keyboard open, complete long biography/form, focus and status announcement. Save `screenshots/voyage/slice-7/*`, notes/logs; record deployed mail configuration status without claiming live delivery from mocks. Commit `docs: record arrival and inquiry review`.
 
 ## Slice 8 — launch, removals, integration and performance
 
@@ -1196,7 +1202,7 @@ Delete legacy `PageClient.tsx`, `Navbar.tsx`, `ThemeToggle.tsx`, `TypewriterText
 
 GlobalOverlays changes `isVoyage` to `pathname === "/" || pathname?.startsWith("/voyage")`; still exclude `/admin`, and keep scene absent on `/work/*`. No top progress strip on `/`. Existing standalone `/projects` can keep its ordinary progress indicator unless the user wants all public progress removed; this is distinct from the deleted top navigation.
 
-- [ ] Preserve Slice 4's now-established content-first SSR contract. Do not reintroduce a tier-null empty root or hidden hero. Extend its pending reservation custom properties when adding variable chapter lengths (`worlds=(1.5*N+1)*100vh`, Belt 160vh, Passage 60vh, Constellation 180vh when present, Pilot 200vh, Landing at least 150vh, Surface default+tail). All chapters—including the inquiry form—must be in the server HTML exactly once. Intrinsic Services is excluded from reservations and remains normal flow before and after hydration. Other cinematic content taller than its reservation must use accessible bounded internal scrolling while pending, so hydration does not shift downstream section boundaries. Reduced-motion CSS uses intrinsic static content from the first paint. Keep SceneRoot high/mid-only.
+- [ ] Preserve Slice 4's now-established content-first SSR contract. Do not reintroduce a tier-null empty root or hidden hero. Extend its pending reservation custom properties when adding variable chapter lengths (`worlds=(1.5*N+1)*100vh`, Belt 160vh, Passage 60vh, Constellation 180vh when present, Pilot 200vh, Landing at least 150vh, Surface default+tail). All chapters—including the inquiry form—must be in the server HTML exactly once. Intrinsic content taller than reservation must use accessible bounded internal scrolling while pending, so hydration does not shift downstream section boundaries. Reduced-motion CSS uses intrinsic static content from the first paint. Keep SceneRoot high/mid-only.
 
 Run actual HTTP response/no-JS checks again at launch; require current hero, each authored body, and form inputs with no duplicate IDs. Record real buffered CLS at both target viewports and require <0.05. This is a regression gate on the concrete Slice 4 implementation, not a deferred architecture choice.
 
@@ -1381,9 +1387,9 @@ test("keyboard and contrast audit has no serious/critical violations",async({pag
 });
 ```
 
-Resolve typing differences against installed Playwright APIs; no `any` suppressions. Add actual integration cases for context loss (`WEBGL_lose_context` when available), dock target→active rail, primary inquiry form without a scheduler placeholder, unknown/unpublished case 404, no canvas on `/work/*` and `/admin`, Relaunch and keyboard project details.
+Resolve typing differences against installed Playwright APIs; no `any` suppressions. Add actual integration cases for context loss (`WEBGL_lose_context` when available), dock target→active rail, primary inquiry form without scheduler placeholders, unknown/unpublished case 404, no canvas on `/work/*` and `/admin`, Relaunch and keyboard project details.
 
-- [ ] Add actual response/no-JS assertions: request `/` and confirm current CMS hero/process/body/form text in the server payload; open a browser context with `javaScriptEnabled:false`, verify the H1 and named inputs visibly render, and count each chapter ID once. Add keyboard and page-scroll tests to read every intrinsic Services record with maximum copy in authored order, open/close the Process inline disclosure, navigate combined case/project controls and all Landing inputs in order. Any remaining inactive stacked/pinned panels in other chapters must be excluded from keyboard/pointer access by visibility:hidden or hidden/inert, and absent from Tab order; checking a section rectangle alone is insufficient.
+- [ ] Add actual response/no-JS assertions: request `/` and confirm current CMS hero/process/body/form text in the server payload; open a browser context with `javaScriptEnabled:false`, verify the H1 and named inputs visibly render, and count each chapter ID once. Add keyboard tests to focus/scroll the active mobile Services panel with maximum copy, open/close the Process inline disclosure, navigate combined case/project controls and all Landing inputs in order. Inactive stacked/pinned panels must be excluded from keyboard/pointer access by visibility:hidden (the settled Services gate) or hidden/inert, and absent from Tab order; checking a section rectangle alone is insufficient.
 - [ ] Fix the observed production-console defects recorded in `.playwright-mcp/console-2026-09-30T11-42-25-773Z.log`: inspect each rootlayout preload, remove the unsupported MIME `type` or use the browser-supported type for its actual resource (the existing `.otf` font preload should use `type="font/otf"`, not `font/opentype`). Let Next Image own image preloads where applicable; do not preload assets merely to silence warnings. Resolve favicon.ico404 using an existing real brand asset if available (copy/convert to a valid favicon or add metadata icon pointing to that asset); if none exists, record missing brand input instead of inventing a logo. Verify production network/console has no unsupported-preload warning or missing icon request. Distinguish Framer Motion's informational reduced-motion development message from application errors; do not suppress genuine errors to make the gate green.
 - [ ] Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`. Every unexpected failure must be fixed or explicitly block completion. Test logs must identify actual counts, not guessed counts. Check imports do not drag server/Mongoose code into client chunks. Verify no new console errors/hydration warnings in both routes.
 - [ ] Capture production Lighthouse and performance traces at 1440×900 and a realistic mobile profile. Compare to recorded pre-redesign baseline if it exists; if no usable baseline exists, state comparison unavailable and record absolute results. Target LCP ≤2.5s, CLS <0.05, accessibility ≥95, high-tier desktop ≥55fps and mid-tier phone ≥45fps. Record hardware/browser, tier, DPR, throttling, measured frame counts and probe result. Browser emulation is not evidence of real mid-tier phone GPU performance. Missing hardware validation remains a named limitation, not a fabricated pass.
@@ -1400,10 +1406,10 @@ Resolve typing differences against installed Playwright APIs; no `any` suppressi
 
 ## Coverage and honest completion boundaries
 
-- Implemented by plan: data-driven proof/process/quotes/projects; readable static alternatives; skip semantics across physical layout/camera/navigation; no reverse camera; bookable URL configuration; real inquiry API integration; truthful Pilot; Surface relaunch; home launch; CMS invalidation; legacy removal; automated/browser/perf gates.
+- Implemented by plan: data-driven proof/process/quotes/projects; readable static alternatives; skip semantics across physical layout/camera/navigation; no reverse camera; real inquiry API integration; truthful Pilot; Surface relaunch; home launch; CMS invalidation; legacy removal; automated/browser/perf gates.
 - External inputs still required for full product acceptance: verified published case studies/testimonials/credential copy; deployed DB/email settings; target-device performance evidence when unavailable locally.
-- No scheduler integration is in scope without an existing real URL. Inquiry success sound follows actual stored-success response; it does not prove email delivery or a booked appointment.
+- No new scheduler integration is in scope. Inquiry success sound follows actual stored-success response; receipt is not proof of a booked appointment or delivered email.
 - Content-first SSR ships and is measured in Slice 4 before its visual gate; Slices 5–8 extend its one-DOM reservations and recheck server/no-JS content and CLS. No blank placeholder or unmeasured hydration counts as a pass.
 - Original geometry is approved. No code is represented as a ThreeUI source port unless its source is actually read and attribution retained.
 
-**Visual regression gate:** Preserve the accepted editorial foreground and correction tokens across all chapters. Review may simplify rings/planets/graphs and sample glass/pinned CSS. Real CMS proof and form readability dominate. Services stays intrinsic natural flow on mobile and desktop; no overlapping mobile cards or horizontal strip regressions.
+**Restored-design browser gate:** Use the original Claude glass/type/scene language: Orbit ring, case planets, quote belt and actual shared-technology graph remain planned subjects. Tune their framing and readability without substituting editorial service rows or removing motifs wholesale. Keep original camera never-reverse resolution, truthful data relationships, all-record still access, server-visible text and measured boundary tests.

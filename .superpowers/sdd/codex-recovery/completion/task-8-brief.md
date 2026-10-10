@@ -1,12 +1,18 @@
-## Authoritative visual amendment — 2026-09-30
+## Current authority — follow the original Claude plan
 
-The user rejected the earlier visual result. Follow `.superpowers/sdd/codex-recovery/design-correction-brief.md` and its accepted restrained cinematic correction. An editorial foreground and meaningful real CMS content dominate. Do not default to equal glass cards; rings, planets and graphs are secondary sparse scene cues, with no invented project relationships. Decorative sample CSS, glass/blur prescriptions and old pinned-reader styling below are subordinate to the corrected tokens and composition. Visual review may simplify or decrease decoration. Keep pinned interaction only where a chapter needs it and all content remains accessible; Services uses intrinsic natural flow on every tier, authored order, no arc/150vh/card-strip treatment. Do not restore overlapping animated mobile service cards. Functional camera, data, navigation and accessibility contracts remain mandatory.
+Latest user instruction: **“follow the claudes plan.”** The original approved Claude design is `docs/superpowers/specs/2026-09-14-voyage-redesign-design.md`; the recovered Claude Slice 3 execution plan is `docs/superpowers/plans/2026-09-18-voyage-slice-3.md`. This September 30 document is a **Codex-authored follow-on execution plan**, not a recovered Claude-authored plan. It implements that original approved design with reviewed engineering resolutions.
+
+The editorial visual amendment introduced at `d0ffb8a` is superseded. Restore/retain the planned glass panels, shallow service arc, topology, hyperspace beat, original hero typography, capsule dock, telemetry, amber rail marker, orbital ring, case-study planets and shared-technology graph. Do not propagate the editorial service rows, velocity-only Jump or viewport-relative star framing from the detour. Tune for fidelity/readability within the approved design; do not substitute a new art direction. Data remains truthful: no invented case relationships, testimonials or credentials.
+
+Retain valid engineering work: root-local measured physical/canonical mapping, content-first server/no-JS text, tier-gated ignition and SceneRoot, one WebGL context, programmatic navigation/audio suppression, idle velocity decay, dark-only audio, mobile focus trapping/Escape return, reduced-motion/WebGL fallback, text-zoom fixes and prefixed blur ordering. Never restore blank server markup to recover a visual effect. The current app restoration brief is `.superpowers/sdd/codex-recovery/claude-restoration-brief.md`; its task restores Slice 3 visuals before future chapter work. Continue the full remaining redesign after its review gate.
+
+The user's explicit Resend choice remains binding: primary contact is the existing inquiry service, with no invented calendar/provider or new scheduler configuration. Original “Book a call” CTA language may request a call through that inquiry flow; it does not promise a booked appointment. “See the work” uses the real `/projects` reader until Worlds exists, then the retained Worlds target (or safe real fallback when empty).
 
 ### Task 8: Primary Resend-backed inquiry submission
 
 **Files:** Create `src/components/voyage/Landing.tsx`, `Landing.test.tsx`; modify root/CSS only as needed. Reuse existing `/api/inquiries` and Resend mail service. No scheduler Settings/schema/admin/API additions, validator, provider iframe or empty scheduling column. No real booking URL is currently supplied. An already-existing verified booking link may remain secondary if discovered; do not invent or configure one.
 
-**Interfaces:** `Landing({animated:boolean})`. Exact existing endpoint payload `{name,email,building,budget,timeline,website}`; no internal fields. CTA says “Discuss a project”/“Send inquiry”; success confirms receipt, not an appointment or unverified reply deadline.
+**Interfaces:** `Landing({animated:boolean})`. Exact existing endpoint payload `{name,email,building,budget,timeline,website}`; no internal fields. The original “Book a call” CTA leads to this inquiry/call-request flow; submit says “Send inquiry”; success confirms receipt, not an appointment or unverified reply deadline.
 
 - [ ] Add full Landing form implementation:
 
@@ -45,7 +51,7 @@ export default function Landing({animated}:{animated:boolean}){
  return <section id="landing" className="chapter landing" aria-labelledby="landing-title">
   <div className="voyage-static"><p className="chapter__label">10 / LANDING</p><h2 id="landing-title">You’ve arrived. Let’s talk about what you’re building.</h2>
    <div className="landing__grid">
-    <form className="landing__form" autoComplete="on" onSubmit={submit} aria-busy={state==="sending"}>
+    <form className="glass landing__form" autoComplete="on" onSubmit={submit} aria-busy={state==="sending"}>
      <h3>Tell me what you’re building</h3>
      <label htmlFor="inquiry-name">Name</label><input id="inquiry-name" name="name" autoComplete="name" required maxLength={120}/>
      <label htmlFor="inquiry-email">Email</label><input id="inquiry-email" name="email" type="email" autoComplete="email" required maxLength={200}/>

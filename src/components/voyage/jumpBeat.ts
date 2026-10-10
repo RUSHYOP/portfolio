@@ -1,13 +1,14 @@
 import { CHAPTERS, type ChapterId } from "@/scene/camera/flightPath";
 
 /**
- * *Minimum* wall-clock hold for the Jump letterbox, in ms. Letterbox.tsx:7 runs a 0.45s
- * transition each way, and a fast flick crosses the chapter's 25vh in well under that — so
- * the bars need a clock floor rather than a chapterProgress window. They also need a scroll
- * floor: the effective hold is `max(JUMP_HOLD_MS, the rest of the band)`, because every
- * in-band emit renews the deadline (see decideJumpBeat). Fast pass → the clock wins; slow or
- * keyboard pass → the band wins. The whoosh is not on this clock at all: it is a one-shot
- * 0.4s SFX fired once on the crossing edge.
+ * *Minimum* monotonic (`performance.now()`) hold for the Jump letterbox, in ms.
+ * Letterbox.tsx:7 runs a 0.45s transition each way, and a fast flick crosses the chapter's
+ * 25vh in well under that — so the bars need a clock floor rather than a chapterProgress
+ * window. They also need a scroll floor: the effective hold is
+ * `max(JUMP_HOLD_MS, the rest of the band)`, because every in-band emit renews the deadline
+ * (see decideJumpBeat). Fast pass → the clock wins; slow or keyboard pass → the band wins.
+ * The whoosh is not on this clock at all: it is a one-shot 0.4s SFX fired once on the
+ * crossing edge.
  */
 export const JUMP_HOLD_MS = 900;
 
@@ -28,7 +29,7 @@ export interface JumpBeatInput {
   /** voyageStore.programmatic as of this emit. */
   nextProgrammatic: boolean;
   nowMs: number;
-  /** Wall-clock deadline of the hold currently in force (0 = none). */
+  /** Monotonic (`performance.now()`) deadline of the hold currently in force (0 = none). */
   holdUntilMs: number;
 }
 

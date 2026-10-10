@@ -61,7 +61,8 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 400);
 
-    // Topology before the orb, so the star draws over the graph (no renderOrder is set anywhere).
+    // Array order sets update() order only, not draw order: the orb's ShaderMaterial is opaque,
+    // so three draws it first; the transparent pieces are depth-sorted after it.
     const pieces: SetPiece[] = [new Starfield(), new WarpStreaks(), new Topology(), new EnergyOrb()];
     for (const p of pieces) p.build(scene, tier);
 

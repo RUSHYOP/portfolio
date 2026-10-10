@@ -122,13 +122,24 @@ describe("Topology", () => {
     expect(topo.object?.visible).toBe(false);
   });
 
-  it("sits in front of the camera and faces it", () => {
+  // A translated, yawed camera: with an identity camera a world-axis offset would produce
+  // the same position, so only this pose proves the offset is applied in *camera* space.
+  it("sits at its camera-space offset in front of the camera and faces it", () => {
     const topo = new Topology();
     topo.build(new THREE.Scene(), "mid");
     voyageStore.setScroll(0.12, 0);
-    const camera = new THREE.PerspectiveCamera();     // at the origin, looking down -z
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(5, 0, 0);
+    camera.rotation.y = Math.PI / 2;                 // looking down world -x
+    camera.updateMatrixWorld();
     topo.update(makeFrame({ camera }));
-    expect(topo.object!.position.z).toBeLessThan(-10);
+    const local = topo.object!.position.clone()
+      .sub(camera.position)
+      .applyQuaternion(camera.quaternion.clone().invert());
+    // Literals pin Topology's OFFSET_X / OFFSET_Y / OFFSET_Z.
+    expect(local.x).toBeCloseTo(-0.9, 6);
+    expect(local.y).toBeCloseTo(1.4, 6);
+    expect(local.z).toBeCloseTo(-24, 6);
     expect(topo.object!.quaternion.equals(camera.quaternion)).toBe(true);
   });
 

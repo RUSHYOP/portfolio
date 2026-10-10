@@ -22,7 +22,7 @@ const SOLO_END = 0.56;
 /** Crossfade between adjacent mobile panels, as a fraction of one panel's slot — capped at
  *  SOLO_START in absolute terms so, for few panels, the first fade-in never leaks before
  *  the chapter starts (chapterProgress 0). */
-export const SOLO_CROSSFADE = 0.18;
+const SOLO_CROSSFADE = 0.18; // module-private: no importer outside this file
 
 export interface PanelPose {
   /** 0..1 desktop dock progress — drives opacity and the lift. */

@@ -150,6 +150,24 @@ describe("Starfield — chapter 02 focus pull", () => {
     expect(field.material.opacity).toBeCloseTo(baseOpacity, 4);
   });
 
+  // Both drivers non-zero: they combine by max (0.5), where a sum would give 0.8.
+  it("combines the manual and chapter pulls by max, not by sum", () => {
+    const scene = new THREE.Scene();
+    const field = new Starfield();
+    field.build(scene, "mid");
+    field.applyControls(1);
+    const baseSize = field.material.size;            // BASE_SIZE at ignite 1, no soften, no audio
+
+    voyageStore.setScroll(0.08 + 0.12 * 0.12, 0);    // Approach, chapterProgress ≈ 0.12
+    const s = voyageStore.getState();
+    const chapter = approachSoften(s.chapter.id, s.chapterProgress);
+    expect(chapter).toBeCloseTo(0.5, 6);
+    field.setSoften(0.3);
+    // ~3.3s of frames: the chapter ease has settled to within ~1e-5 of its target.
+    for (let i = 0; i < 200; i++) field.update(makeFrame());
+    expect(field.material.size).toBeCloseTo(baseSize * (1 + Math.max(0.3, chapter) * 0.6), 4);
+  });
+
   it("still honours setSoften while the chapter driver is idle", () => {
     const scene = new THREE.Scene();
     const field = new Starfield();

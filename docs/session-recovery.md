@@ -13,7 +13,7 @@ Recovered from the project Claude transcript, 112 project session-summary record
 - [x] Recover decisions, outstanding work and original visual-review requirement.
 - [x] Verify baseline: 313 tests passing; TypeScript clean. Existing lint backlog: 10 errors and 6 warnings.
 - [x] Restore local runtime and inspect Launch on desktop/mobile. Desktop Launch probe: 121 FPS, high tier.
-- [ ] Slice 3: Approach panels/topology and Jump visuals/audio; task tests, independent reviews, desktop/mobile/still browser checks.
+- [x] Slice 3: Approach panels/topology and Jump visuals/audio; task tests, independent reviews, desktop/mobile/still browser checks. Launch-window FPS probes held high/mid tiers; chapter 02/03 performance and Playwright integration remain Slice 8 follow-ups. See the Slice 3 worklog and local Task 10/11 reports.
 - [ ] Slice 4: Orbit process ring and step panels.
 - [ ] Slice 5: Worlds with authored case studies and distinguishing planet features.
 - [ ] Slice 6: Belt, Dark Passage and interactive project Constellation; skip empty proof chapters with consistent camera/scroll geometry.

@@ -42,6 +42,16 @@ Public reads go through the published-only branch (`col.list({ publishedOnly: tr
 
 **Media pipeline**: uploads go through `/api/upload` → validated by type-specific size/dimension limits (`profile`, `project_icon`, `skill_icon`, `audio`) → stored in GridFS → referenced as `/api/media/{fileId}`. (`scripts/migrate-media.ts` was a one-time migration off static `public/` files; `@vercel/blob` is a leftover dependency, not the active storage path.)
 
+## Voyage architecture — Approach Vector and Jump
+
+`src/app/voyage/page.tsx` is the server entry: it calls `getVoyageContent()` and passes settings and published services into `VoyageRoot`. `VoyageRoot` passes the service records to `Services`, which narrows the CMS `Item` fields at the leaf before rendering. This keeps server collection code out of client bundles and lets the panels handle missing fields and any service count.
+
+Service poses are CSS custom properties computed from pure layout functions. The stylesheet selects the desktop shallow arc or mobile one-at-a-time replacement through its media query; JavaScript does not decide the breakpoint. The mobile Approach pin is 64vh, giving the panels a stationary window within its 150vh section. In the `still` tier the pin is removed and all panels flow as readable content.
+
+`Topology` joins the existing single WebGL scene's set-piece array. It assembles seeded nodes during Approach. `Starfield` reads the Approach chapter for focus pull; `WarpStreaks` and `EnergyOrb` read Jump for the hyperspace tunnel and flare. Each piece reads `ctx.voyage.chapter.id` inside its own `update()`; `SceneRoot` registers and updates pieces without owning their chapter-specific animation rules. No second renderer or post-processing composer is used.
+
+Jump uses two clocks. `decideJumpBeat` detects an organic forward chapter-index crossing, while `useJumpBeat` subscribes to `voyageStore` and triggers the one-shot whoosh and letterbox. The store's `programmatic` flag suppresses beats caused by `scrollTo`. The whoosh lasts 0.4s; the letterbox has a 900ms floor and remains down while the scroll position stays in the Jump band. Continuous tunnel and flare motion follows chapter progress, including slow scrolling.
+
 ## Visual design system
 
 Design tokens live in `src/app/globals.css` as CSS custom properties, swapped via `[data-theme="dark"|"light"]` on `<html>` (see `ThemeToggle.tsx`, persisted to `localStorage`).

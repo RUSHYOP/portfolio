@@ -70,3 +70,29 @@
 ### Next
 - Apply the 24 plan fixes → verify → commit the plan → execute Tasks 1–11 sequentially (one Opus implementer at a time, independent review after each; controller runs the browser review at 1440×900 and 390×844 with screenshots to `screenshots/voyage/slice-3/`).
 - Then: whole-branch review → merge; slice 4 (Orbit) plan; Resend key rotation still offered.
+
+## Slice 3 — Approach Vector + Jump (feat/voyage-slice-3)
+
+Completed 2026-09-30. Task evidence and independent reviews are in `.superpowers/sdd/codex-recovery/`; all 16 desktop/mobile/still captures are committed under `screenshots/voyage/slice-3/`.
+
+- Task 1: Added a programmatic-scroll flag to `voyageStore`, with epsilon, timeout and no-op exits.
+- Task 2: Added the pure `decideJumpBeat` chapter-index crossing detector and hold decision.
+- Task 3: Added chapter-progress hyperspace curves to `WarpStreaks`, combined with existing velocity curves.
+- Task 4: Added Jump glare and an additive star flare to `EnergyOrb`; combined glare channels with `max`.
+- Task 5: Added the Approach focus pull in `Starfield`, preserving its existing soften control with `max`.
+- Task 6: Added seeded, per-tier `Topology` to the existing `SceneRoot` pieces array.
+- Task 7: Wired published services from `page.tsx` through `getVoyageContent()` to `VoyageRoot` and tested the data read.
+- Task 8: Added data-driven service panels, staggered desktop docking and mobile single-panel replacement. The mobile Approach pin is 64vh so its stationary window lasts 86vh of the 150vh section.
+- Task 9: Added the bare 25vh Jump section and `useJumpBeat`, with a one-shot synthesized whoosh and letterbox held through the band.
+- Task 10: Captured and inspected all 16 required views; verified organic skipped-band/reverse/keyboard crossings, the programmatic CTA, reduced motion and audio scheduling. Fixed compiled glass blur declaration order, mobile still-card clipping and graph placement; independent reviews approved each fix. Camera transition reads as a quick cut-like recenter, without smear; no lookAt snap was needed.
+- Task 11: Closed the documentation and verification gate. Amended the local ignored `slice3-decisions.md` at its two superseded pin/capture lines: 64vh Approach pin and the `[0.04, 0.56]` mobile solo window, with p10/p12/p14 captures.
+
+Launch-only one-second probes were 121 FPS high→high on desktop and 121 FPS mid→mid on mobile. The mobile-emulated native-scroll smoke pass measured 240 frames, median 8.3ms, p95 9.9ms, max 10.3ms; it does not certify target-phone or chapter 02/03 performance. Browser review retuned `Topology.OFFSET_X` −2.6→0 and `OFFSET_Y` 1.4→−9; `OFFSET_Z` stayed −34. The glass declarations were reordered to retain both prefix and standard blur, and static mobile cards now flow without clipping.
+
+Closing checks: `npx tsc --noEmit` 0 errors; `npx vitest run` 398 tests in 35 files passed; `npm run build` succeeded with `/voyage` in the route table. `npx eslint .` reports the existing 16 problems (10 errors, 6 warnings) outside Slice 3. The prescribed scoped command `npx eslint src/scene src/components/voyage src/lib src/app/voyage` exits 0 with 2 pre-existing `src/lib` warnings (`auth.ts`, `mongodb.ts`), and no errors; it is not globally clean.
+
+Spec §8, chapters 02/03: desktop and mobile panels/Jump were reachable and legible in the captures; `Topology` joins the single existing WebGL scene, without a composer; the Launch-window probe retained high/mid tiers; browser review found zero JavaScript/app console errors. In `still`, `StillSky` replaces the scene, Services drops its pin and shows all panels, and the inert Jump keeps its 25vh span. Browser asset/preload warnings remain for Slice 8. Audio verification confirms whoosh scheduling and mute gating, not subjective sound quality.
+
+### Next
+
+Slice 4: Orbit / process ring. Carry forward the tuned Topology offsets (X 0, Y −9, Z −34) and the 64vh Approach pin/mobile solo window. `Launch.tsx` still lacks a `useReducedMotion()` guard (GAP-3), and Playwright integration tests remain deferred to Slice 8 (spec §7). Slice 8 also owns measured chapter 02/03 frame cost, final device performance, root asset/preload cleanup and the brief still-Ignition exit fade. Whole-change review and remote delivery follow the remaining slices; this branch has not been pushed yet.

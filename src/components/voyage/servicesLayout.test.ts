@@ -90,6 +90,26 @@ describe("panelPose — mobile replacement", () => {
     expect([0, 1, 2].map((i) => panelPose(i, 3, 0).solo)).toEqual([0, 0, 0]);
     expect([0, 1, 2].map((i) => panelPose(i, 3, 0.9).solo)).toEqual([0, 0, 0]);
   });
+
+  // Fix pass 1: a slot-relative crossfade is wider than SOLO_START once n < 3, so a lone
+  // panel used to sit at 57% opacity while the section was still scrolling in.
+  it("is dark before the chapter starts for one and two panels", () => {
+    expect(panelPose(0, 1, 0).solo).toBe(0);
+    expect(panelPose(0, 2, 0).solo).toBe(0);
+  });
+
+  it("holds a lone panel fully up across the middle of the window", () => {
+    for (const t of [0.08, 0.3, 0.52]) expect(panelPose(0, 1, t).solo).toBe(1);
+  });
+
+  it("is fully faded out by SOLO_END + SOLO_START (0.60), the widest capped fade-out", () => {
+    // Not the 0.573 pin release: the capped fade-out still overruns it by <= 0.027
+    // (0.600 for n = 1, 2; 0.591 for n = 3) — a known, accepted tail.
+    for (const n of [1, 2, 3]) {
+      // toBeCloseTo: SOLO_END + fade is not exactly representable (≈2e-15 residue here).
+      for (let i = 0; i < n; i++) expect(panelPose(i, n, 0.6).solo).toBeCloseTo(0, 10);
+    }
+  });
 });
 
 describe("STATIC_POSE", () => {

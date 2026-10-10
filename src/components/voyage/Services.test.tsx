@@ -103,6 +103,10 @@ describe("Services", () => {
     voyageStore.setScroll(0.01, 0);
     const { container } = render(<Services animated services={[svc("a")]} />);
     expect(cssVar(panels(container)[0], "--dock")).toBe(0);
+    // Fix pass 1: the lone mobile panel is dark too (it used to sit at --solo 0.573 here),
+    // and flagged off so the CSS drops its blur and pointer events.
+    expect(cssVar(panels(container)[0], "--solo")).toBe(0);
+    expect(panels(container)[0].getAttribute("data-solo-off")).toBe("true");
   });
 
   it("marks the panels the mobile replacement has faded out, so the CSS can drop their blur", () => {

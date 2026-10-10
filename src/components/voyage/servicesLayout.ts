@@ -19,8 +19,10 @@ const DOCK_SPAN = 0.16;
  *  0.573 (150 - 64 = 86vh of hold). */
 const SOLO_START = 0.04;
 const SOLO_END = 0.56;
-/** Crossfade between adjacent mobile panels, as a fraction of one panel's slot. */
-const SOLO_CROSSFADE = 0.18;
+/** Crossfade between adjacent mobile panels, as a fraction of one panel's slot — capped at
+ *  SOLO_START in absolute terms so, for few panels, the first fade-in never leaks before
+ *  the chapter starts (chapterProgress 0). */
+export const SOLO_CROSSFADE = 0.18;
 
 export interface PanelPose {
   /** 0..1 desktop dock progress — drives opacity and the lift. */
@@ -52,11 +54,15 @@ export function panelPose(index: number, count: number, chapterProgress: number)
   const x = n > 1 ? (index / (n - 1)) * 2 - 1 : 0;
 
   const slot = (SOLO_END - SOLO_START) / n;
-  const local = (t - (SOLO_START + slot * index)) / slot;
+  // Absolute crossfade width: slot-relative, but never wider than SOLO_START (n < 3 would
+  // otherwise start the fade-in before chapterProgress 0). Absolute units keep that edge
+  // exact: for n < 3 at chapterProgress 0, dt === -fade, so the first panel is precisely 0.
+  const fade = Math.min(SOLO_CROSSFADE * slot, SOLO_START);
+  const dt = t - (SOLO_START + slot * index);
   let solo = 0;
-  if (local > -SOLO_CROSSFADE && local < 1 + SOLO_CROSSFADE) {
-    solo = local < 0 ? 1 + local / SOLO_CROSSFADE
-         : local > 1 ? 1 - (local - 1) / SOLO_CROSSFADE
+  if (dt > -fade && dt < slot + fade) {
+    solo = dt < 0 ? 1 + dt / fade
+         : dt > slot ? 1 - (dt - slot) / fade
          : 1;
   }
 

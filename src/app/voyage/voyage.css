@@ -70,11 +70,12 @@
 .chapter--micro { pointer-events: none; }
 
 /* ====== Glass panel (shared) ====== */
+/* Prefixed form first: lightningcss drops the standard `backdrop-filter` when a `-webkit-` declaration follows it, and Chrome ignores the prefixed alias — so the glass never blurred. */
 .glass {
   position: relative; border-radius: 20px;
   background: rgba(10, 10, 10, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -173,8 +174,8 @@
      above is NOT the remedy here (transform: none means it promotes nothing, and
      backdrop-filter is itself a compositing trigger) — dropping it is an optional tidy-up. */
   .service-panel[data-solo-off="true"] {
-    backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     /* Stacked inset:0 scrollers: a faded-out panel must not swallow touches or scroll. */
     pointer-events: none;
   }
@@ -218,7 +219,7 @@
   pointer-events: auto; display: flex; align-items: center; gap: 0.25rem;
   padding: 0.35rem 0.4rem 0.35rem 0.5rem; border-radius: 999px;
   background: rgba(10, 10, 10, 0.55); border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 40px rgba(0, 0, 0, 0.45);
   transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1), background 0.4s;
 }
@@ -242,7 +243,7 @@
 .dock__sheet {
   position: fixed; inset: 0; z-index: 9399; pointer-events: auto;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem;
-  background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  background: rgba(0, 0, 0, 0.82); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
 }
 .dock__sheet-link {
   background: transparent; border: 0; color: var(--white); cursor: pointer;

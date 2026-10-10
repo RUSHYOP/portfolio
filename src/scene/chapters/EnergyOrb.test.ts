@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import * as THREE from "three";
 import { EnergyOrb, jumpGlare } from "./EnergyOrb";
 import { STAR_POSITION, starScale } from "@/scene/camera/flightPath";
@@ -141,5 +141,40 @@ describe("EnergyOrb — chapter 03 flare", () => {
     // uGlare is deliberately NOT gated by ignite — the burst's opacity is.
     expect(orb.material.uniforms.uGlare.value)
       .toBeCloseTo(jumpGlare(voyageStore.getState().chapterProgress), 6);
+  });
+
+  it("gates burst opacity and scale by ignition", () => {
+    const gradient = { addColorStop: vi.fn() };
+    const context = {
+      createRadialGradient: vi.fn(() => gradient),
+      fillRect: vi.fn(),
+      fillStyle: null as CanvasGradient | string | CanvasPattern | null,
+    };
+    vi.stubGlobal("document", {
+      createElement: vi.fn(() => ({
+        width: 0,
+        height: 0,
+        getContext: vi.fn(() => context),
+      })),
+    });
+
+    const scene = new THREE.Scene();
+    const orb = new EnergyOrb();
+    try {
+      orb.build(scene, "mid");
+      voyageStore.setScroll(0.21, 0);
+      const burst = orb.object?.children[2] as THREE.Sprite;
+
+      orb.update(makeFrame({ ignite: 0.5 }));
+      expect((burst.material as THREE.SpriteMaterial).opacity).toBeCloseTo(0.5, 6);
+      expect(burst.scale.x).toBeGreaterThan(0);
+
+      orb.update(makeFrame({ ignite: 0 }));
+      expect((burst.material as THREE.SpriteMaterial).opacity).toBe(0);
+      expect(burst.scale.x).toBe(0);
+    } finally {
+      orb.dispose();
+      vi.unstubAllGlobals();
+    }
   });
 });

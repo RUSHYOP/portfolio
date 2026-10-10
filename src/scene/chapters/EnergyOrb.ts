@@ -200,7 +200,7 @@ export class EnergyOrb implements SetPiece {
     if (this.burst && this.burstMaterial) {
       // Hidden outside the beat rather than drawn at zero opacity.
       this.burst.visible = jump > 0.001;
-      this.burstMaterial.opacity = jump;
+      this.burstMaterial.opacity = jump * ctx.ignite;
       const b = (BURST_WORLD * jump * ctx.ignite) / sc;
       this.burst.scale.set(b, b, 1);
     }

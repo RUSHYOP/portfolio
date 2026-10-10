@@ -11,9 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default async function VoyagePage() {
-  // One Promise.all for everything /voyage renders; servicesDef.revalidate already targets
-  // this route on a CMS write. Only `services` is threaded through — later slices add
-  // their own prop rather than carrying four unused ones.
-  const { services, settings } = await getVoyageContent();
-  return <VoyageRoot settings={settings} services={services} />;
+  // One Promise.all for everything /voyage renders; collection revalidation targets
+  // this route on CMS writes.
+  const { services, process, settings } = await getVoyageContent();
+  return <VoyageRoot settings={settings} services={services} process={process} />;
 }

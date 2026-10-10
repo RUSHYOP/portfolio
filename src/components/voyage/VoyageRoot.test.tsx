@@ -7,11 +7,13 @@ import VoyageRoot from "./VoyageRoot";
 it("serves one readable hero and intrinsic Services without waiting for a tier or scene", () => {
   const settings = { heroHeadline: "Build thoughtful AI-powered products", heroSubheadline: "Actual supporting copy" } as Settings;
   const services = [{ id: "one", order: 0, createdAt: "", title: "One service", promise: "Actual promise" }] as Item[];
-  const html = renderToString(<VoyageRoot settings={settings} services={services} />);
+  const process: Item[] = [{ id: "step", order: 0, createdAt: "", title: "A real process step", what: "The actual work" }];
+  const html = renderToString(<VoyageRoot settings={settings} services={services} process={process} />);
   expect(html.match(/<h1\b/g)).toHaveLength(1);
   expect(html.match(/One service<\/h2>/g)).toHaveLength(1);
   expect(html).toContain("Actual supporting copy");
   expect(html).toContain("Actual promise");
+  expect(html).toContain("A real process step");
   expect(html).toContain('class="voyage-track"');
   expect(html).not.toContain('class="ignition"');
   expect(html).not.toContain('voyage-root--booting');

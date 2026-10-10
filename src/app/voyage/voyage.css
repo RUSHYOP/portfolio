@@ -226,6 +226,33 @@
   }
 }
 
+/* ====== Orbit process ====== */
+.process h2 { font-family: "Styrene A", var(--font-space-grotesk), sans-serif; font-size: clamp(2rem,4vw,3.5rem); font-weight:500; line-height:1.08; }
+.process h3 { font-size:clamp(1.35rem,2vw,2rem); font-weight:500; margin:0 0 1rem; }
+.process__pin { padding-top:90px; padding-bottom:60px; }
+.process__content { width:min(46%,580px); margin-left:auto; height:min(680px,calc(100dvh - 170px)); min-height:0; display:flex; flex-direction:column; }
+.process__content > .chapter__label, .process__content > h2, .process__count, .process__all-toggle { flex-shrink:0; }
+.process [hidden] { display:none!important; }
+.process__count { font-family:var(--font-jetbrains-mono),monospace; color:#a3a3a3; font-size:.75rem; margin:1rem 0; }
+.process__reader, .process__all { flex:1 1 0; min-height:0; overflow:auto; overscroll-behavior:contain; border-radius:20px; }
+.process__reader:focus-visible, .process__all:focus-visible, .process__all-toggle:focus-visible { outline:2px solid white; outline-offset:3px; }
+.process__panel { padding:clamp(1.25rem,2vw,2rem); }
+.process__panel dt { font-family:var(--font-jetbrains-mono),monospace; text-transform:uppercase; letter-spacing:.12em; color:#a3a3a3; font-size:.7rem; margin-top:1rem; }
+.process__panel dd { margin:.4rem 0 0; font-size:1.05rem; line-height:1.7; overflow-wrap:anywhere; white-space:pre-line; }
+.process ol { list-style:none; margin:0; padding:0; }
+.process__all-toggle { align-self:flex-start; margin:0 0 1rem; padding:.5rem 0; font-size:.85rem; cursor:pointer; background:none; border:0; color:white; }
+.process__all li + li { margin-top:1rem; }
+.process__static { padding:100px clamp(1.5rem,6vw,6rem); max-width:900px; margin:auto; }
+.process__static li { padding:2rem 0; }
+@media (max-width:767px) {
+  .process__pin { justify-content:flex-end; padding:0 1.25rem 88px; }
+  .process__content { width:100%; margin:0; height:min(620px,calc(100dvh - 188px)); }
+  .process__content > .chapter__label { margin-bottom:.5rem; }
+  .process__content h2 { font-size:2rem; }
+  .process__panel { padding:1.15rem; }
+  .process__count { margin:.65rem 0; }
+}
+
 /* ====== CTA ====== */
 .cta {
   display: inline-flex; align-items: center; gap: 0.6rem;

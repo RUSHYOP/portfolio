@@ -19,6 +19,7 @@ import Dock from "@/components/dock/Dock";
 import Ignition from "./Ignition";
 import Launch from "./Launch";
 import Services from "./Services";
+import Process from "./Process";
 import { useJumpBeat } from "./useJumpBeat";
 
 const SceneRoot = dynamic(() => import("@/scene/SceneRoot"), { ssr: false });
@@ -34,9 +35,11 @@ interface VoyageRootProps {
   settings: Settings;
   /** Chapter 02's panels. Untyped past Item's three base fields — narrowed in Services. */
   services: Item[];
+  /** Chapter 04's ordered process steps. */
+  process: Item[];
 }
 
-export default function VoyageRoot({ settings, services }: VoyageRootProps) {
+export default function VoyageRoot({ settings, services, process }: VoyageRootProps) {
   const [tier, setTier] = useState<Tier | null>(null);
   const [ignited, setIgnited] = useState(false);
   const [letterbox, setLetterbox] = useState(false);
@@ -98,7 +101,7 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
   }, []);
   const onIgnitionComplete = useCallback(() => setIgnited(true), []);
 
-  // Chapters 01–03 own their own sections now; the rest are still placeholders.
+  // Chapters 01–04 own their own sections now; the rest are still placeholders.
   const placeholders = useMemo(
     () => CHAPTERS.filter((c) => c.id !== "launch" && c.id !== "approach" && c.id !== "jump"),
     [],
@@ -131,8 +134,9 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
           className="chapter chapter--micro"
           style={{ height: `${sectionHeightVh(jumpChapter)}vh` }}
         />
-        {placeholders.map((c) => (
-          <section
+        {placeholders.map((c) => {
+          if (c.id === "orbit") return <Process key={c.id} steps={process} animated={animated} />;
+          return <section
             key={c.id}
             id={c.id}
             className={`chapter chapter--placeholder${c.micro ? " chapter--micro" : ""}`}
@@ -145,8 +149,8 @@ export default function VoyageRoot({ settings, services }: VoyageRootProps) {
                 </p>
               </div>
             )}
-          </section>
-        ))}
+          </section>;
+        })}
       </main>
 
       <button type="button" className="voyage-audio" onClick={toggleMuted}

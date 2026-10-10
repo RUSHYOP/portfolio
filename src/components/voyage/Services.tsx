@@ -46,9 +46,8 @@ function readService(item: Item) {
 export default function Services({ services, animated }: ServicesProps) {
   const s = useVoyage();
   const reduce = useReducedMotion();
-  // The planned pinned composition is tuned for up to three cards. Keep overflow
-  // collections in natural flow until the measured strip arrives in Slice 4.
-  const still = !animated || reduce === true || services.length > 3;
+  const still = !animated || reduce === true;
+  const many = services.length > 3;
   // Before the chapter the panels are dark; after it they are docked (and off-screen).
   const t =
     s.chapter.id === "approach" ? s.chapterProgress : s.progress < chapter.start ? 0 : 1;
@@ -57,18 +56,20 @@ export default function Services({ services, animated }: ServicesProps) {
     <section
       id="approach"
       className="chapter chapter--approach"
-      style={still ? { minHeight: `${sectionHeightVh(chapter)}vh` } : { height: `${sectionHeightVh(chapter)}vh` }}
+      style={still ? undefined : { height: `${sectionHeightVh(chapter)}vh` }}
       aria-label="Services"
       data-static={still ? "true" : undefined}
+      data-many={many ? "true" : undefined}
     >
-      <div className="chapter__pin">
+      <div className="chapter__pin" tabIndex={still ? 0 : undefined}>
         <p className="chapter__label">
           {chapter.index} / {chapter.label}
         </p>
-        <div className="services">
+        <div className="services" role={many ? "region" : undefined}
+          aria-label={many ? "Services" : undefined} tabIndex={many ? 0 : undefined}>
           {services.map((item, i) => {
             const { title, promise, outcomes, engagement } = readService(item);
-            const pose = still ? STATIC_POSE : panelPose(i, services.length, t);
+            const pose = still || many ? STATIC_POSE : panelPose(i, services.length, t);
             return (
               <article
                 key={item.id}
@@ -76,7 +77,7 @@ export default function Services({ services, animated }: ServicesProps) {
                 style={poseStyle(pose)}
                 // On mobile the panels overlap. CSS hides fully faded panels from pointer
                 // and keyboard navigation and drops their blur until they reappear.
-                data-solo-off={!still && pose.solo < 0.005 ? "true" : undefined}
+                data-solo-off={!still && !many && pose.solo < 0.005 ? "true" : undefined}
                 tabIndex={0}
                 aria-label={title || `Service ${i + 1}`}
               >

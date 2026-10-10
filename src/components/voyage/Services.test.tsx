@@ -41,12 +41,23 @@ describe("Services", () => {
     expect(panel.textContent).toContain("6–10 weeks");
   });
 
-  it("is data-driven in the number of services", () => {
-    const five = ["a", "b", "c", "d", "e"].map((id) => svc(id));
-    const { container } = render(<Services animated services={five} />);
-    expect(panels(container)).toHaveLength(5);
-    expect(container.querySelector("#approach")?.getAttribute("data-static")).toBe("true");
-    expect(container.querySelector<HTMLElement>("#approach")?.style.height).toBe("");
+  it.each([6, 10])("keeps %i animated records in a readable strip", count => {
+    const records = Array.from({ length: count }, (_, i) => svc(String(i), {
+      promise: "P".repeat(200), outcomes: Array(4).fill("O".repeat(80)), engagement: "E".repeat(120),
+    }));
+    const { container } = render(<Services animated services={records} />);
+    expect(panels(container)).toHaveLength(count);
+    expect(container.querySelector("#approach")?.getAttribute("data-static")).toBeNull();
+    expect(container.querySelector("#approach")?.getAttribute("data-many")).toBe("true");
+    expect(container.querySelector<HTMLElement>("#approach")?.style.height).toBe("150vh");
+    expect(container.querySelector(".services")?.getAttribute("role")).toBe("region");
+    expect(container.querySelector(".services")?.getAttribute("tabindex")).toBe("0");
+    for (const [i, panel] of panels(container).entries()) {
+      expect(panel.querySelector("h2")?.textContent).toBe(`Title ${i}`);
+      expect(cssVar(panel, "--dock")).toBe(1);
+      expect(panel.getAttribute("data-solo-off")).toBeNull();
+      expect(panel.getAttribute("tabindex")).toBe("0");
+    }
   });
 
   it("renders the optional fields' empty states", () => {
@@ -73,11 +84,10 @@ describe("Services", () => {
     expect(panels(container)[0].querySelector("h2")).toBeNull();
   });
 
-  it("still renders the section at full height with no services at all", () => {
+  it("still renders the section with no services at all", () => {
     const { container } = render(<Services animated services={[]} />);
     const section = container.querySelector<HTMLElement>("#approach");
     expect(section).not.toBeNull();
-    // 150vh: the chapter's scroll budget is structural and must survive an empty CMS.
     expect(section!.style.height).toBe("150vh");
     expect(section!.getAttribute("aria-label")).toBe("Services");
     expect(panels(container)).toHaveLength(0);
@@ -131,6 +141,29 @@ describe("Services", () => {
     const { container } = render(<Services animated={false} services={[svc("a"), svc("b")]} />);
     for (const panel of panels(container)) {
       expect(panel.getAttribute("tabindex")).toBe("0");
+    }
+    expect(container.querySelector(".chapter__pin")?.getAttribute("tabindex")).toBe("0");
+  });
+
+  it("renders all six maximum-length still records in intrinsic flow", () => {
+    const long = Array.from({ length: 6 }, (_, i) => svc(String(i), {
+      title: `Service ${i} ${"T".repeat(110)}`,
+      promise: "P".repeat(200),
+      outcomes: Array.from({ length: 4 }, (_, j) => `${j} ${"O".repeat(78)}`),
+      engagement: "E".repeat(120),
+    }));
+    const { container } = render(<Services animated={false} services={long} />);
+    const section = container.querySelector<HTMLElement>("#approach")!;
+    expect(section.style.height).toBe("");
+    expect(section.style.minHeight).toBe("");
+    expect(section.getAttribute("data-static")).toBe("true");
+    expect(panels(container)).toHaveLength(6);
+    for (const [i, panel] of panels(container).entries()) {
+      expect(panel.querySelector("h2")?.textContent).toBe(long[i].title);
+      expect(panel.querySelectorAll(".service-panel__outcomes li")).toHaveLength(4);
+      expect(panel.getAttribute("hidden")).toBeNull();
+      expect(panel.getAttribute("inert")).toBeNull();
+      expect(panel.getAttribute("data-solo-off")).toBeNull();
     }
   });
 });

@@ -164,6 +164,18 @@
   display: block; margin-bottom: 0.3rem; opacity: 0.6; text-transform: uppercase;
 }
 
+/* Larger collections keep the pinned chapter but offer a readable, keyboard-scrollable
+   strip. Each card scrolls its own long copy without changing the chapter allocation. */
+.chapter--approach:not([data-static="true"])[data-many="true"] .services {
+  display: flex; flex-wrap: nowrap; gap: 1.25rem; overflow-x: auto; align-items: stretch;
+}
+.chapter--approach:not([data-static="true"])[data-many="true"] .service-panel {
+  position: relative; inset: auto; flex: 0 0 min(80vw, 380px); min-width: min(80vw, 320px);
+  max-height: 52vh; overflow-y: auto; opacity: 1; transform: none; pointer-events: auto;
+}
+.chapter--approach .services:focus-visible,
+.chapter--approach .service-panel:focus-visible { outline: 2px solid var(--white); outline-offset: 3px; }
+
 /* Mobile: a 64vh pin is stationary for 86vh of the 150vh section — chapterProgress 0..0.573,
    which is where servicesLayout's replacement windows end. Three full panels cannot stack
    inside one phone viewport, so they replace one another in place.
@@ -191,8 +203,8 @@
   }
 }
 
-/* Reduced motion, still tier, and overflow collections use natural document height.
-   VoyageScroll measures the chapter bounds, so longer cards remain readable. */
+/* Reduced motion and still tier use natural document height. The bridge measures
+   intrinsic still content, so longer cards remain readable without blank travel. */
 .chapter--approach[data-static="true"] { height: auto; }
 .chapter--approach[data-static="true"] .chapter__pin {
   position: static; height: auto; min-height: 100vh;

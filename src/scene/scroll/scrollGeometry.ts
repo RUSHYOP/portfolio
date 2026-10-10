@@ -1,4 +1,6 @@
 import type { Chapter } from "@/scene/camera/flightPath";
+// Measured section bounds supersede raw normalized scroll progress whenever a chapter
+// uses intrinsic or extended height. The canonical chapter ranges remain unchanged.
 export interface ScrollSegment { startPx: number; endPx: number; start: number; end: number }
 function map(value: number, segments: readonly ScrollSegment[], inverse: boolean): number {
   if (!segments.length) return 0;

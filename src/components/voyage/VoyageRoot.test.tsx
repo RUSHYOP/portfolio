@@ -17,7 +17,8 @@ it("serves one readable hero and intrinsic Services without waiting for a tier o
   expect(html).not.toContain('voyage-root--booting');
   expect(html).not.toContain('min-height:1350vh');
   expect(html).not.toMatch(/class="launch"[^>]*opacity:0/);
-  expect(html).toMatch(/id="approach"[^>]*min-height:150vh/);
+  expect(html).not.toMatch(/id="approach"[^>]*min-height:150vh/);
+  expect(html).toMatch(/id="approach"[^>]*data-static="true"/);
   expect(html).toContain("Book a call");
   expect(html).toContain("See the work");
   expect(html).toContain('href="/projects"');

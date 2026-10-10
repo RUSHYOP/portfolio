@@ -31,16 +31,19 @@ export const CHAPTERS: readonly Chapter[] = [
 
 export const CONTENT_CHAPTERS: readonly Chapter[] = CHAPTERS.filter((c) => !c.micro);
 
-/** Default physical allocation in vh. Intrinsic or extended chapters are mapped through
- * measured scroll segments; canonical progress is not generally scrollY / scroll limit. */
+/** Default physical scroll allocation in vh. With only default section heights,
+ * the track is this allocation plus VOYAGE_TAIL_VH. Chapters with intrinsic or
+ * extended heights are mapped through measured scroll segments; voyage progress
+ * is canonical and is not generally scrollY / document scroll limit. */
 export const VOYAGE_SCROLL_VH = 1250;
 
-/** One final viewport tail makes Surface's measured end equal the true scroll limit.
- * Default chapter offsets equal chapter.start * VOYAGE_SCROLL_VH only when every
- * chapter uses its default allocation; measured geometry is authoritative otherwise. */
+/** The final section includes one extra viewport so its measured end minus this
+ * tail equals the true document scroll limit. Default section offsets equal
+ * chapter.start * VOYAGE_SCROLL_VH only when all default allocations are used;
+ * measured geometry is authoritative once any section differs. */
 export const VOYAGE_TAIL_VH = 100;
 
-/** Default DOM allocation in vh; variable chapters use intrinsic/extended height.
+/** Default DOM allocation in vh; variable chapters may use intrinsic/extended height.
  * The final chapter carries the tail. */
 export function sectionHeightVh(chapter: Chapter): number {
   return (chapter.end - chapter.start) * VOYAGE_SCROLL_VH + (chapter.id === "surface" ? VOYAGE_TAIL_VH : 0);

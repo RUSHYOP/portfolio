@@ -141,6 +141,26 @@ describe("voyageStore.programmatic", () => {
     expect(voyageStore.getState().programmatic).toBe(false);
   });
 
+  it("tick clears an idle expired trip before the next organic Jump crossing", () => {
+    vi.useFakeTimers();
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.9);
+    voyageStore.setScroll(0.19, 0.1);
+    const states: Array<{ progress: number; programmatic: boolean; elapsedMs: number }> = [];
+    voyageStore.subscribe(({ progress, programmatic, elapsedMs }) => {
+      states.push({ progress, programmatic, elapsedMs });
+    });
+
+    vi.advanceTimersByTime(PROGRAMMATIC_TIMEOUT_MS + 1);
+    voyageStore.tick(50);
+    expect(voyageStore.getState().programmatic).toBe(false);
+    expect(voyageStore.getState().elapsedMs).toBe(50);
+    expect(states).toEqual([{ progress: 0.19, programmatic: false, elapsedMs: 50 }]);
+
+    voyageStore.setScroll(0.23, 0.2);
+    expect(states[1]).toMatchObject({ progress: 0.23, programmatic: false });
+  });
+
   it("a later scrollTo replaces the target", () => {
     voyageStore.registerScroller(vi.fn());
     voyageStore.scrollTo(0.5);

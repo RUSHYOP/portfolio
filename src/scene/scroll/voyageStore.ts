@@ -95,7 +95,8 @@ export const voyageStore = {
   tick(dtMs: number): void {
     // NaN/Infinity deltas (a stalled or mis-timed interval) would poison elapsedMs permanently.
     if (!Number.isFinite(dtMs) || dtMs <= 0) return;
-    state = { ...state, elapsedMs: state.elapsedMs + dtMs };
+    // Scroll events may stop before the deadline; the clock still clears a stale trip.
+    state = { ...state, elapsedMs: state.elapsedMs + dtMs, programmatic: resolveProgrammatic(state.progress) };
     emit();
   },
 

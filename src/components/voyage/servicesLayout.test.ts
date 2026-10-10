@@ -90,6 +90,18 @@ describe("panelPose — mobile replacement", () => {
     expect([0, 1, 2].map((i) => panelPose(i, 3, 0).solo)).toEqual([0, 0, 0]);
     expect([0, 1, 2].map((i) => panelPose(i, 3, 0.9).solo)).toEqual([0, 0, 0]);
   });
+
+  it("finishes the final fade inside the mobile pin for counts 1 through 6", () => {
+    const end = 0.56;
+    for (let count = 1; count <= 6; count++) {
+      const last = count - 1;
+      const fadeSpan = ((end - 0.04) / count) * 0.18;
+      expect(panelPose(last, count, end - fadeSpan).solo).toBeCloseTo(1, 10);
+      expect(panelPose(last, count, end - fadeSpan / 2).solo).toBeCloseTo(0.5, 10);
+      expect(panelPose(last, count, end).solo).toBe(0);
+      expect(panelPose(last, count, end + fadeSpan / 2).solo).toBe(0);
+    }
+  });
 });
 
 describe("STATIC_POSE", () => {

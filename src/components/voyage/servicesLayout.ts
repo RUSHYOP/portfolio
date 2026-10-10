@@ -56,6 +56,8 @@ export function panelPose(index: number, count: number, chapterProgress: number)
   let solo = 0;
   if (local > -SOLO_CROSSFADE && local < 1 + SOLO_CROSSFADE) {
     solo = local < 0 ? 1 + local / SOLO_CROSSFADE
+         // The final panel has no successor to overlap, so finish its exit at SOLO_END.
+         : index === n - 1 ? clamp01((1 - local) / SOLO_CROSSFADE)
          : local > 1 ? 1 - (local - 1) / SOLO_CROSSFADE
          : 1;
   }

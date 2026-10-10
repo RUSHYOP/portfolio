@@ -103,6 +103,102 @@
 }
 @keyframes hintPulseMobile { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
 
+/* ====== Approach Vector (ch. 02) ====== */
+/* The pose arrives as four custom properties; this media query, not JS, decides which two
+   of them are in force. Desktop: a staggered arc. Mobile: one panel at a time. */
+.services { display: flex; align-items: stretch; gap: clamp(1rem, 2vw, 1.75rem); width: 100%; }
+.service-panel {
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+  padding: clamp(1.25rem, 2vw, 2rem);
+  opacity: var(--dock);
+  transform: translateY(calc((1 - var(--dock)) * 48px - var(--arc) * 26px))
+             rotate(calc(var(--tilt) * 1.1deg));
+  will-change: transform, opacity;
+}
+.service-panel:focus-visible { outline: 2px solid var(--white); outline-offset: 3px; }
+@media (min-width: 768px) {
+  /* Keyboard focus can reach a panel before its scroll dock has begun. Reveal that panel
+     for the duration of focus so its content and focus ring are readable. */
+  .service-panel:focus-visible {
+    opacity: 1; transform: none;
+  }
+}
+.service-panel__index {
+  font-family: var(--font-jetbrains-mono), monospace; font-size: 0.62rem; letter-spacing: 0.2em;
+  color: var(--gray-dark); margin: 0 0 0.9rem;
+}
+.service-panel__title {
+  font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
+  font-size: clamp(1.15rem, 1.8vw, 1.6rem); font-weight: 500; letter-spacing: -0.01em;
+  line-height: 1.15; margin: 0 0 0.75rem;
+}
+.service-panel__promise {
+  font-size: 0.95rem; line-height: 1.6; color: var(--gray-light); margin: 0 0 1.25rem;
+}
+.service-panel__outcomes {
+  list-style: none; padding: 0; margin: 0 0 1.25rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.service-panel__outcomes li {
+  position: relative; padding-left: 1rem; font-size: 0.88rem; line-height: 1.5; color: var(--gray-mid);
+}
+.service-panel__outcomes li::before {
+  content: ""; position: absolute; left: 0; top: 0.65em; width: 6px; height: 1px;
+  background: rgba(255, 255, 255, 0.45);
+}
+.service-panel__engagement {
+  margin: auto 0 0; font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.66rem; letter-spacing: 0.12em; color: var(--gray-dark);
+}
+.service-panel__engagement span {
+  display: block; margin-bottom: 0.3rem; opacity: 0.6; text-transform: uppercase;
+}
+
+/* Mobile: a 64vh pin is stationary for 86vh of the 150vh section — chapterProgress 0..0.573,
+   which is where servicesLayout's replacement windows end. Three full panels cannot stack
+   inside one phone viewport, so they replace one another in place.
+
+   The pin keeps .chapter__pin's `top: 0`, so the panel sits in the upper two-thirds with
+   empty track beneath it. Do NOT add a `top` offset to compensate: the sticky hold is
+   `section − top − height`, so `top: 18vh` would cut it from 86vh to 68vh (chapterProgress
+   0.453) and push the replacement windows' 0.56 end outside the pin. Adjust the panel's own
+   internal padding instead. */
+@media (max-width: 767px) {
+  .chapter--approach .chapter__pin { height: 64vh; }
+  .services { position: relative; flex: 1 1 auto; }
+  .service-panel {
+    position: absolute; inset: 0; overflow-y: auto;
+    opacity: var(--solo); transform: none;
+  }
+  /* Fully faded panels still overlap the active panel. Hide them from pointer and keyboard
+     navigation, and stop sampling their backdrop blur. The focused, visible panel remains
+     keyboard scrollable when its content is taller than the pin. */
+  .service-panel[data-solo-off="true"] {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+/* Reduced motion / still tier: no pin, no scroll-derived motion — the panels just flow.
+   The section height stays a fixed 150vh on every tier (VoyageScroll derives progress and
+   drives scrollTo from `scrollHeight − innerHeight`, so `height: auto` here would land every
+   dock and rail link after Approach short). 2rem of padding rather than 6rem keeps the
+   stacked column inside 150vh at 390x844; `mobile-still.png` in Task 10 Step 3 is the
+   evidence. Nothing clips either way — no ancestor sets `overflow: hidden`. */
+.chapter--approach[data-static="true"] .chapter__pin {
+  position: static; height: auto; min-height: 100vh;
+  padding-top: 2rem; padding-bottom: 2rem;
+}
+.chapter--approach[data-static="true"] .service-panel {
+  position: static; inset: auto; opacity: 1; transform: none;
+  visibility: visible; pointer-events: auto;
+}
+@media (max-width: 767px) {
+  .chapter--approach[data-static="true"] .services { flex-direction: column; }
+}
+
 /* ====== CTA ====== */
 .cta {
   display: inline-flex; align-items: center; gap: 0.6rem;

@@ -11,6 +11,8 @@ export interface VoyageState {
   distanceAU: number;
   /** Wall-clock ms since the voyage mounted (drives the T+ readout). */
   elapsedMs: number;
+  /** True while a scrollTo() is travelling to its target, for chapter-edge detectors. */
+  programmatic: boolean;
 }
 
 type Listener = (state: VoyageState) => void;
@@ -29,6 +31,24 @@ export function normalizeVelocity(pxPerFrame: number): number {
   return clamp01(Math.abs(pxPerFrame) / VELOCITY_NORMALIZER);
 }
 
+/** How close a scroll must land to the target before the flag clears. */
+export const PROGRAMMATIC_EPS = 0.002;
+
+/** Hard ceiling for a programmatic scroll whose animation stalls or is interrupted. */
+export const PROGRAMMATIC_TIMEOUT_MS = 2000;
+
+let programmaticTarget: number | null = null;
+let programmaticDeadlineMs = 0;
+
+function resolveProgrammatic(progress: number): boolean {
+  if (programmaticTarget === null) return false;
+  if (Math.abs(progress - programmaticTarget) < PROGRAMMATIC_EPS || Date.now() >= programmaticDeadlineMs) {
+    programmaticTarget = null;
+    return false;
+  }
+  return true;
+}
+
 function initialState(): VoyageState {
   return {
     progress: 0,
@@ -37,6 +57,7 @@ function initialState(): VoyageState {
     chapterProgress: 0,
     distanceAU: distanceAU(0),
     elapsedMs: 0,
+    programmatic: false,
   };
 }
 
@@ -63,9 +84,11 @@ export const voyageStore = {
   setScroll(progress: number, velocity01: number): void {
     const p = clamp01(progress);
     const v = clamp01(velocity01);
-    if (p === state.progress && v === state.velocity) return;
+    // A target or timeout can clear the flag even when progress and velocity match.
+    const programmatic = resolveProgrammatic(p);
+    if (p === state.progress && v === state.velocity && programmatic === state.programmatic) return;
     const { chapter, chapterProgress } = chapterAt(p);
-    state = { ...state, progress: p, velocity: v, chapter, chapterProgress, distanceAU: distanceAU(p) };
+    state = { ...state, progress: p, velocity: v, chapter, chapterProgress, distanceAU: distanceAU(p), programmatic };
     emit();
   },
 
@@ -87,7 +110,17 @@ export const voyageStore = {
   },
 
   scrollTo(progress: number): void {
-    scroller?.(clamp01(progress));
+    if (!scroller) return;
+    const p = clamp01(progress);
+    // No scroll event will arrive if the reader is already at the destination.
+    if (Math.abs(p - state.progress) < PROGRAMMATIC_EPS) { scroller(p); return; }
+    programmaticTarget = p;
+    programmaticDeadlineMs = Date.now() + PROGRAMMATIC_TIMEOUT_MS;
+    if (!state.programmatic) {
+      state = { ...state, programmatic: true };
+      emit();
+    }
+    scroller(p);
   },
 
   /** Test-only: clears listeners as well as state. */
@@ -95,5 +128,7 @@ export const voyageStore = {
     state = initialState();
     listeners.clear();
     scroller = null;
+    programmaticTarget = null;
+    programmaticDeadlineMs = 0;
   },
 };

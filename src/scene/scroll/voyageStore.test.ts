@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { voyageStore, normalizeVelocity, VELOCITY_NORMALIZER } from "./voyageStore";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { voyageStore, normalizeVelocity, VELOCITY_NORMALIZER, PROGRAMMATIC_EPS, PROGRAMMATIC_TIMEOUT_MS } from "./voyageStore";
 
 beforeEach(() => voyageStore.reset());
+afterEach(() => vi.useRealTimers());
 
 describe("voyageStore", () => {
   it("starts at launch with zero progress", () => {
@@ -108,5 +109,78 @@ describe("normalizeVelocity", () => {
     expect(normalizeVelocity(-VELOCITY_NORMALIZER / 2)).toBe(0.5);
     expect(normalizeVelocity(1000)).toBe(1);
     expect(normalizeVelocity(NaN)).toBe(0);
+  });
+});
+
+describe("voyageStore.programmatic", () => {
+  it("is false at rest", () => {
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
+  it("scrollTo arms the flag and setScroll clears it within EPS of the target", () => {
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.5);
+    expect(voyageStore.getState().programmatic).toBe(true);
+
+    voyageStore.setScroll(0.3, 0.6);
+    expect(voyageStore.getState().programmatic).toBe(true);
+
+    voyageStore.setScroll(0.5 - PROGRAMMATIC_EPS / 2, 0.1);
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
+  it("clears on the wall-clock timeout when the scroller never reaches the target", () => {
+    vi.useFakeTimers();
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.9);
+    voyageStore.setScroll(0.3, 0.6);
+    expect(voyageStore.getState().programmatic).toBe(true);
+
+    vi.advanceTimersByTime(PROGRAMMATIC_TIMEOUT_MS + 1);
+    voyageStore.setScroll(0.31, 0.6);
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
+  it("a later scrollTo replaces the target", () => {
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.5);
+    voyageStore.scrollTo(0.84);
+    voyageStore.setScroll(0.5, 0.4);
+    expect(voyageStore.getState().programmatic).toBe(true);
+    voyageStore.setScroll(0.84, 0.05);
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
+  it("does not arm without a registered scroller (nothing will move)", () => {
+    voyageStore.scrollTo(0.5);
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
+  it("does not arm when the reader is already at the target", () => {
+    const scroller = vi.fn();
+    voyageStore.registerScroller(scroller);
+    voyageStore.scrollTo(voyageStore.getState().progress);
+    expect(voyageStore.getState().programmatic).toBe(false);
+    expect(scroller).toHaveBeenCalledTimes(1);
+  });
+
+  it("emits the flag to subscribers", () => {
+    const cb = vi.fn();
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.subscribe(cb);
+    voyageStore.scrollTo(0.5);
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb.mock.calls[0][0].programmatic).toBe(true);
+    voyageStore.setScroll(0.5, 0);
+    expect(cb.mock.calls[1][0].programmatic).toBe(false);
+  });
+
+  it("reset() disarms a scroll in flight", () => {
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.5);
+    voyageStore.reset();
+    expect(voyageStore.getState().programmatic).toBe(false);
+    voyageStore.setScroll(0.3, 0.2);
+    expect(voyageStore.getState().programmatic).toBe(false);
   });
 });

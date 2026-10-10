@@ -215,4 +215,24 @@ describe("WarpStreaks — chapter 03", () => {
     const p = streaks.geometry.getAttribute("position").array as Float32Array;
     expect(Math.hypot(p[0], p[1])).toBeCloseTo(Math.hypot(p[3], p[4]), 5);
   });
+
+  // Fix pass 1: chapterProgress never reaches 1 inside [0.20, 0.22), so a per-frame converge
+  // reset snapped every head from ~0.45r to r on the first orbit frame (a visible flare).
+  it("relaxes the convergence on Jump exit instead of snapping it open", () => {
+    const scene = new THREE.Scene();
+    const streaks = new WarpStreaks();
+    streaks.build(scene, "mid");
+    voyageStore.setScroll(0.219, 0); // chapterProgress ~0.95, the last in-band frame
+    expect(voyageStore.getState().chapter.id).toBe("jump");
+    streaks.update(makeFrame());
+    voyageStore.setScroll(0.221, 0);
+    expect(voyageStore.getState().chapter.id).toBe("orbit");
+    streaks.update(makeFrame());
+
+    const p = streaks.geometry.getAttribute("position").array as Float32Array;
+    const headR = Math.hypot(p[0], p[1]);
+    const tailR = Math.hypot(p[3], p[4]);
+    expect(tailR).toBeGreaterThan(0);
+    expect(headR / tailR).toBeLessThan(0.9); // still converged, not snapped back to 1
+  });
 });

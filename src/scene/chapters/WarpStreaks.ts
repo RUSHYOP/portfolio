@@ -75,6 +75,8 @@ export class WarpStreaks implements SetPiece {
   private positions: Float32Array = new Float32Array(0);
   private scene: THREE.Scene | null = null;
   private length = streakLength(0);
+  // Fix pass 1: head convergence persists across frames so it can ease out after the Jump.
+  private converge = 0;
   // Re-created in build() so a rebuild reproduces exactly the same layout.
   private rand: () => number = mulberry32(STREAK_SEED);
 
@@ -100,6 +102,7 @@ export class WarpStreaks implements SetPiece {
     this.heads = new Float32Array(n * 3);
     this.positions = new Float32Array(n * 6);
     this.length = streakLength(0);
+    this.converge = 0;
     this.rand = mulberry32(STREAK_SEED);
     // Heads are placed in the corridor ahead of the origin: the flight starts at
     // CAMERA_WAYPOINTS[0] (0,0,0), and update() recycles camera-relative from there on.
@@ -141,12 +144,15 @@ export class WarpStreaks implements SetPiece {
     // Chapter 03: direct chapterProgress assignment through max(), never the dt*6 ease
     // (tau ~0.17s barely reaches two time constants inside a 25vh beat). max() keeps both
     // ends continuous with the velocity curves and floors the tunnel if the reader stalls.
-    let converge = 0;
+    // Converge decays through the same ease as length so the tunnel relaxes instead of snapping
+    // open on the first frame after the band (chapterProgress never reaches 1 inside [0.20, 0.22)).
+    this.converge += (0 - this.converge) * Math.min(1, ctx.dt * 6);
+    // Accepted asymmetry: scrolling backward inside the band, length/converge only fall via this ease.
     if (ctx.voyage.chapter.id === "jump") {
       const t = ctx.voyage.chapterProgress;
       this.length = Math.max(this.length, hyperLength(t));
       this.material.opacity = Math.max(this.material.opacity, hyperOpacity(t) * ctx.ignite);
-      converge = hyperConverge(t);
+      this.converge = Math.max(this.converge, hyperConverge(t));
     }
     const camZ = ctx.camera.position.z;
     const n = this.count;
@@ -155,7 +161,7 @@ export class WarpStreaks implements SetPiece {
       if (this.heads[zi] > camZ + BEHIND) this.heads[zi] = camZ - AHEAD + this.rand() * 10;
       if (this.heads[zi] < camZ - AHEAD - 20) this.heads[zi] = camZ - this.rand() * AHEAD;
     }
-    this.writePositions(converge); // 0 outside the Jump, so other chapters are unchanged
+    this.writePositions(this.converge); // eases to 0 after the Jump; 0 in chapters never near it
     (this._geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
   }
 

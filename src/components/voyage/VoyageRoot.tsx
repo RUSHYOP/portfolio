@@ -117,7 +117,7 @@ export default function VoyageRoot({ settings, services, process }: VoyageRootPr
   return (
     <div className="voyage-root" data-tier={tier ?? "pending"} data-jump={jumpLetterbox ? "true" : undefined}>
       <VoyageScroll smooth={animated} />
-      {tier && tier !== "still" ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
+      {tier && tier !== "still" ? <SceneRoot tier={tier} ignite={ignited} processCount={process.length} onContextLost={onContextLost} /> : <StillSky />}
 
       {/* Ignition clears its own state on finish, independently from the Jump hold. */}
       <Letterbox active={animated && (letterbox || jumpLetterbox)} />

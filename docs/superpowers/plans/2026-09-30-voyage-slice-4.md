@@ -44,7 +44,7 @@ For N steps, Orbit local progress covers N+1 viewports; step phase uses `chapter
 
 | File | Responsibility |
 |---|---|
-| `src/scene/scroll/scrollGeometry.ts` + `.test.ts` | Pure physical/canonical piecewise mapping |
+| `src/scene/scroll/scrollGeometry.ts` + `.test.ts`, `scrollGeometry.dom.test.ts` | Physical/canonical mapping and measured DOM boundaries |
 | `src/scene/scroll/VoyageScroll.tsx` | Root-local DOM measurement and bridge conversion |
 | `src/components/voyage/orbitPhase.ts` + `.test.ts` | Count-safe shared step/angle/fade math |
 | `src/components/voyage/Process.tsx` + `.test.tsx` | CMS narrowing, sticky animated panel / static ordered list |
@@ -57,7 +57,7 @@ For N steps, Orbit local progress covers N+1 viewports; step phase uses `chapter
 
 ## Task 1: Preserve chapter alignment with variable physical lengths
 
-**Files:** Create `src/scene/scroll/scrollGeometry.ts`, `src/scene/scroll/scrollGeometry.test.ts`; modify `src/scene/scroll/VoyageScroll.tsx`, and update the progress comment in `src/scene/scroll/voyageStore.ts`.
+**Files:** Create `src/scene/scroll/scrollGeometry.ts`, `src/scene/scroll/scrollGeometry.test.ts`; create `src/scene/scroll/scrollGeometry.dom.test.ts`; modify `src/scene/scroll/VoyageScroll.tsx`, `src/components/voyage/VoyageRoot.tsx`, and allocation comments in `src/scene/camera/flightPath.ts` / `src/scene/scroll/voyageStore.ts`.
 
 **Interfaces:** `ScrollSegment { startPx; endPx; start; end }`; `toVoyage(y, segments): number`; `toScroll(progress, segments): number`. DOM IDs remain chapter IDs. Store, camera, rail and dock keep their current public interfaces.
 
@@ -110,6 +110,7 @@ describe("physical/canonical geometry", () => {
 - [ ] Run `npx vitest run src/scene/scroll/scrollGeometry.test.ts`; expect missing-module failure. Implement the complete module:
 
 ```ts
+import type { Chapter } from "@/scene/camera/flightPath";
 export interface ScrollSegment { startPx: number; endPx: number; start: number; end: number }
 function map(value: number, segments: readonly ScrollSegment[], inverse: boolean): number {
   if (!segments.length) return 0;
@@ -128,21 +129,76 @@ function map(value: number, segments: readonly ScrollSegment[], inverse: boolean
 }
 export const toVoyage = (y: number, segments: readonly ScrollSegment[]) => map(y, segments, false);
 export const toScroll = (p: number, segments: readonly ScrollSegment[]) => map(p, segments, true);
+export function measureScrollSegments(track: HTMLElement | null, chapters: readonly Chapter[], scrollY: number, viewportHeight: number): ScrollSegment[] {
+  return chapters.flatMap(c => {
+    const element = track?.querySelector<HTMLElement>(`#${c.id}`);
+    if (!element) return [];
+    const rect = element.getBoundingClientRect();
+    const startPx = rect.top + scrollY;
+    return [{ startPx, endPx: startPx + rect.height - (c.id === "surface" ? viewportHeight : 0), start: c.start, end: c.end }];
+  });
+}
 ```
 
-- [ ] Integrate into the existing bridge, preserving Slice 3's programmatic completion logic. Add imports for `CHAPTERS`, `toScroll`, `toVoyage`, `ScrollSegment`. At the top of the existing effect, before Lenis/native branch selection, insert:
+- [ ] Add `src/scene/scroll/scrollGeometry.dom.test.ts`. This tests the actual measurement helper at two viewport heights, with a nonzero document origin and restored scroll, including an intrinsic one-step still section shorter than its old allocation:
+
+```ts
+// @vitest-environment jsdom
+import { afterEach, expect, it, vi } from "vitest";
+import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
+import { measureScrollSegments, toScroll, toVoyage } from "./scrollGeometry";
+afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); });
+it.each([900, 844])("measures boundaries and the Surface tail at viewport height %i", viewport => {
+  for (const orbitPx of [150 * viewport / 100, 500 * viewport / 100, 180]) {
+    const track = document.createElement("main");
+    track.className = "voyage-track";
+    document.body.replaceChildren(track);
+    const restoredY = 333;
+    let offset = 37;
+    for (const chapter of CHAPTERS) {
+      const section = document.createElement("section"); section.id = chapter.id;
+      const height = chapter.id === "orbit" ? orbitPx : sectionHeightVh(chapter) * viewport / 100;
+      const documentTop = offset;
+      vi.spyOn(section, "getBoundingClientRect").mockReturnValue(new DOMRect(0, documentTop - restoredY, 390, height));
+      track.appendChild(section); offset += height;
+    }
+    const actualDocumentScrollLimit = offset - viewport;
+    const segments = measureScrollSegments(track, CHAPTERS, restoredY, viewport);
+    for (const segment of segments) {
+      expect(toScroll(segment.start, segments)).toBeCloseTo(segment.startPx, 8);
+      expect(toVoyage(segment.startPx, segments)).toBeCloseTo(segment.start, 8);
+      const navTarget = toScroll(segment.start + .001, segments);
+      expect(navTarget).toBeGreaterThan(segment.startPx);
+      expect(navTarget).toBeLessThan(segment.endPx);
+    }
+    expect(segments.at(-1)!.endPx).toBeCloseTo(actualDocumentScrollLimit, 8);
+    expect(toVoyage(actualDocumentScrollLimit, segments)).toBe(1);
+    expect(toScroll(1, segments)).toBeCloseTo(actualDocumentScrollLimit, 8);
+  }
+});
+it("reclassifies an exact measured boundary as the next chapter", () => {
+  const track = document.createElement("main");
+  const orbit = document.createElement("section"); orbit.id = "orbit";
+  const worlds = document.createElement("section"); worlds.id = "worlds";
+  track.append(orbit, worlds);
+  vi.spyOn(orbit, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 200, 390, 4220));
+  vi.spyOn(worlds, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 4420, 390, 1899));
+  const segments = measureScrollSegments(track, CHAPTERS.filter(c => c.id === "orbit" || c.id === "worlds"), 100, 844);
+  expect(toVoyage(4520, segments)).toBe(.34);
+  expect(toScroll(.34, segments)).toBe(4520);
+  expect(toScroll(.221, segments)).toBeCloseTo(300 + 4220 * (.001 / .12), 8);
+});
+```
+
+Run `npx vitest run src/scene/scroll/scrollGeometry.test.ts src/scene/scroll/scrollGeometry.dom.test.ts`; expect pass after implementation. The mocked DOM test verifies measurement math; Task 5 separately verifies the real browser document scroll limit so CSS trailing space cannot hide behind the fixture.
+
+- [ ] Integrate into the existing bridge, preserving Slice 3's programmatic completion logic. Add imports for `CHAPTERS`, `toScroll`, `toVoyage`, `measureScrollSegments`, `ScrollSegment`. At the top of the existing effect, before Lenis/native branch selection, insert:
 
 ```ts
 const track = document.querySelector<HTMLElement>(".voyage-track");
 let segments: ScrollSegment[] = [];
 const measure = () => {
-  segments = CHAPTERS.flatMap(c => {
-    const element = track?.querySelector<HTMLElement>(`#${c.id}`);
-    if (!element) return [];
-    const rect = element.getBoundingClientRect();
-    const startPx = rect.top + window.scrollY;
-    return [{ startPx, endPx: startPx + rect.height - (c.id === "surface" ? window.innerHeight : 0), start: c.start, end: c.end }];
-  });
+  segments = measureScrollSegments(track, CHAPTERS, window.scrollY, window.innerHeight);
   voyageStore.setScroll(toVoyage(window.scrollY, segments), 0);
 };
 measure();
@@ -175,7 +231,48 @@ window.scrollTo({ top: toScroll(p, segments), behavior: "auto" });
 
 Call `cleanupGeometry()` in both existing branch cleanup functions. Remove `maxScroll()` if now unused. Keep actual physical velocity unchanged; only the timeline mapping changes. The measure callback reseeds canonical state on resize/content reflow. It must not call `scrollTo`, arm programmatic navigation, or restart Lenis.
 
-- [ ] Run `npx vitest run src/scene/scroll/scrollGeometry.test.ts src/scene/scroll/voyageStore.test.ts src/scene/camera/flightPath.test.ts` and `npm run typecheck`; expect pass. Record in the source comment that measured mapping supersedes raw normalized progress for non-default allocations. Commit only these files with `feat: map voyage progress to measured chapter layout`.
+- [ ] Now that measured mapping exists, remove Slice 3's deliberate fixed-height limitation for still Services. In `Services.tsx` use `style={still ? undefined : { height: `${sectionHeightVh(chapter)}vh` }}` on the Approach section. Keep the existing `data-static` selector's intrinsic `.chapter__pin` rules. Update its obsolete fixed-150vh comment to say the bridge measures intrinsic still content. Add `tabIndex={still ? 0 : undefined}` to its static reader wrapper when pending SSR bounds its overflow. Animated Approach geometry stays unchanged.
+
+Add a Services DOM test with six real-shaped Item fixtures and maximum legal title/promise/outcomes/engagement: still Approach has `style.height === ""`, all six titles occur once, and none is hidden/inert. In the browser, with N=6 and long text at 390×844/200% zoom, compare `approach.getBoundingClientRect().bottom` with the next section top (within 2px); no overflow may cover Jump/Orbit. Also verify the **active animated mobile** service panel is focusable/scrollable for full long copy and every inactive overlapping panel uses the controller’s Slice 3 `visibility:hidden` gate, which removes it from keyboard/pointer access and the accessibility tree; inert is an alternative, not an additional requirement.
+
+- [ ] Preserve readable desktop Services for legal large arrays. Keep the approved shallow arc when N≤3. For N>3 choose one bounded horizontal strip with readable-width cards on both screen sizes: add `const many = services.length > 3`, `data-many={many ? "true" : undefined}` to Approach, and use `STATIC_POSE` when `still || many`. The `.services` wrapper gets `role={many ? "region" : undefined}`, `aria-label={many ? "Services" : undefined}`, `tabIndex={many ? 0 : undefined}`. Preserve Slice 3’s existing `tabIndex={0}` on animated service cards for both N≤3 and many; static-card tabindex is optional; no solo visibility/pointer suppression applies in many mode. Ordinary N≤3 keeps the controller's active-mobile-panel gates. Add:
+
+```css
+.chapter--approach:not([data-static="true"])[data-many="true"] .services { display:flex; flex-wrap:nowrap; gap:1.25rem; overflow-x:auto; align-items:stretch; }
+.chapter--approach:not([data-static="true"])[data-many="true"] .service-panel { position:relative; inset:auto; flex:0 0 min(80vw,380px); min-width:min(80vw,320px); max-height:52vh; overflow-y:auto; opacity:1; transform:none; pointer-events:auto; }
+.chapter--approach[data-static="true"] .services { display:grid; grid-template-columns:1fr; }
+.chapter--approach .services:focus-visible, .chapter--approach .service-panel:focus-visible { outline:2px solid white; outline-offset:3px; }
+```
+
+Add N=6 and N=10 long-copy browser cases at 1440×900 and 390×844: every title remains readable at ≥320px card width on desktop, horizontally offscreen cards scroll into view when tab-focused, long body text scrolls within the active card, and no record is dropped. N=3 retains the original arc and its browser baseline. Still N=6/N=10 remains a natural vertical list and downstream chapter bounds do not overlap.
+
+- [ ] Remove the fixed minimum from the root track **in this task**, before any intrinsic-height Process is wired. Replace only its opening element:
+
+```tsx
+<main className="voyage-track">
+```
+
+Remove `VOYAGE_SCROLL_VH` and `VOYAGE_TAIL_VH` imports from VoyageRoot if no other references remain. Keep every default chapter allocation, including Surface's tail. Replace the old root track comment with `Measured child sections determine document travel; Surface includes one final viewport tail.` Do not add an equivalent CSS min-height: N=1 still content can be shorter than the former allocation and must not create blank travel after Surface.
+
+Update the two allocation comments in `flightPath.ts` (constants/function bodies unchanged):
+
+```ts
+/** Default physical scroll allocation in vh. With only default section heights,
+ *  the track is this allocation plus VOYAGE_TAIL_VH. Chapters with intrinsic or
+ *  extended heights are mapped through measured scroll segments; voyage progress
+ *  is canonical and is not generally scrollY / document scroll limit. */
+export const VOYAGE_SCROLL_VH = 1250;
+
+/** The final section includes one extra viewport so its measured end minus this
+ *  tail equals the true document scroll limit. Default section offsets equal
+ *  chapter.start * VOYAGE_SCROLL_VH only when all default allocations are used;
+ *  measured geometry is authoritative once any section differs. */
+export const VOYAGE_TAIL_VH = 100;
+```
+
+Also update the `sectionHeightVh` docstring to `Default DOM allocation in vh; variable chapters may use intrinsic/extended height. The final chapter carries the tail.` The existing default-allocation unit tests remain valid and should retain that explicit scope in their comments.
+
+- [ ] Run `npx vitest run src/scene/scroll/scrollGeometry.test.ts src/scene/scroll/scrollGeometry.dom.test.ts src/scene/scroll/voyageStore.test.ts src/scene/camera/flightPath.test.ts` and `npm run typecheck`; expect pass. Record in the source comment that measured mapping supersedes raw normalized progress for non-default allocations. Commit only these files with `feat: map voyage progress to measured chapter layout`.
 
 ## Task 2: Data-driven process panels and shared orbital phase
 
@@ -225,7 +322,8 @@ export function orbitPhase(progress: number, count: number) {
 
 ```tsx
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import Process from "./Process";
 import { voyageStore } from "@/scene/scroll/voyageStore";
@@ -253,12 +351,63 @@ it("handles empty content without an empty heading", () => {
   render(<Process steps={[]} animated />);
   expect(screen.queryByRole("heading")).toBeNull();
 });
+it("keeps reader identity and focus while resetting its scroll on a step change", () => {
+  voyageStore.setScroll(.22 + .12 * (.5 / 3), 0);
+  render(<Process steps={steps} animated />);
+  const reader = screen.getByRole("region", { name: "Process step details" });
+  reader.focus(); reader.scrollTop = 120;
+  act(() => voyageStore.setScroll(.22 + .12 * (1.5 / 3), 0));
+  expect(screen.getByRole("region", { name: "Process step details" })).toBe(reader);
+  expect(document.activeElement).toBe(reader);
+  expect(reader.scrollTop).toBe(0);
+  expect(screen.getByRole("heading", { name: "Build" })).toBeTruthy();
+});
+it("keeps disclosure keyboard order stable with no hidden reader focus stop", async () => {
+  const user = userEvent.setup();
+  render(<><Process steps={steps} animated /><button type="button">After Orbit</button></>);
+  const toggle = screen.getByRole("button", { name: "Read all steps" });
+  await user.click(toggle);
+  expect(document.activeElement).toBe(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(screen.queryByRole("region", { name: "Process step details" })).toBeNull();
+  const reader = document.querySelector<HTMLElement>(".process__reader")!;
+  expect(reader.hidden).toBe(true); expect(reader.tabIndex).toBe(-1); expect(reader.hasAttribute("inert")).toBe(true);
+  const all = screen.getByRole("region", { name: "All process steps" });
+  expect(screen.getAllByRole("heading", { level: 3 }).map(x => x.textContent)).toEqual(["Discover", "Build"]);
+  await user.tab(); expect(document.activeElement).toBe(all);
+  await user.tab(); expect(document.activeElement).toBe(screen.getByRole("button", { name: "After Orbit" }));
+  await user.tab({ shift: true }); expect(document.activeElement).toBe(all);
+  await user.tab({ shift: true }); expect(document.activeElement).toBe(toggle);
+  await user.keyboard("{Enter}");
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(document.activeElement).toBe(toggle);
+  expect(screen.queryByRole("region", { name: "All process steps" })).toBeNull();
+  await user.tab(); expect(document.activeElement).toBe(reader);
+});
+it("renders the last maximum-length step in the all-steps region", async () => {
+  const user = userEvent.setup();
+  const longSteps = steps.map((step, index) => ({ ...step, what: `${index}:` + "w".repeat(598), deliverable: "d".repeat(400), duration: "t".repeat(40) }));
+  render(<Process steps={longSteps} animated />);
+  await user.click(screen.getByRole("button", { name: "Read all steps" }));
+  const all = screen.getByRole("region", { name: "All process steps" });
+  expect(all.textContent).toContain(longSteps[1].what);
+  expect(all.querySelectorAll("article")).toHaveLength(2);
+});
+it("keeps one-step still content intrinsic and unpinned", () => {
+  render(<Process steps={steps.slice(0, 1)} animated={false} />);
+  const section = document.getElementById("orbit")!;
+  expect(section.style.height).toBe("");
+  expect(section.querySelector(".chapter__pin")).toBeNull();
+  expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(1);
+});
+
 ```
 
 - [ ] Run `npx vitest run src/components/voyage/Process.test.tsx`; expect missing-module failure. Add full component:
 
 ```tsx
 "use client";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { Item } from "@/lib/collections/defineCollection";
 import { useVoyage } from "@/scene/scroll/useVoyage";
 import { orbitHeightVh, orbitPhase } from "./orbitPhase";
@@ -278,8 +427,13 @@ function Step({ step, index }: { step: Item; index: number }) {
 }
 export default function Process({ steps, animated }: { steps: Item[]; animated: boolean }) {
   const voyage = useVoyage();
+  const readerRef = useRef<HTMLDivElement>(null);
+  const [allOpen, setAllOpen] = useState(false);
   const local = voyage.chapter.id === "orbit" ? voyage.chapterProgress : voyage.progress < .22 ? 0 : 1;
   const phase = orbitPhase(local, steps.length);
+  useLayoutEffect(() => {
+    if (readerRef.current) readerRef.current.scrollTop = 0;
+  }, [phase.index]);
   if (!steps.length) return <section id="orbit" className="chapter" style={{ height: "150vh" }} />;
   return <section id="orbit" aria-labelledby="process-heading"
     className={`chapter process ${animated ? "process--animated" : "process--still"}`}
@@ -289,15 +443,20 @@ export default function Process({ steps, animated }: { steps: Item[]; animated: 
         <p className="chapter__label">04 / ORBIT</p>
         <h2 id="process-heading">How we get there</h2>
         <p className="process__count">{String(phase.index + 1).padStart(2, "0")} / {String(steps.length).padStart(2, "0")}</p>
-        <div key={phase.index} className="process__reader" role="region" aria-label="Process step details" tabIndex={0}>
+        <button type="button" className="process__all-toggle" aria-expanded={allOpen}
+          aria-controls="process-all-steps" onClick={() => setAllOpen(open => !open)}>
+          {allOpen ? "Return to current step" : "Read all steps"}
+        </button>
+        <div ref={readerRef} className="process__reader" role="region" aria-label="Process step details"
+          hidden={allOpen} inert={allOpen} tabIndex={allOpen ? -1 : 0}>
           <div style={{ opacity: phase.fade, transform: `translateY(${12 * (1 - phase.fade)}px)` }}>
             <Step step={steps[phase.index]} index={phase.index} />
           </div>
         </div>
-        <details className="process__all">
-          <summary>Read all steps</summary>
+        <div id="process-all-steps" className="process__all" role="region" aria-label="All process steps"
+          hidden={!allOpen} inert={!allOpen} tabIndex={allOpen ? 0 : -1}>
           <ol>{steps.map((step, index) => <li key={step.id}><Step step={step} index={index} /></li>)}</ol>
-        </details>
+        </div>
       </div>
     </div> : <div className="process__static">
       <p className="chapter__label">04 / ORBIT</p>
@@ -308,34 +467,32 @@ export default function Process({ steps, animated }: { steps: Item[]; animated: 
 }
 ```
 
-The native details offers keyboard/screen-reader access to all steps without scroll choreography. Its open panel must be independently scrollable; do not make each changing step a live region. Key the reader by index so each newly selected step starts at scrollTop=0. Browser-check keyboard focus during a step transition; the all-steps details remains the stable alternative for keyboard reading.
-
+The disclosure is inline, not an overlay. The stable toggle always precedes the one visible scroll region; the inactive region is hidden and inert. Opening/closing retains focus on the toggle, and Tab reaches the visible region then leaves the chapter normally. Both regions contain text, not synthetic tab stops per paragraph. The current reader is never keyed/remounted: an index-change layout effect resets its scrollTop while preserving focus and DOM identity. No live region announces continuous scroll changes. All steps remain in the disclosure for screen-reader browse mode and keyboard scrolling.
 - [ ] Append CSS:
 
 ```css
 .process h2 { font-family: "Styrene A", var(--font-space-grotesk), sans-serif; font-size: clamp(2rem,4vw,3.5rem); font-weight:500; line-height:1.08; }
 .process h3 { font-size:clamp(1.35rem,2vw,2rem); font-weight:500; margin:0 0 1rem; }
 .process__pin { padding-top:90px; padding-bottom:60px; }
-.process__content { width:min(46%,580px); margin-left:auto; position:relative; }
+.process__content { width:min(46%,580px); margin-left:auto; height:min(680px,calc(100dvh - 170px)); min-height:0; display:flex; flex-direction:column; }
+.process__content > .chapter__label, .process__content > h2, .process__count, .process__all-toggle { flex-shrink:0; }
+.process [hidden] { display:none!important; }
 .process__count { font-family:var(--font-jetbrains-mono),monospace; color:#a3a3a3; font-size:.75rem; margin:1rem 0; }
-.process__reader { max-height:52vh; overflow:auto; overscroll-behavior:contain; border-radius:20px; }
-.process__reader:focus-visible, .process__all summary:focus-visible { outline:2px solid white; outline-offset:3px; }
+.process__reader, .process__all { flex:1 1 0; min-height:0; overflow:auto; overscroll-behavior:contain; border-radius:20px; }
+.process__reader:focus-visible, .process__all:focus-visible, .process__all-toggle:focus-visible { outline:2px solid white; outline-offset:3px; }
 .process__panel { padding:clamp(1.25rem,2vw,2rem); }
 .process__panel dt { font-family:var(--font-jetbrains-mono),monospace; text-transform:uppercase; letter-spacing:.12em; color:#a3a3a3; font-size:.7rem; margin-top:1rem; }
 .process__panel dd { margin:.4rem 0 0; font-size:1.05rem; line-height:1.7; overflow-wrap:anywhere; white-space:pre-line; }
 .process ol { list-style:none; margin:0; padding:0; }
-.process__all { margin-top:1rem; font-size:.85rem; }
-.process__all summary { cursor:pointer; width:fit-content; }
-.process__all[open] { position:absolute; inset:0; z-index:3; padding:1rem; background:#0a0a0a; border:1px solid #333; border-radius:20px; overflow:auto; overscroll-behavior:contain; }
+.process__all-toggle { align-self:flex-start; margin:0 0 1rem; padding:.5rem 0; font-size:.85rem; cursor:pointer; background:none; border:0; color:white; }
 .process__all li + li { margin-top:1rem; }
 .process__static { padding:100px clamp(1.5rem,6vw,6rem); max-width:900px; margin:auto; }
 .process__static li { padding:2rem 0; }
 @media (max-width:767px) {
   .process__pin { justify-content:flex-end; padding:0 1.25rem 88px; }
-  .process__content { width:100%; margin:0; }
+  .process__content { width:100%; margin:0; height:min(620px,calc(100dvh - 188px)); }
   .process__content > .chapter__label { margin-bottom:.5rem; }
   .process__content h2 { font-size:2rem; }
-  .process__reader { max-height:44vh; }
   .process__panel { padding:1.15rem; }
   .process__count { margin:.65rem 0; }
 }
@@ -347,11 +504,88 @@ The native details offers keyboard/screen-reader access to all steps without scr
 if (c.id === "orbit") return <Process key={c.id} steps={process} animated={animated} />;
 ```
 
-Do not move Process outside ordered map or remove Approach/Jump branches. Existing track min-height may remain the default minimum; actual child heights plus observer determine physical geometry. Thread `processCount={process.length}` into SceneRoot in Task 3.
+Do not move Process outside ordered map or remove Approach/Jump branches. Task 1 already removes the track minimum: the actual children and final Surface tail alone determine the scroll range, including intrinsic-height still Process with N=1. Thread `processCount={process.length}` into SceneRoot in Task 4.
 
 - [ ] Run both new tests, `npm run typecheck`, and lint the touched files; expect no new touched-file problems. Run `npm run lint` separately and compare against the recorded 10-error/6-warning baseline. Commit these files with `feat: add accessible data-driven Orbit process panels`.
 
-## Task 3: One monochrome orbital ring in the existing scene
+## Task 3: Content-first server rendering with stable initial reservations
+
+**Files:** Modify `src/components/voyage/VoyageRoot.tsx`, `Launch.tsx`, `Process.tsx`, the completed Services static wrapper, and `src/app/voyage/voyage.css`; create `src/components/voyage/serverContent.test.tsx`.
+
+**Interfaces:** `data-tier="pending"` describes server/hydration markup. `animated` is false until a high/mid tier is resolved. Server emits the actual hero, services and all process text in one section tree. The pending CSS reserves the same physical chapter dimensions that enhancement will use; reduced-motion CSS renders intrinsic content from the first paint. SceneRoot only mounts for high/mid.
+
+- [ ] Remove the `if (tier === null) return <div className="voyage-root voyage-root--booting" />;` branch. Move `const animated = tier !== null && tier !== "still";` before the existing hook consumers that need it, preserving unconditional hook order. Retain the mount environment detection; it changes the data-tier attribute after hydration. Add `type CSSProperties` to the React import and `orbitHeightVh` import. Compute these plain render values:
+
+```ts
+const reservations = Object.fromEntries(CHAPTERS.map(c => [`--reserve-${c.id}`, `${sectionHeightVh(c)}vh`])) as CSSProperties;
+const trackStyle = { ...reservations, "--reserve-orbit": `${orbitHeightVh(process.length)}vh` } as CSSProperties;
+```
+
+Use these opening/scene elements and keep the existing children/order:
+
+```tsx
+<div className="voyage-root" data-tier={tier ?? "pending"}>
+  <VoyageScroll smooth={animated} />
+  {tier === "high" || tier === "mid" ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
+  {/* Existing HUD, dock, Ignition and ordered sections remain here. */}
+  <main className="voyage-track" style={trackStyle}>
+```
+
+The excerpt is an insertion contract, not replacement of the full root: preserve Slice 3/4's actual SceneRoot props when editing the scene element. Track style contains reservation custom properties only, **no minHeight**. Do not mount Ignition while tier is null: wrap its existing element in `tier !== null && ...`, so the disabled-state completion effect cannot prematurely finish session ignition. Once tier resolves it may overlay content; it must never hide server text. In Launch invocation pass `ready={true}`. In `Launch.tsx` change the motion wrapper `initial` to `false` and keep `animate={{opacity:1,y:0}}`; remove the no-longer-used readiness prop if desired by updating its one caller in the same edit. Hint opacity still derives from chapter progress. No inline server opacity:0 or transform may hide the H1/body/CTAs.
+
+- [ ] Add reservation CSS. It applies only before tier resolution; the actual enhanced section heights remain component-owned. Surface retains its final tail. Each pending static content wrapper gets a keyboard-focusable bounded reader (`tabIndex={0}` on Services' static wrapper and Process `.process__static`); all actual text is rendered, with no duplicated sections or headings:
+
+```css
+.voyage-root[data-tier="pending"] #launch { height:var(--reserve-launch)!important; }
+.voyage-root[data-tier="pending"] #approach { height:var(--reserve-approach)!important; }
+.voyage-root[data-tier="pending"] #jump { height:var(--reserve-jump)!important; }
+.voyage-root[data-tier="pending"] #orbit { height:var(--reserve-orbit)!important; }
+.voyage-root[data-tier="pending"] #worlds { height:var(--reserve-worlds)!important; }
+.voyage-root[data-tier="pending"] #belt { height:var(--reserve-belt)!important; }
+.voyage-root[data-tier="pending"] #passage { height:var(--reserve-passage)!important; }
+.voyage-root[data-tier="pending"] #constellation { height:var(--reserve-constellation)!important; }
+.voyage-root[data-tier="pending"] #pilot { height:var(--reserve-pilot)!important; }
+.voyage-root[data-tier="pending"] #landing { height:var(--reserve-landing)!important; }
+.voyage-root[data-tier="pending"] #surface { height:var(--reserve-surface)!important; }
+.voyage-root[data-tier="pending"] .process__static,
+.voyage-root[data-tier="pending"] .chapter--approach[data-static="true"] > .chapter__pin { max-height:100vh; overflow:auto; }
+@media (prefers-reduced-motion:reduce) {
+  .voyage-root[data-tier="pending"] .chapter:not(#surface) { height:auto!important; min-height:0!important; }
+  .voyage-root[data-tier="pending"] #jump { display:none; }
+  .voyage-root[data-tier="pending"] .process__static,
+  .voyage-root[data-tier="pending"] .chapter--approach[data-static="true"] > .chapter__pin { max-height:none; overflow:visible; }
+  .voyage-root[data-tier="pending"] .chapter__pin { position:relative; height:auto; min-height:100vh; }
+}
+```
+
+The Services selectors match Slice 3’s `chapter--approach` / `data-static="true"` contract; do not introduce a duplicate Services tree. Future Slice 5–7 tasks must extend the reservation values to their real variable heights and render each newly added chapter/form in this same server tree.
+
+- [ ] Add server rendering test using `react-dom/server` against Launch and Process (no browser/WebGL required):
+
+```tsx
+import {renderToString} from "react-dom/server";
+import {expect,it} from "vitest";
+import Launch from "./Launch";
+import Process from "./Process";
+it("includes visible real hero and every process step in server HTML",()=>{
+ const hero=renderToString(<Launch headline="Actual CMS headline" subheadline="Actual CMS promise" ready />);
+ expect(hero).toContain("Actual CMS headline");expect(hero).toContain("Actual CMS promise");
+ expect(hero).not.toContain("opacity:0");
+ const process=renderToString(<Process animated={false} steps={[
+  {id:"a",order:0,createdAt:"",title:"Discover",what:"Understand constraints"},
+  {id:"b",order:1,createdAt:"",title:"Ship",what:"Operate reliably"},
+ ]}/>);
+ expect(process).toContain("Understand constraints");expect(process).toContain("Operate reliably");
+ expect(process.match(/id="orbit"/g)).toHaveLength(1);
+ expect(process).not.toContain("chapter__pin");
+});
+```
+
+Retain `ready` in Launch for this test/interface unless the deliberate same-task cleanup updates both. Run this test, all touched component tests, typecheck and touched lint. Browser gate must separately inspect actual `/voyage` response and a JavaScript-disabled browser: component render tests alone cannot prove the root is server-rendering content. Capture CLS from navigation through tier resolution at 1440×900 and 390×844 using buffered LayoutShift entries; require <0.05 before accepting the slice. If a reservation mismatch shifts downstream sections, fix the relevant reservation/body overflow rather than restoring the blank server root.
+
+- [ ] Commit `feat: server-render voyage content before scene enhancement`.
+
+## Task 4: One monochrome orbital ring in the existing scene
 
 **Files:** Create `src/scene/chapters/OrbitRing.ts`, `OrbitRing.test.ts`; modify `src/scene/SceneRoot.tsx`, `src/components/voyage/VoyageRoot.tsx`.
 
@@ -491,13 +725,13 @@ Bank changes camera up orientation, not position or forward direction. With coun
 
 - [ ] Run `npx vitest run src/scene/chapters/OrbitRing.test.ts src/components/voyage/orbitPhase.test.ts src/scene/camera/flightPath.test.ts`, then `npm run typecheck` and lint the touched files; expect no new touched-file problems. Run `npm run lint` separately and compare against the recorded 10-error/6-warning baseline. Commit with `feat: render the scroll-driven process orbit`.
 
-## Task 4: Browser gate, regression checks, and evidence
+## Task 5: Browser gate, regression checks, and evidence
 
 **Files:** `worklog.md`, `insights.md`, `screenshots/voyage/slice-4/*`; only fix implementation files if review demonstrates a defect.
 
 **Interfaces:** Existing dev server `/voyage`; browser automation and screenshot tools available to executing session; existing quality JSON logs.
 
-- [ ] Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Record exact results, including any pre-existing failures separately. Do not invent FPS or claim a WebGL review from a still fallback screenshot.
+- [ ] Verify actual `/voyage` response HTML contains the current CMS headline, service/process body text and exactly one of each chapter ID. Open with JavaScript disabled and confirm that text is visible/readable; no blank root and no hidden hero. Record buffered CLS during normal hydration at both target viewports and require <0.05. Then run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Record exact results, including any pre-existing failures separately. Do not invent FPS or claim a WebGL review from a still fallback screenshot.
 - [ ] Start or reuse `npm run dev`. Read the browser automation tool documentation before driving it. Open `/voyage`; confirm actual process CMS data. At 1440×900 and 390×844 capture Orbit entry, each of the four held steps (or every returned step if count differs), Orbit exit, Approach, Jump, and Worlds entry. For each held step i use the measured Orbit element:
 
 ```js
@@ -508,9 +742,35 @@ window.scrollTo({ top: target, behavior: "instant" });
 ```
 
 Wait for the actual `window.scrollY` to settle within 2px of target before capturing. Do not assume old raw p=.27 reaches the middle of Orbit. Store screenshot names `desktop-orbit-step-01.png`, `mobile-orbit-step-01.png`, matching entry/exit and regression names under `screenshots/voyage/slice-4/`. Check ring front position and panel title match in each capture. Check 30° bank during first-viewport entry, smooth ring rotation between steps, bright white nodes, no amber ring, and no overlap with dock/controls.
-- [ ] Click Process in dock and Orbit rail tick, then Work/Worlds and Landing. Verify the target section's top aligns with the viewport and the rail label matches; repeat after a viewport resize and after opening/closing Read all steps. Verify no Jump SFX on programmatic passage. Confirm raw native forward scroll retains Slice 3 Jump behavior. Confirm browser restoration into Orbit seeds correct step without a scroll event.
-- [ ] Test maximum legal copy (600-character what, 400-character deliverable, 40-character duration) using temporary local test fixtures, reverted before commit. At 390×844 and 200% zoom: reader keyboard focus reachable, all words readable by scrolling, no horizontal overflow, details summary focus visible and all steps accessible, no keyboard trap. Keep inner scroll reset keyed to step changes. Scroll past Orbit while details is closed and open; no hidden step consumes keyboard focus. Retune CSS only with evidence.
+- [ ] Click Process in dock and Orbit rail tick, then Work/Worlds and Landing. Preserve their existing `chapter.start + .001` targets. Verify actual scrollY is within 2px of the measured `toScroll(chapter.start + .001, segments)` target, separately verify that offset lies inside the named chapter and its rail label is active; repeat after a viewport resize and after opening/closing the inline Read all steps disclosure. Verify no Jump SFX on programmatic passage. Confirm raw native forward scroll retains Slice 3 Jump behavior. Confirm browser restoration into Orbit seeds correct step without a scroll event.
+- [ ] Test maximum legal copy (600-character what, 400-character deliverable, 40-character duration) using temporary local test fixtures, reverted before commit. At 390×844 and 200% zoom: reader keyboard focus reachable, all words readable by scrolling, no horizontal overflow, disclosure toggle focus visible and all steps accessible, no keyboard trap. Verify stable reader DOM/focus with scrollTop reset when step index changes. Scroll past Orbit with disclosure closed and open; hidden region is inert and never consumes keyboard focus. Tab from the toggle through the visible region to the next page control; Shift+Tab returns. In the all-steps region press End and verify the final step is readable within the viewport bound. Retune CSS only with evidence.
 - [ ] Emulate reduced motion and reload: confirm no voyage canvas, no Orbit sticky container, all N steps readable in order, no scroll-driven fades or transforms, and later chapter navigation remains aligned despite intrinsic Orbit height. Disable WebGL and reload for the same checks. Test zero, one, four and five process records with local fixtures and restore real data. Zero is the explicit empty-section deviation, not a broken render.
+- [ ] At **both 900px and 844px viewport heights**, test local N=0 and N=1 fixtures in still mode and N=4 animated. Run this browser assertion using the live DOM (not a mocked scrollHeight):
+
+```js
+const table = [
+  ["launch",0,.08],["approach",.08,.20],["jump",.20,.22],["orbit",.22,.34],
+  ["worlds",.34,.52],["belt",.52,.60],["passage",.60,.63],["constellation",.63,.74],
+  ["pilot",.74,.84],["landing",.84,.95],["surface",.95,1],
+];
+const track = document.querySelector(".voyage-track");
+if (getComputedStyle(track).minHeight !== "0px" && getComputedStyle(track).minHeight !== "auto") throw new Error("Unexpected fixed track minimum");
+const segments = table.map(([id,start,end]) => {
+  const rect = document.getElementById(id).getBoundingClientRect();
+  const top = rect.top + window.scrollY;
+  return { id, start, end, top, bottom: top + rect.height - (id === "surface" ? innerHeight : 0) };
+});
+const scrollLimit = document.documentElement.scrollHeight - innerHeight;
+if (Math.abs(segments.at(-1).bottom - scrollLimit) > 2) throw new Error("Surface does not end at true document scroll limit");
+for (const s of segments) {
+  const navTarget = s.top + .001 / (s.end - s.start) * (s.bottom - s.top);
+  if (!(navTarget > s.top && navTarget < s.bottom)) throw new Error(`Navigation outside ${s.id}`);
+}
+window.scrollTo({ top: scrollLimit, behavior: "instant" });
+```
+
+After settling, verify actual scrollY equals the reported scrollLimit within 2px, Surface is the active rail chapter, and `surface` canonical progress is 1 (the pure measured-boundary test proves the mapping; inspect the store using the running app's dev debugger if needed). Scroll back to every measured section top and confirm its active chapter at the exact boundary; then click its actual dock/rail control and compare to the **+.001 mapped target**, not top. Repeat after resize without reload. There must be no extra trailing blank caused by the removed 1350vh minimum; Surface's intentional one-viewport tail is already accounted for and is not an extra chapter interval. Restore real data after fixtures.
+
 - [ ] Inspect console errors and GPU context count; at most one live voyage canvas. Record actual quality tier and logged 1s FPS probe for both desktop and mobile. If software rendering forces still or demotion, record that limitation and obtain a real animated review before marking cinematic acceptance complete. Inspect ring disappearance on either side of Orbit and context-loss fallback. Review every screenshot visually, not just file existence.
 - [ ] Append factual outcomes and deviations to `worklog.md` and `insights.md`, including actual step counts, mapping change, sampled FPS, desktop/mobile review findings, and any remaining controller decision. Commit screenshots and notes with `docs: record Orbit browser acceptance`. Only proceed to Slice 5 after this gate passes.
 

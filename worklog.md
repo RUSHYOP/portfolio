@@ -73,6 +73,11 @@
 - Forty commits implemented slice 3 and part of Orbit outside this workflow, then `revert: undo Codex Voyage changes` restored the tree to 063e2d5 (diff empty). Decision 2026-10-09: ignore it and execute the reviewed plan from scratch; the reverted commits remain in history as reference only.
 - Environment had lapsed after three weeks: `node_modules` gone, the Mongo container gone, dev server down. Restored with `npm ci`, a fresh `mongo:7` on 27018 + `npm run seed`, `npm run dev`; baseline re-established at 313/313, typecheck 0.
 
+### 2026-10-10 — slice 3 wave 1 (parallel)
+- User directive: parallelize the remaining work before a weekly usage reset. Tasks 2–8 were implemented concurrently by seven Opus agents in isolated git worktrees (`.worktrees/task-N`, branches `slice3/task-N` from be538a0, `node_modules` symlinked), each reviewed independently by a fresh Opus agent; Task 1 reviewed alongside. All eight reviews approved; one fix pass (Task 3: the brief's `converge` was a per-frame local and snapped from ~0.55 to 0 on the first frame after Jump while streaks were still ~60 units long — now an eased field with a same-instance exit test). Task 4's implementer caught a contradiction inside the brief (burst opacity gated by ignite in the design note, not in the snippet) and followed the note; the reviewer upheld it.
+- Merged in order 2, 5, 6, 7, 4, 3 with the suite green after each (371 tests / 33 files, typecheck 0). Git identity switched to RUSHYOP (the machine had been left on a different account; 43 local commits re-authored) and the branch pushed.
+- Cross-task catches recorded for Task 9/10: native `scrollTo` animates (not instant) because `globals.css` sets `html { scroll-behavior: smooth }`; the letterbox hold only renews while live, so a ≥900 ms emit gap while parked in the band lifts the bars.
+
 ### Next
-- Execute Tasks 1–11 sequentially (one Opus implementer at a time, independent review after each; controller runs the browser review at 1440×900 and 390×844 with screenshots to `screenshots/voyage/slice-3/`).
+- Task 8 review → merge → Task 9 (VoyageRoot wiring, sequential) → Task 10 browser pass (controller) → Task 11 docs → whole-branch review → merge to master.
 - Then: whole-branch review → merge; slice 4 (Orbit) plan; Resend key rotation still offered.

@@ -13,6 +13,39 @@ export function streakOpacity(velocity01: number): number {
   return 0.12 + (0.65 - 0.12) * clamp01(velocity01);
 }
 
+// Slice 3 task 3: smoothstep easing shared by the hyperspace length and convergence curves.
+const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/* ── Chapter 03: hyperspace ──────────────────────────────────────────────────
+ * A separate curve family from streakLength/streakOpacity, which stay velocity-driven and
+ * are pinned by tests. These are driven by chapterProgress instead: velocity is
+ * instantaneous and sign-less (voyageStore.ts:28-30), so a slow deliberate scroll through
+ * the 25vh beat would otherwise produce no hyperspace at all.
+ */
+
+/** Full tunnel length at the end of the beat, in world units. */
+export const HYPER_LENGTH_MAX = 60;
+/** Peak additive opacity of the tunnel. */
+export const HYPER_OPACITY_PEAK = 0.9;
+/** How far the far end of a streak is pulled toward the flight axis (0..1). */
+export const HYPER_CONVERGE_MAX = 0.55;
+
+/** Starts at streakLength(0) so max() with the velocity length is continuous on entry. */
+export function hyperLength(t01: number): number {
+  return 0.4 + (HYPER_LENGTH_MAX - 0.4) * smooth(clamp01(t01));
+}
+
+/** Zero at both ends so max() with the velocity opacity is continuous in and out. */
+export function hyperOpacity(t01: number): number {
+  return HYPER_OPACITY_PEAK * Math.sin(Math.PI * clamp01(t01));
+}
+
+/** The far end of each streak converges on the axis, so the field reads as a tunnel
+ *  radiating from the vanishing point rather than a curtain of parallel lines. */
+export function hyperConverge(t01: number): number {
+  return HYPER_CONVERGE_MAX * smooth(clamp01(t01));
+}
+
 /** Fixed PRNG seed: the at-rest frame must be identical on every load (screenshot baseline)
  *  and after a rebuild, so build() and the field initializer must not drift apart. */
 const STREAK_SEED = 4242;
@@ -42,6 +75,8 @@ export class WarpStreaks implements SetPiece {
   private positions: Float32Array = new Float32Array(0);
   private scene: THREE.Scene | null = null;
   private length = streakLength(0);
+  // Fix pass 1: head convergence persists across frames so it can ease out after the Jump.
+  private converge = 0;
   // Re-created in build() so a rebuild reproduces exactly the same layout.
   private rand: () => number = mulberry32(STREAK_SEED);
 
@@ -67,6 +102,7 @@ export class WarpStreaks implements SetPiece {
     this.heads = new Float32Array(n * 3);
     this.positions = new Float32Array(n * 6);
     this.length = streakLength(0);
+    this.converge = 0;
     this.rand = mulberry32(STREAK_SEED);
     // Heads are placed in the corridor ahead of the origin: the flight starts at
     // CAMERA_WAYPOINTS[0] (0,0,0), and update() recycles camera-relative from there on.
@@ -86,11 +122,15 @@ export class WarpStreaks implements SetPiece {
     scene.add(this.lines);
   }
 
-  private writePositions(): void {
+  /** `converge` 0..1 pulls the head (far end, most negative z) toward the flight axis while
+   *  the tail keeps its full radius. build() always writes with 0, so the seeded layout
+   *  assertions compare like with like. (Slice 3 task 3: converge parameter added.) */
+  private writePositions(converge = 0): void {
     const n = this.count;
+    const k = 1 - converge;
     for (let i = 0; i < n; i++) {
       const x = this.heads[i * 3], y = this.heads[i * 3 + 1], z = this.heads[i * 3 + 2];
-      this.positions[i * 6 + 0] = x; this.positions[i * 6 + 1] = y; this.positions[i * 6 + 2] = z;
+      this.positions[i * 6 + 0] = x * k; this.positions[i * 6 + 1] = y * k; this.positions[i * 6 + 2] = z;
       this.positions[i * 6 + 3] = x; this.positions[i * 6 + 4] = y; this.positions[i * 6 + 5] = z + this.length;
     }
   }
@@ -101,6 +141,19 @@ export class WarpStreaks implements SetPiece {
     // ease toward the target length so a scroll stop doesn't snap the streaks
     this.length += (streakLength(v) - this.length) * Math.min(1, ctx.dt * 6);
     this.material.opacity = streakOpacity(v) * ctx.ignite;
+    // Chapter 03: direct chapterProgress assignment through max(), never the dt*6 ease
+    // (tau ~0.17s barely reaches two time constants inside a 25vh beat). max() keeps both
+    // ends continuous with the velocity curves and floors the tunnel if the reader stalls.
+    // Converge decays through the same ease as length so the tunnel relaxes instead of snapping
+    // open on the first frame after the band (chapterProgress never reaches 1 inside [0.20, 0.22)).
+    this.converge += (0 - this.converge) * Math.min(1, ctx.dt * 6);
+    // Accepted asymmetry: scrolling backward inside the band, length/converge only fall via this ease.
+    if (ctx.voyage.chapter.id === "jump") {
+      const t = ctx.voyage.chapterProgress;
+      this.length = Math.max(this.length, hyperLength(t));
+      this.material.opacity = Math.max(this.material.opacity, hyperOpacity(t) * ctx.ignite);
+      this.converge = Math.max(this.converge, hyperConverge(t));
+    }
     const camZ = ctx.camera.position.z;
     const n = this.count;
     for (let i = 0; i < n; i++) {
@@ -108,7 +161,7 @@ export class WarpStreaks implements SetPiece {
       if (this.heads[zi] > camZ + BEHIND) this.heads[zi] = camZ - AHEAD + this.rand() * 10;
       if (this.heads[zi] < camZ - AHEAD - 20) this.heads[zi] = camZ - this.rand() * AHEAD;
     }
-    this.writePositions();
+    this.writePositions(this.converge); // eases to 0 after the Jump; 0 in chapters never near it
     (this._geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
   }
 

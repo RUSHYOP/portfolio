@@ -19,9 +19,9 @@ const NODE_DEPTH = 7;
 /** Camera-space offset: up-left of centre and 34 units ahead, so the graph sits behind the
  *  docked panels rather than behind the star (which projects low-right). Inside the
  *  camera's near 0.1 / far 400 (SceneRoot.tsx:61). */
-const OFFSET_X = -2.6;
+const OFFSET_X = -0.9; // was -2.6: at OFFSET_Z -24 that projected the graph left of the middle panel; -0.9 centres it behind the panel so it spills past both edges
 const OFFSET_Y = 1.4;
-const OFFSET_Z = -34;
+const OFFSET_Z = -24; // was -34: browser review (p12) — at -34 the graph sat entirely behind the blurred glass and vanished; -24 projects it ~1.4× larger so nodes spill past the panel edges
 
 /** Assembly window over Approach's chapterProgress. Completes inside the 100vh pin's hold
  *  (chapterProgress 0..1/3) so the graph is whole while the panels are docked. */

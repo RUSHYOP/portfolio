@@ -79,6 +79,15 @@ Every number in Tasks 5, 6, 8 and 10 is derived from this. **The controller revi
 
 ---
 
+## Execution amendments (2026-10-10, recorded after the browser review)
+
+- **Task 3:** `converge` is an eased private field (`dt*6`, `max` with `hyperConverge` inside the band), not a per-frame local — the brief's local snapped from ≈0.55 to 0 on the first frame after Jump while streaks were still ≈60 units long. Same-instance exit test added.
+- **Task 4:** burst opacity is `jump * ctx.ignite` (the brief's design note), not the snippet's `jump`.
+- **Task 8:** the mobile crossfade width is capped at `SOLO_START` in absolute terms (a lone or paired panel otherwise faded in before the chapter started); faded-out panels get `pointer-events: none`; the fade-out now ends at cp 0.60 (0.027 past the pin release — accepted).
+- **Task 9:** the hook uses `performance.now()`; its effect cleanup also resets the Jump letterbox.
+- **Task 10 retunes:** `voyage.css` declares `-webkit-backdrop-filter` before `backdrop-filter` at all four sites (lightningcss dropped the standard property — no glass had blurred since slice 1); Topology `OFFSET_Z −34→−24`, `OFFSET_X −2.6→−0.9`; mobile Approach pin `padding-top: 4.5rem`; still-tier mobile panels `flex: 0 0 auto; overflow: visible`. Baselines: `screenshots/voyage/slice-3/` (16 files).
+- **Execution shape:** Tasks 2–8 ran in parallel git worktrees (user directive), each independently reviewed; Task 9 sequential; Task 10 run by the controller.
+
 ## Deferred to execution review (from plan review)
 
 The plan review (`.superpowers/sdd/slice3-plan-review.md`) left seven Minor findings unfixed on purpose: each is either a judgement call the controller makes with the live page in hand, or a change better made once the code exists. Recorded here so they survive into execution rather than being rediscovered.

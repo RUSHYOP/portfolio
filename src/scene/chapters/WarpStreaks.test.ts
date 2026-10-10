@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
-import { WarpStreaks, streakLength, streakOpacity } from "./WarpStreaks";
+// Slice 3 task 3: hyperspace curves and constants are imported alongside the velocity curves.
+import {
+  WarpStreaks, streakLength, streakOpacity,
+  hyperLength, hyperOpacity, hyperConverge,
+  HYPER_LENGTH_MAX, HYPER_OPACITY_PEAK, HYPER_CONVERGE_MAX,
+} from "./WarpStreaks";
 import { TIER_SETTINGS } from "@/scene/quality";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { makeFrame } from "./testUtils";
@@ -100,5 +105,114 @@ describe("WarpStreaks", () => {
   it("throws a descriptive error when geometry is read before build()", () => {
     const streaks = new WarpStreaks();
     expect(() => streaks.geometry).toThrow(/before build/);
+  });
+});
+
+// Slice 3 task 3: chapter 03 (Jump) hyperspace mode — pure curves, then the update() branch.
+describe("hyperspace curves", () => {
+  it("length starts where the velocity curve rests and ends at the tunnel maximum", () => {
+    // Entry continuity: max(streakLength(v), hyperLength(0)) can never step down.
+    expect(hyperLength(0)).toBeCloseTo(streakLength(0), 10);
+    expect(hyperLength(1)).toBeCloseTo(HYPER_LENGTH_MAX, 5);
+    expect(hyperLength(-1)).toBeCloseTo(streakLength(0), 10);
+    expect(hyperLength(2)).toBeCloseTo(HYPER_LENGTH_MAX, 5);
+    expect(hyperLength(0.5)).toBeGreaterThan(hyperLength(0.25));
+    expect(hyperLength(0.5)).toBeLessThan(hyperLength(0.75));
+  });
+
+  it("opacity is zero at both ends and peaks mid-beat", () => {
+    expect(hyperOpacity(0)).toBeCloseTo(0, 10);
+    expect(hyperOpacity(1)).toBeCloseTo(0, 10);
+    expect(hyperOpacity(0.5)).toBeCloseTo(HYPER_OPACITY_PEAK, 10);
+    expect(hyperOpacity(-1)).toBeCloseTo(0, 10);
+    expect(hyperOpacity(2)).toBeCloseTo(0, 10);
+  });
+
+  it("convergence grows monotonically and clamps", () => {
+    expect(hyperConverge(0)).toBeCloseTo(0, 10);
+    expect(hyperConverge(1)).toBeCloseTo(HYPER_CONVERGE_MAX, 10);
+    expect(hyperConverge(-1)).toBeCloseTo(0, 10);
+    expect(hyperConverge(2)).toBeCloseTo(HYPER_CONVERGE_MAX, 10);
+    expect(hyperConverge(0.75)).toBeGreaterThan(hyperConverge(0.25));
+  });
+});
+
+describe("WarpStreaks — chapter 03", () => {
+  it("stretches at zero scroll velocity inside the Jump", () => {
+    // The regression this pins: a deliberate slow scroll through the 25vh beat has
+    // velocity ~0, so anything keyed off velocity would show no hyperspace at all.
+    const scene = new THREE.Scene();
+    const streaks = new WarpStreaks();
+    streaks.build(scene, "mid");
+    voyageStore.setScroll(0.21, 0);
+    const cp = voyageStore.getState().chapterProgress;
+    expect(voyageStore.getState().chapter.id).toBe("jump");
+    streaks.update(makeFrame());
+
+    const positions = streaks.geometry.getAttribute("position").array as Float32Array;
+    // 3 places: the buffer is Float32, and the length is read back as a difference of two
+    // world-space z values around -100.
+    const length = positions[5] - positions[2];
+    expect(length).toBeCloseTo(hyperLength(cp), 3);
+    expect(length).toBeGreaterThan(streakLength(1));
+    expect(streaks.material.opacity).toBeCloseTo(hyperOpacity(cp), 5);
+  });
+
+  it("converges the far end of each streak toward the flight axis", () => {
+    const scene = new THREE.Scene();
+    const streaks = new WarpStreaks();
+    streaks.build(scene, "mid");
+    voyageStore.setScroll(0.215, 0);
+    const cp = voyageStore.getState().chapterProgress;
+    streaks.update(makeFrame());
+
+    const p = streaks.geometry.getAttribute("position").array as Float32Array;
+    const headR = Math.hypot(p[0], p[1]);
+    const tailR = Math.hypot(p[3], p[4]);
+    expect(tailR).toBeGreaterThan(0);
+    expect(headR / tailR).toBeCloseTo(1 - hyperConverge(cp), 5);
+  });
+
+  it("floors the tunnel with the velocity curves rather than replacing them", () => {
+    // Entering the band at speed: max() must keep the velocity values, which are the larger
+    // pair this early in the beat. A bare assignment of the hyperspace curves steps them
+    // down — every other jump-band test here runs at velocity 0, where max() and a plain
+    // assignment are bit-identical, so this is the only test that can tell them apart.
+    const scene = new THREE.Scene();
+    const streaks = new WarpStreaks();
+    streaks.build(scene, "mid");
+    voyageStore.setScroll(0.2005, 1); // chapterProgress 0.025
+    streaks.update(makeFrame());
+
+    expect(streaks.material.opacity).toBeCloseTo(streakOpacity(1), 5); // 0.65, not 0.0706
+    const p = streaks.geometry.getAttribute("position").array as Float32Array;
+    expect(p[5] - p[2]).toBeCloseTo(0.4 + (streakLength(1) - 0.4) * 0.1, 3); // 1.76, not 0.5099
+  });
+
+  it("fades the tunnel with the ignition curtain", () => {
+    // The new ctx.ignite multiplier on the hyperspace opacity is unreachable from every other
+    // test here, because makeFrame() defaults to ignite: 1 — dropping it would leave the suite
+    // green while the tunnel blazed at full brightness behind the ignition curtain.
+    const scene = new THREE.Scene();
+    const streaks = new WarpStreaks();
+    streaks.build(scene, "mid");
+    voyageStore.setScroll(0.21, 0);
+    const cp = voyageStore.getState().chapterProgress;
+    streaks.update(makeFrame({ ignite: 0.5 }));
+    expect(streaks.material.opacity).toBeCloseTo(hyperOpacity(cp) * 0.5, 5);
+  });
+
+  it("leaves the Approach range exactly as it was", () => {
+    // Guards WarpStreaks.test.ts's existing velocity assertions from the new branch.
+    const scene = new THREE.Scene();
+    const streaks = new WarpStreaks();
+    streaks.build(scene, "mid");
+    voyageStore.setScroll(0.1, 1);
+    expect(voyageStore.getState().chapter.id).toBe("approach");
+    streaks.update(makeFrame());
+
+    expect(streaks.material.opacity).toBeCloseTo(streakOpacity(1), 5);
+    const p = streaks.geometry.getAttribute("position").array as Float32Array;
+    expect(Math.hypot(p[0], p[1])).toBeCloseTo(Math.hypot(p[3], p[4]), 5);
   });
 });

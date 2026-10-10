@@ -56,7 +56,7 @@ export default function Process({ steps, animated }: { steps: Item[]; animated: 
           <ol>{steps.map((step, index) => <li key={step.id}><Step step={step} index={index} /></li>)}</ol>
         </div>
       </div>
-    </div> : <div className="process__static">
+    </div> : <div className="process__static" tabIndex={0}>
       <p className="chapter__label">04 / ORBIT</p>
       <h2 id="process-heading">How we get there</h2>
       <ol>{steps.map((step, index) => <li key={step.id}><Step step={step} index={index} /></li>)}</ol>

@@ -244,6 +244,32 @@
 .process__all li + li { margin-top:1rem; }
 .process__static { padding:100px clamp(1.5rem,6vw,6rem); max-width:900px; margin:auto; }
 .process__static li { padding:2rem 0; }
+
+/* Server markup reserves the same chapter track while the browser chooses a scene tier. */
+.voyage-root[data-tier="pending"] #launch { height:var(--reserve-launch)!important; }
+.voyage-root[data-tier="pending"] #approach { height:var(--reserve-approach)!important; }
+.voyage-root[data-tier="pending"] #jump { height:var(--reserve-jump)!important; }
+.voyage-root[data-tier="pending"] #orbit { height:var(--reserve-orbit)!important; }
+.voyage-root[data-tier="pending"] #worlds { height:var(--reserve-worlds)!important; }
+.voyage-root[data-tier="pending"] #belt { height:var(--reserve-belt)!important; }
+.voyage-root[data-tier="pending"] #passage { height:var(--reserve-passage)!important; }
+.voyage-root[data-tier="pending"] #constellation { height:var(--reserve-constellation)!important; }
+.voyage-root[data-tier="pending"] #pilot { height:var(--reserve-pilot)!important; }
+.voyage-root[data-tier="pending"] #landing { height:var(--reserve-landing)!important; }
+.voyage-root[data-tier="pending"] #surface { height:var(--reserve-surface)!important; }
+.voyage-root[data-tier="pending"] .process__static,
+.voyage-root[data-tier="pending"] .chapter--approach[data-static="true"] > .chapter__pin {
+  max-height:100vh; overflow:auto;
+}
+@media (prefers-reduced-motion:reduce) {
+  .voyage-root[data-tier="pending"] .chapter:not(#surface) { height:auto!important; min-height:0!important; }
+  .voyage-root[data-tier="pending"] #jump { display:none; }
+  .voyage-root[data-tier="pending"] .process__static,
+  .voyage-root[data-tier="pending"] .chapter--approach[data-static="true"] > .chapter__pin {
+    max-height:none; overflow:visible;
+  }
+  .voyage-root[data-tier="pending"] .chapter__pin { position:relative; height:auto; min-height:100vh; }
+}
 @media (max-width:767px) {
   .process__pin { justify-content:flex-end; padding:0 1.25rem 88px; }
   .process__content { width:100%; margin:0; height:min(620px,calc(100dvh - 188px)); }

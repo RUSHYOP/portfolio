@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import type { Settings } from "@/lib/data";
 import type { Item } from "@/lib/collections/defineCollection";
 import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
+import { orbitHeightVh } from "./orbitPhase";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import VoyageScroll from "@/scene/scroll/VoyageScroll";
 import { detectEnv, selectTier, probeDemote, runFpsProbe, type Tier } from "@/scene/quality";
@@ -110,6 +111,8 @@ export default function VoyageRoot({ settings, services, process }: VoyageRootPr
   // Content is always rendered; quality selection only enhances its background.
   const animated = tier !== null && tier !== "still";
   const jumpLetterbox = useJumpBeat(animated);
+  const reservations = Object.fromEntries(CHAPTERS.map(c => [`--reserve-${c.id}`, `${sectionHeightVh(c)}vh`])) as CSSProperties;
+  const trackStyle = { ...reservations, "--reserve-orbit": `${orbitHeightVh(process.length)}vh` } as CSSProperties;
 
   return (
     <div className="voyage-root" data-tier={tier ?? "pending"} data-jump={jumpLetterbox ? "true" : undefined}>
@@ -125,8 +128,8 @@ export default function VoyageRoot({ settings, services, process }: VoyageRootPr
       {tier && <Ignition enabled={animated} onComplete={onIgnitionComplete} onLetterbox={setLetterbox} />}
 
       {/* Measured child sections determine travel; Surface includes one final viewport tail. */}
-      <main className="voyage-track">
-        <Launch headline={settings.heroHeadline} subheadline={settings.heroSubheadline} ready={ignited} />
+      <main className="voyage-track" style={trackStyle}>
+        <Launch headline={settings.heroHeadline} subheadline={settings.heroSubheadline} ready />
         <Services services={services} animated={animated} />
         {/* Chapter 03 carries 25vh of scroll and nothing else: no pin, label or aria-label. */}
         <section

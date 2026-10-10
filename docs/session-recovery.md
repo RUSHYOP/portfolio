@@ -30,6 +30,12 @@ The approved design is `docs/superpowers/specs/2026-09-14-voyage-redesign-design
 
 ## External and content dependencies
 
-MongoDB and Resend are established choices. The original local Mongo container was absent; a new loopback-only `mongo:7` container was created at port 27018 and seeded, without changing production data. The current seed contains no case studies or testimonials; never invent client endorsements. The scheduler provider/booking URL remains unresolved; marketplace productivity discovery returned no products. A booking URL has been requested while independent implementation continues.
+MongoDB and Resend are established choices. The original local Mongo container was absent; a new loopback-only `mongo:7` container was created at port 27018 and seeded, without changing production data. The current seed contains no case studies or testimonials; never invent client endorsements. The user selected Resend when asked about contact: use the existing inquiry backend as the primary contact flow, with no scheduler integration or empty booking column.
 
 Resend key rotation was offered previously, not completed or newly authorized. Existing remote branches were intentionally retained. Historical Claude-specific model and authorship instructions describe the prior session, not authorship of new Codex work.
+
+## Latest user steering
+
+The user explicitly confirmed the full remaining redesign and selected Resend for the inquiry service. Continue the real Resend-backed contact flow; no booking provider or public scheduler URL has been supplied.
+
+The user rejected the current visual quality as fake, childish and unpolished. Functional Slice 3 verification remains valid, but visual acceptance is reopened. Correct the composition and rendering quality before extending the same treatment to later chapters. Audit and refine the current work; do not treat fidelity to the recovered plan or passing tests as proof of design quality. An optional direction question is pending (refined cinematic or minimal editorial); preserve the existing cinematic direction unless the user steers otherwise.

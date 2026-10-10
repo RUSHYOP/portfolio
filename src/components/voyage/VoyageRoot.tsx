@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Settings } from "@/lib/data";
+import type { Item } from "@/lib/collections/defineCollection";
 import { CHAPTERS, VOYAGE_SCROLL_VH, VOYAGE_TAIL_VH, sectionHeightVh } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import VoyageScroll from "@/scene/scroll/VoyageScroll";
@@ -26,9 +27,11 @@ const PROBE_DELAY_MS = 900;
 
 interface VoyageRootProps {
   settings: Settings;
+  /** Chapter 02's panels. Untyped past Item's three base fields — narrowed in Services. */
+  services: Item[];
 }
 
-export default function VoyageRoot({ settings }: VoyageRootProps) {
+export default function VoyageRoot({ settings, services }: VoyageRootProps) {
   const [tier, setTier] = useState<Tier | null>(null);
   const [ignited, setIgnited] = useState(false);
   const [letterbox, setLetterbox] = useState(false);
@@ -99,6 +102,8 @@ export default function VoyageRoot({ settings }: VoyageRootProps) {
   if (tier === null) return <div className="voyage-root voyage-root--booting" />;
 
   const animated = tier !== "still";
+
+  void services;
 
   return (
     <div className="voyage-root" data-tier={tier}>

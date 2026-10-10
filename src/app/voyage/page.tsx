@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getSettings } from "@/lib/data";
+import { getVoyageContent } from "@/lib/data";
 import VoyageRoot from "@/components/voyage/VoyageRoot";
 import "./voyage.css";
 
@@ -11,6 +11,9 @@ export const metadata: Metadata = {
 };
 
 export default async function VoyagePage() {
-  const settings = await getSettings();
-  return <VoyageRoot settings={settings} />;
+  // One Promise.all for everything /voyage renders; servicesDef.revalidate already targets
+  // this route on a CMS write. Only `services` is threaded through — later slices add
+  // their own prop rather than carrying four unused ones.
+  const { services, settings } = await getVoyageContent();
+  return <VoyageRoot settings={settings} services={services} />;
 }

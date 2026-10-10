@@ -119,6 +119,26 @@ describe("decideJumpBeat — minimum hold", () => {
     expect(r.holdUntilMs).toBe(10_300 + JUMP_HOLD_MS);
   });
 
+  // Final-review coverage: entering the band backwards with no hold in force must neither
+  // fire nor drop the bars, and must not start a hold of its own.
+  it("a cold backward entry (orbit → jump) neither fires nor holds", () => {
+    const r = decideJumpBeat(input({ prevIndex: at("orbit"), nextIndex: at("jump"), holdUntilMs: 0 }));
+    expect(r.fire).toBe(false);
+    expect(r.letterbox).toBe(false);
+    expect(r.holdUntilMs).toBe(0);
+  });
+
+  // Final-review coverage: the hold gate is `nowMs >= holdUntilMs`, so a crossing on the
+  // exact deadline millisecond fires (and starts a fresh hold from now).
+  it("fires on a crossing exactly at the hold deadline", () => {
+    const r = decideJumpBeat(input({
+      prevIndex: at("approach"), nextIndex: at("jump"),
+      nowMs: 10_900, holdUntilMs: 10_900,
+    }));
+    expect(r.fire).toBe(true);
+    expect(r.holdUntilMs).toBe(10_900 + JUMP_HOLD_MS);
+  });
+
   it("re-arms for a fresh crossing after the hold expires", () => {
     const r = decideJumpBeat(input({
       prevIndex: at("approach"), nextIndex: at("jump"),

@@ -58,3 +58,5 @@ Reviews, observations, and lessons — not task tracking (see `worklog.md`).
 - Native scroll emits no guaranteed zero-velocity event. Clear stale movement on the existing clock, and suppress both in-flight and arrival velocity for programmatic travel; otherwise the last frame can flash or drive audio.
 - SSR text in the DOM is insufficient when a client-only dismissal overlay covers it. Gate Ignition on resolved tier and enabled motion, and inspect actual no-JS screenshots as well as server markup.
 - Protected hyphenated headline tokens still need emergency wrapping at narrow widths and enlarged text. Mobile navigation needs a minmax(0,1fr) content column so a visible inquiry action can wrap without widening the page.
+
+- User instruction “follow the claudes plan” supersedes the editorial art-direction detour. Preserve the original chapter motifs and tune only observed rendering/readability defects. Retaining original typography requires an intrinsic Launch container at large text sizes; a centered fixed-height pin placed the H1 above the document at200% and was corrected without changing the type scale.

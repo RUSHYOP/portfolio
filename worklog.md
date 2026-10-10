@@ -145,6 +145,9 @@ No criterion failed.
 - Task 10 item 9 (judder) was judged only on scripted passes.
 - Reviewer minors collected for the whole-branch review in `.superpowers/sdd/slice3-final-deferrals.md`.
 
+### Slice 3 merged (2026-10-10)
+- Whole-branch review (Opus, 72-commit range, net 47 files / +5083) → "ready to merge after fix wave": one Important — the scroll store's idle `tick()` never resolved an expired `programmatic` deadline, so a stale `prev=true` could suppress a genuine Jump crossing after an interrupted CTA scroll — plus hook coverage, discriminating tests, a11y attributes and comment fixes. One fixer closed all 10 items (5 commits; new `useJumpBeat` hook test with a case that fails on the old store); re-review "Ready to merge". Merged into `master` (fast-forward to cce842b), 413 tests + typecheck + production build verified on the merged result, pushed.
+
 ### Next
 - Whole-branch review of `feat/voyage-slice-3` → fix wave → merge to `master`.
 - **Slice 4 — Orbit (process ring).** Carry forward the tuned constants: `Topology.OFFSET_Z = −24`, `OFFSET_X = −0.9`; mobile Approach pin `64vh` + `padding-top: 4.5rem`; `DOCK_END = 0.28`; `SOLO_START = 0.04`, `SOLO_END = 0.56`, `SOLO_CROSSFADE = 0.18` (capped at `SOLO_START`); `JUMP_HOLD_MS = 900`; `HYPER_LENGTH_MAX = 60`, `HYPER_OPACITY_PEAK = 0.9`, `HYPER_CONVERGE_MAX = 0.55`; `BURST_WORLD = 26`; `topologyNodes` 42 / 22 / 0; and the prefixed-first `backdrop-filter` order for any new glass.

@@ -117,6 +117,12 @@
   opacity: var(--dock);
   transform: translateY(calc((1 - var(--dock)) * 48px - var(--arc) * 26px))
              rotate(calc(var(--tilt) * 1.1deg));
+  /* --dock is a 0/1 trigger (servicesLayout.ts), so this transition IS the dock animation;
+     --dock-delay (unitless ms) staggers the panels left to right. Slice 4 browser review:
+     the old scroll-scrubbed dock could rest half-built. */
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--dock-delay, 0) * 1ms),
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--dock-delay, 0) * 1ms);
   will-change: transform, opacity;
 }
 .service-panel__index {
@@ -168,6 +174,8 @@
   .service-panel {
     position: absolute; inset: 0; overflow-y: auto;
     opacity: var(--solo); transform: none;
+    /* --solo is scrubbed by scroll; the desktop dock transition would make it lag. */
+    transition: none;
   }
   /* All N panels overlap at full size with only opacity separating them, and `opacity: 0`
      does NOT skip a backdrop filter — Blink's PaintedOutputInvisible bails out early both on
@@ -196,6 +204,8 @@
 }
 .chapter--approach[data-static="true"] .service-panel {
   position: static; inset: auto; opacity: 1; transform: none;
+  /* Reduced motion: no dock animation either. */
+  transition: none;
 }
 @media (max-width: 767px) {
   .chapter--approach[data-static="true"] .services { flex-direction: column; flex: 0 0 auto; }

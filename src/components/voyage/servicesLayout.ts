@@ -7,13 +7,15 @@
  */
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const smooth = (t: number) => t * t * (3 - 2 * t);
 
-/** Desktop: the first panel starts here and the last is fully docked by DOCK_END. */
-const DOCK_START = 0.02;
-const DOCK_END = 0.28;
-/** How much of the chapter one panel takes to dock. */
-const DOCK_SPAN = 0.16;
+/** Desktop: the dock is a trigger, not a scrub — every panel's target flips to 1 the moment
+ *  the chapter is entered (chapterProgress > 0), and the CSS transition on .service-panel
+ *  supplies the motion. Slice 4 browser review: the old scrub (0.02..0.28) left a half-built
+ *  arc at every rest point inside it, and nav arrivals (start + 0.001) landed before it. */
+const DOCK_TRIGGER = 0;
+/** Delay between the first panel's transition and the last's, in ms. Fixed in total, so a
+ *  fourth service narrows the step instead of stretching the entrance. */
+const DOCK_STAGGER_MS = 240;
 
 /** Mobile: one panel at a time inside a 64vh pin, which is stationary to chapterProgress
  *  0.573 (150 - 64 = 86vh of hold). */
@@ -33,22 +35,24 @@ export interface PanelPose {
   tilt: number;
   /** 0..1 mobile replacement opacity. */
   solo: number;
+  /** ms — this panel's desktop dock transition delay (the stagger). */
+  delay: number;
 }
 
 /** Reduced motion / still tier: everything visible, nothing offset. */
-export const STATIC_POSE: PanelPose = { dock: 1, arc: 0, tilt: 0, solo: 1 };
+export const STATIC_POSE: PanelPose = { dock: 1, arc: 0, tilt: 0, solo: 1, delay: 0 };
 
 /**
  * Pose for panel `index` of `count` at Approach's `chapterProgress`.
  * Data-driven in `count` (Q1): the CMS has no cap, so a fourth service must not break the
- * arc — it narrows the stagger instead.
+ * arc — it narrows the stagger instead. `dock` is always exactly 0 or 1 (see DOCK_TRIGGER).
  */
 export function panelPose(index: number, count: number, chapterProgress: number): PanelPose {
   const t = clamp01(chapterProgress);
   const n = Math.max(1, count);
 
-  const stagger = n > 1 ? (DOCK_END - DOCK_SPAN - DOCK_START) / (n - 1) : 0;
-  const dock = smooth(clamp01((t - (DOCK_START + stagger * index)) / DOCK_SPAN));
+  const dock = t > DOCK_TRIGGER ? 1 : 0;
+  const delay = n > 1 ? (DOCK_STAGGER_MS * index) / (n - 1) : 0;
 
   // -1 at the left panel, +1 at the right; the arc is the parabola through them.
   const x = n > 1 ? (index / (n - 1)) * 2 - 1 : 0;
@@ -67,5 +71,5 @@ export function panelPose(index: number, count: number, chapterProgress: number)
   }
 
   // A lone panel is flat: the parabola only means something once there is a left/right pair.
-  return { dock, arc: n > 1 ? 1 - x * x : 0, tilt: x, solo: clamp01(solo) };
+  return { dock, arc: n > 1 ? 1 - x * x : 0, tilt: x, solo: clamp01(solo), delay };
 }

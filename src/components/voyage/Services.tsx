@@ -21,13 +21,15 @@ const chapter = CHAPTERS.find((c) => c.id === "approach")!;
  *  uses, so there is no JS breakpoint (no matchMedia listener). Server/client parity is not
  *  guaranteed by that, though: useReducedMotion() can differ between them, and it holds only
  *  because VoyageRoot never server-renders Services (its `tier === null` boot gate). */
-type PoseStyle = CSSProperties & Record<"--dock" | "--arc" | "--tilt" | "--solo", number>;
+type PoseStyle = CSSProperties & Record<"--dock" | "--arc" | "--tilt" | "--solo" | "--dock-delay", number>;
 
 const poseStyle = (p: PanelPose): PoseStyle => ({
   "--dock": p.dock,
   "--arc": p.arc,
   "--tilt": p.tilt,
   "--solo": p.solo,
+  // Unitless ms; the CSS multiplies by 1ms. Desktop dock transition only.
+  "--dock-delay": p.delay,
 });
 
 /** `Item` is untyped past its three base fields, so every read is narrowed here at the leaf.

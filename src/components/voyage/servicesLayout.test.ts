@@ -2,26 +2,36 @@ import { describe, it, expect } from "vitest";
 import { panelPose, STATIC_POSE } from "./servicesLayout";
 
 describe("panelPose — desktop docking", () => {
-  it("docks from nothing to fully docked", () => {
+  it("is undocked before the chapter and docked from its first pixel", () => {
     expect(panelPose(0, 3, 0).dock).toBe(0);
-    expect(panelPose(0, 3, 0.02).dock).toBe(0);
+    // Dock / FlightRail / Launch CTA all land on approach.start + 0.001 (chapterProgress
+    // ~0.009): the arrival frame must be the docked arc, not an empty chapter.
+    expect(panelPose(0, 3, 0.009).dock).toBe(1);
+    expect(panelPose(2, 3, 0.009).dock).toBe(1);
     expect(panelPose(0, 3, 1).dock).toBe(1);
   });
 
-  it("staggers: the first panel leads the last", () => {
-    const t = 0.15;
-    expect(panelPose(0, 3, t).dock).toBeGreaterThan(panelPose(1, 3, t).dock);
-    expect(panelPose(1, 3, t).dock).toBeGreaterThan(panelPose(2, 3, t).dock);
-  });
-
-  it("has every panel docked before the 100vh pin starts to leave (chapterProgress 1/3)", () => {
-    // The pin is stationary only for chapterProgress 0..1/3; a panel still arriving after
-    // that would dock while the whole block is sliding out of frame.
+  // Browser review (slice 4): the scroll-scrubbed dock left a half-built arc — one panel up,
+  // one ghosted, one missing — at every rest point inside chapterProgress 0.02..0.28. The
+  // dock is a trigger now; the CSS transition supplies the motion, so scroll position alone
+  // can never hold a partial frame.
+  it("never yields a partial dock at any scroll position, for any panel count", () => {
     for (let n = 1; n <= 6; n++) {
       for (let i = 0; i < n; i++) {
-        expect(panelPose(i, n, 0.28).dock).toBeCloseTo(1, 10);
+        for (let k = 0; k <= 200; k++) {
+          expect([0, 1]).toContain(panelPose(i, n, k / 200).dock);
+        }
       }
     }
+  });
+
+  it("staggers by transition delay: the first panel leads, the last trails by the fixed total", () => {
+    expect(panelPose(0, 3, 1).delay).toBe(0);
+    expect(panelPose(1, 3, 1).delay).toBeGreaterThan(panelPose(0, 3, 1).delay);
+    expect(panelPose(2, 3, 1).delay).toBeGreaterThan(panelPose(1, 3, 1).delay);
+    // Data-driven N: more services narrow the step, never stretch the whole stagger.
+    for (const n of [2, 3, 4, 6]) expect(panelPose(n - 1, n, 1).delay).toBe(panelPose(2, 3, 1).delay);
+    expect(panelPose(0, 1, 1).delay).toBe(0);
   });
 
   it("never leaves the 0..1 range", () => {
@@ -114,6 +124,6 @@ describe("panelPose — mobile replacement", () => {
 
 describe("STATIC_POSE", () => {
   it("is the fully-visible, un-offset pose for reduced motion", () => {
-    expect(STATIC_POSE).toEqual({ dock: 1, arc: 0, tilt: 0, solo: 1 });
+    expect(STATIC_POSE).toEqual({ dock: 1, arc: 0, tilt: 0, solo: 1, delay: 0 });
   });
 });

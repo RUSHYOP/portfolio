@@ -137,6 +137,21 @@ describe("Services", () => {
     expect(panel.querySelector(".service-panel__index")?.getAttribute("aria-hidden")).toBe("true");
   });
 
+  // Slice 4 browser review: nav / rail / CTA arrivals land on approach.start + 0.001, which
+  // used to be before the scrubbed dock window — an empty chapter on the first click.
+  it("docks every panel at the nav arrival point and hands the stagger to CSS as a delay", () => {
+    voyageStore.setScroll(progressAt("approach", 0) + 0.001, 0);
+    const { container } = render(
+      <Services animated services={[svc("a"), svc("b"), svc("c")]} />,
+    );
+    const ps = panels(container);
+    for (const panel of ps) expect(cssVar(panel, "--dock")).toBe(1);
+    const delays = ps.map((p) => cssVar(p, "--dock-delay"));
+    expect(delays[0]).toBe(0);
+    expect(delays[1]).toBeGreaterThan(delays[0]);
+    expect(delays[2]).toBeGreaterThan(delays[1]);
+  });
+
   it("keeps the panels dark before the chapter is reached", () => {
     voyageStore.setScroll(progressAt("launch", 0.125), 0);   // still in Launch
     const { container } = render(<Services animated services={[svc("a")]} />);

@@ -9,6 +9,22 @@ const body = (selector: string) => {
   return css.slice(start, css.indexOf("}", start));
 };
 
+describe("voyage.css — Approach", () => {
+  // The dock is a 0/1 trigger (servicesLayout.ts); this transition is the only thing that
+  // animates it, staggered per panel by --dock-delay.
+  it("animates the desktop dock with a transition delayed by --dock-delay", () => {
+    const r = body(".service-panel");
+    expect(r).toMatch(/transition:[^;]*opacity[^;]*var\(--dock-delay\b/);
+    expect(r).toMatch(/transition:[^;]*transform[^;]*var\(--dock-delay\b/);
+  });
+  it("drops the transition where opacity is scrubbed or static (mobile --solo, still tier)", () => {
+    const mobile = css.indexOf("\n  .service-panel {");
+    expect(mobile, "mobile .service-panel rule").toBeGreaterThan(-1);
+    expect(css.slice(mobile, css.indexOf("}", mobile))).toMatch(/transition:\s*none/);
+    expect(body('.chapter--approach[data-static="true"] .service-panel')).toMatch(/transition:\s*none/);
+  });
+});
+
 describe("voyage.css — Orbit", () => {
   it("overlaps the step panels and drives each one's opacity from --solo", () => {
     const r = body(".process-panel");

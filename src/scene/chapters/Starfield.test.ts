@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
-import { Starfield, approachSoften } from "./Starfield";
+import { Starfield, approachSoften, orbitSoften, chapterSoften, ORBIT_SOFTEN_PEAK } from "./Starfield";
+import { ORBIT_WINDOW, ORBIT_PRESENCE_END } from "./orbitSchedule";
 import { TIER_SETTINGS } from "@/scene/quality";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { progressAt } from "@/scene/camera/flightPath";
@@ -126,6 +127,78 @@ describe("approachSoften", () => {
   it("clamps out-of-range progress", () => {
     expect(approachSoften("approach", -1)).toBe(0);
     expect(approachSoften("approach", 2)).toBe(0);
+  });
+});
+
+// Slice 4: the focus pull generalises from Approach to Approach + Orbit.
+describe("orbitSoften", () => {
+  it("is the schedule's presence scaled to ORBIT_SOFTEN_PEAK, so it matches ORBIT_WINDOW", () => {
+    expect(orbitSoften(0)).toBe(0);
+    expect(orbitSoften(ORBIT_WINDOW[0])).toBeCloseTo(ORBIT_SOFTEN_PEAK, 12);
+    expect(orbitSoften((ORBIT_WINDOW[0] + ORBIT_WINDOW[1]) / 2)).toBeCloseTo(ORBIT_SOFTEN_PEAK, 12);
+    expect(orbitSoften(ORBIT_WINDOW[1])).toBeCloseTo(ORBIT_SOFTEN_PEAK, 12);
+    expect(orbitSoften(ORBIT_PRESENCE_END)).toBe(0);
+    expect(orbitSoften(1)).toBe(0);
+    expect(ORBIT_SOFTEN_PEAK).toBeGreaterThan(0);
+    expect(ORBIT_SOFTEN_PEAK).toBeLessThanOrEqual(1);
+  });
+
+  it("ramps in and out inside the margins of the hold", () => {
+    expect(orbitSoften(ORBIT_WINDOW[0] / 2)).toBeGreaterThan(0);
+    expect(orbitSoften(ORBIT_WINDOW[0] / 2)).toBeLessThan(ORBIT_SOFTEN_PEAK);
+    expect(orbitSoften((ORBIT_WINDOW[1] + ORBIT_PRESENCE_END) / 2)).toBeGreaterThan(0);
+    expect(orbitSoften((ORBIT_WINDOW[1] + ORBIT_PRESENCE_END) / 2)).toBeLessThan(ORBIT_SOFTEN_PEAK);
+  });
+});
+
+describe("chapterSoften", () => {
+  it("is exactly approachSoften inside Approach — that behaviour is unchanged", () => {
+    for (let k = 0; k <= 100; k++) {
+      expect(chapterSoften("approach", k / 100)).toBe(approachSoften("approach", k / 100));
+    }
+  });
+
+  // The comparison above is approachSoften against itself, so it cannot catch an edit to
+  // approachSoften's own constants — these golden values are the "byte-identical" proof (E8).
+  it("pins approachSoften to golden values — the byte-identical proof", () => {
+    const f = (t: number) => approachSoften("approach", t);
+    expect(f(0.02)).toBe(0);
+    expect(f(0.12)).toBeCloseTo(0.5, 12);   // midpoint of the 0.02 → 0.22 ramp
+    expect(f(0.22)).toBe(1);
+    expect(f(0.45)).toBe(1);
+    expect(f(0.55)).toBeCloseTo(0.5, 12);   // midpoint of the 0.45 → 0.65 ramp
+    expect(f(0.65)).toBe(0);
+    expect(approachSoften("orbit", 0.3)).toBe(0);
+  });
+
+  it("is orbitSoften inside Orbit and zero everywhere else", () => {
+    for (let k = 0; k <= 100; k++) {
+      expect(chapterSoften("orbit", k / 100)).toBe(orbitSoften(k / 100));
+    }
+    for (const id of ["launch", "jump", "worlds", "belt", "passage", "constellation", "pilot", "landing", "surface"] as const) {
+      expect(chapterSoften(id, 0.5)).toBe(0);
+    }
+  });
+});
+
+describe("Starfield — chapter 04 focus pull", () => {
+  it("eases the field out of focus inside Orbit's window, and back in Worlds", () => {
+    const field = new Starfield();
+    field.build(new THREE.Scene(), "mid");
+    field.applyControls(1);
+    const baseSize = field.material.size;
+    const baseOpacity = field.material.opacity;
+
+    voyageStore.setScroll(progressAt("orbit", 0.3), 0);
+    expect(voyageStore.getState().chapter.id).toBe("orbit");
+    for (let i = 0; i < 120; i++) field.update(makeFrame());
+    expect(field.material.size).toBeCloseTo(baseSize * (1 + ORBIT_SOFTEN_PEAK * 0.6), 3);
+    expect(field.material.opacity).toBeLessThan(baseOpacity);
+
+    voyageStore.setScroll(progressAt("worlds", 0.5), 0);
+    for (let i = 0; i < 200; i++) field.update(makeFrame());
+    expect(field.material.size).toBeCloseTo(baseSize, 4);
+    expect(field.material.opacity).toBeCloseTo(baseOpacity, 4);
   });
 });
 

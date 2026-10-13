@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { STAR_POSITION, starScale } from "@/scene/camera/flightPath";
+import { STAR_POSITION, starScale, chapterAt } from "@/scene/camera/flightPath";
 import type { Tier } from "@/scene/quality";
 import type { FrameContext, SetPiece } from "./types";
 
@@ -26,6 +26,31 @@ export function jumpGlare(t01: number): number {
   return Math.sin(Math.PI * Math.min(1, Math.max(0, t01)));
 }
 
+/** Orbit's limb-darkening envelope over the chapter's progress: ramps in over the first fifth,
+ *  holds, ramps out over the last fifth, so Worlds starts with a plain star again. */
+const LIMB_IN_END = 0.2;
+const LIMB_OUT_START = 0.8;
+const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/** Limb darkening: the body brightness goes as `ndotv ^ LIMB_POWER` toward the edge (higher =
+ *  darker limb; 1.0 is Lambert-like, 0.6 is mild), and the bright fresnel rim is cut to LIMB_RIM of itself, so the disc reads as
+ *  a lit sphere instead of a flat bright coin. Browser-review tunables (shader, no unit test). */
+export const LIMB_POWER = 0.6;
+export const LIMB_RIM = 0.3;
+
+/**
+ * 0..1 limb-darkening amount for the whole voyage's progress: 0 in every chapter but Orbit
+ * (so the Jump flare, the Pilot glare and every other chapter's star are untouched). At orbit
+ * distance the star is only 13–56 px across, and the flat fresnel-rimmed shader reads as a dot.
+ */
+export function orbitLimb(progress: number): number {
+  const { chapter, chapterProgress: t } = chapterAt(progress);
+  if (chapter.id !== "orbit") return 0;
+  if (t < LIMB_IN_END) return smooth(t / LIMB_IN_END);
+  if (t > LIMB_OUT_START) return smooth((1 - t) / (1 - LIMB_OUT_START));
+  return 1;
+}
+
 /** AMBER as sRGB "r,g,b" bytes for canvas gradient stops. Unpacked from the hex rather than
  *  read off THREE.Color: ColorManagement is on by default in three >= r152, so Color.r/g/b
  *  hold linear-sRGB and would shift 242,179,92 to 226,115,27 in an sRGB canvas. */
@@ -48,6 +73,7 @@ const FRAG = /* glsl */ `
   uniform float uTime;
   uniform vec3 uColor;
   uniform float uGlare;
+  uniform float uLimb;
   varying vec3 vNormal;
   varying vec3 vPos;
   varying vec3 vView;
@@ -71,8 +97,11 @@ const FRAG = /* glsl */ `
     vec3 p = normalize(vPos);
     float n = fbm(p * 2.5 + vec3(0.0, uTime * 0.05, uTime * 0.03));
     n = n * 0.6 + fbm(p * 6.0 - uTime * 0.08) * 0.4;
-    float fresnel = pow(1.0 - max(dot(vNormal, vView), 0.0), 2.2);
-    vec3 body = mix(uColor * 0.5, uColor * 1.1, n);
+    float ndv = max(dot(vNormal, vView), 0.0);
+    // uLimb = 0 leaves both factors at exactly 1.0, so every chapter but Orbit renders as before.
+    float limb = mix(1.0, pow(ndv, ${LIMB_POWER.toFixed(3)}), uLimb);
+    float fresnel = pow(1.0 - ndv, 2.2) * mix(1.0, ${LIMB_RIM.toFixed(3)}, uLimb);
+    vec3 body = mix(uColor * 0.5, uColor * 1.1, n) * limb;
     // Glare blows out toward white but keeps uColor as the only chroma in the orb.
     vec3 col = body + fresnel * uColor * 1.0 + uGlare * mix(vec3(1.0), uColor, 0.35);
     gl_FragColor = vec4(col, 1.0);
@@ -131,6 +160,7 @@ export class EnergyOrb implements SetPiece {
       uTime: { value: 0 },
       uColor: { value: new THREE.Color(AMBER) },
       uGlare: { value: 0 },
+      uLimb: { value: 0 },
     },
   });
   private glowMaterial: THREE.SpriteMaterial | null = null;
@@ -190,6 +220,8 @@ export class EnergyOrb implements SetPiece {
     const sc = Math.max(0.001, s);
     this.group.scale.setScalar(sc);
     this.material.uniforms.uTime.value = ctx.t;
+    // Chapter 04's limb darkening: a separate uniform, so glare logic below is untouched.
+    this.material.uniforms.uLimb.value = orbitLimb(ctx.voyage.progress);
     // Chapter 03's flare and The Pilot's setGlare are combined by max so neither driver
     // can cancel the other, and setGlare keeps its meaning outside the Jump.
     const jump = ctx.voyage.chapter.id === "jump" ? jumpGlare(ctx.voyage.chapterProgress) : 0;

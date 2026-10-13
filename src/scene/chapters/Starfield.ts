@@ -6,6 +6,7 @@ import { mulberry32 } from "@/scene/prng";
 import type { FrameContext, SetPiece } from "./types";
 // Chapter ids drive the Approach focus pull (slice 3).
 import { type ChapterId } from "@/scene/camera/flightPath";
+import { orbitPresence } from "./orbitSchedule";
 
 const CORRIDOR_Z_NEAR = 20;
 const CORRIDOR_Z_FAR = -220;
@@ -32,6 +33,26 @@ export function approachSoften(chapterId: ChapterId, chapterProgress: number): n
   if (t < SOFTEN_FULL) return smooth((t - SOFTEN_IN) / (SOFTEN_FULL - SOFTEN_IN));
   if (t <= SOFTEN_HOLD_END) return 1;
   return smooth(1 - (t - SOFTEN_HOLD_END) / (SOFTEN_OUT - SOFTEN_HOLD_END));
+}
+
+/** How far the field is pulled out of focus behind Orbit's pinned panels, at the peak of
+ *  ORBIT_WINDOW (Approach goes to 1.0). The ring and the star are the subject here, so the
+ *  pull is lighter. Browser-review tunable. */
+export const ORBIT_SOFTEN_PEAK = 0.75;
+
+/** 0..1 focus pull inside Orbit. Its window IS ORBIT_WINDOW (plus the schedule's edge fades),
+ *  so the stars soften while the step panels are in their window and sharpen back as the
+ *  pin releases. */
+export function orbitSoften(chapterProgress: number): number {
+  return ORBIT_SOFTEN_PEAK * orbitPresence(chapterProgress);
+}
+
+/** The focus pull for whichever chapter is current: Approach and Orbit pull, the rest don't.
+ *  (Distinct from the `chapterSoften` instance field on `Starfield`, which is the eased value.) */
+export function chapterSoften(chapterId: ChapterId, chapterProgress: number): number {
+  if (chapterId === "approach") return approachSoften(chapterId, chapterProgress);
+  if (chapterId === "orbit") return orbitSoften(chapterProgress);
+  return 0;
 }
 
 /**
@@ -149,9 +170,9 @@ export class Starfield implements SetPiece {
 
   update(ctx: FrameContext): void {
     if (!this.points) return;
-    // Chapter 02 owns the focus pull. Eased (tau ~0.33s) so a flick through Approach
+    // Chapters 02 and 04 own the focus pull. Eased (tau ~0.33s) so a flick through either
     // blurs and recovers rather than strobing.
-    const target = approachSoften(ctx.voyage.chapter.id, ctx.voyage.chapterProgress);
+    const target = chapterSoften(ctx.voyage.chapter.id, ctx.voyage.chapterProgress);
     this.chapterSoften += (target - this.chapterSoften) * Math.min(1, ctx.dt * 3);
     this.applyControls(ctx.ignite, ctx.audioEnergy);
     this.points.rotation.z += ctx.dt * 0.004 * (1 + ctx.audioEnergy * 2);

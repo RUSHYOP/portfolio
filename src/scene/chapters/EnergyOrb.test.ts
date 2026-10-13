@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
-import { EnergyOrb, jumpGlare } from "./EnergyOrb";
+import { EnergyOrb, jumpGlare, orbitLimb } from "./EnergyOrb";
 import { STAR_POSITION, starScale, progressAt } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { makeFrame } from "./testUtils";
@@ -83,6 +83,81 @@ describe("jumpGlare", () => {
   it("clamps outside 0..1 so another chapter's progress cannot flare the star", () => {
     expect(jumpGlare(-1)).toBeCloseTo(0, 10);
     expect(jumpGlare(2)).toBeCloseTo(0, 10);
+  });
+});
+
+// Slice 4: chapter 04 (Orbit) limb darkening — the pure ramp, then how update() feeds the shader.
+describe("orbitLimb", () => {
+  it("is 0 in every chapter but Orbit", () => {
+    for (const id of ["launch", "approach", "jump", "worlds", "belt", "pilot", "surface"] as const) {
+      expect(orbitLimb(progressAt(id, 0.5))).toBe(0);
+    }
+  });
+
+  it("ramps 0 → 1 over Orbit's first fifth, holds, and ramps back over its last fifth", () => {
+    expect(orbitLimb(progressAt("orbit", 0))).toBe(0);
+    expect(orbitLimb(progressAt("orbit", 0.1))).toBeGreaterThan(0);
+    expect(orbitLimb(progressAt("orbit", 0.1))).toBeLessThan(1);
+    for (const t of [0.2, 0.35, 0.5, 0.65, 0.8]) expect(orbitLimb(progressAt("orbit", t))).toBeCloseTo(1, 9);
+    expect(orbitLimb(progressAt("orbit", 0.9))).toBeGreaterThan(0);
+    expect(orbitLimb(progressAt("orbit", 0.9))).toBeLessThan(1);
+    expect(orbitLimb(progressAt("orbit", 0.999))).toBeLessThan(1e-4);
+    // Worlds starts with a plain star again.
+    expect(orbitLimb(progressAt("worlds", 0))).toBe(0);
+  });
+
+  it("is symmetric, monotone on both ramps, and always inside 0..1", () => {
+    for (const t of [0.02, 0.05, 0.1, 0.15, 0.19]) {
+      expect(orbitLimb(progressAt("orbit", t))).toBeCloseTo(orbitLimb(progressAt("orbit", 1 - t)), 9);
+    }
+    let prev = -1;
+    for (let k = 0; k <= 100; k++) {
+      const v = orbitLimb(progressAt("orbit", (k / 100) * 0.2));
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
+    for (let k = 0; k <= 200; k++) {
+      const v = orbitLimb(progressAt("orbit", Math.min(0.999, k / 200)));
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("treats NaN progress as the voyage start", () => {
+    expect(orbitLimb(NaN)).toBe(0);
+  });
+});
+
+describe("EnergyOrb — chapter 04 limb", () => {
+  it("starts at 0 and follows orbitLimb(progress) frame by frame", () => {
+    const orb = new EnergyOrb();
+    orb.build(new THREE.Scene(), "mid");
+    expect(orb.material.uniforms.uLimb.value).toBe(0);
+    voyageStore.setScroll(progressAt("orbit", 0.5), 0);
+    orb.update(makeFrame());
+    expect(orb.material.uniforms.uLimb.value).toBeCloseTo(1, 9);
+    voyageStore.setScroll(progressAt("orbit", 0.1), 0);
+    orb.update(makeFrame());
+    expect(orb.material.uniforms.uLimb.value).toBeCloseTo(orbitLimb(voyageStore.getState().progress), 9);
+    voyageStore.setScroll(progressAt("worlds", 0.5), 0);
+    orb.update(makeFrame());
+    expect(orb.material.uniforms.uLimb.value).toBe(0);
+  });
+
+  it("leaves the Jump flare and the Pilot glare alone", () => {
+    const orb = new EnergyOrb();
+    orb.build(new THREE.Scene(), "mid");
+    // Inside Orbit the limb is fully on, and setGlare still reaches the shader untouched.
+    voyageStore.setScroll(progressAt("orbit", 0.5), 0);
+    orb.setGlare(0.25);
+    orb.update(makeFrame());
+    expect(orb.material.uniforms.uGlare.value).toBeCloseTo(0.25, 6);
+    // Inside the Jump the flare is at peak and the limb is off.
+    voyageStore.setScroll(progressAt("jump", 0.5), 0);
+    orb.setGlare(0);
+    orb.update(makeFrame());
+    expect(orb.material.uniforms.uGlare.value).toBeGreaterThan(0.99);
+    expect(orb.material.uniforms.uLimb.value).toBe(0);
   });
 });
 

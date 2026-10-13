@@ -226,7 +226,9 @@
    touching JS: the panel takes the left of the frame, the ring + star read centre-right. */
 .chapter--orbit {
   --orbit-panel-w: min(30rem, 32vw);
-  --orbit-panel-h: clamp(20rem, 48vh, 27rem);
+  /* Max 23rem (was 27rem): browser review — seed steps need ≤ 357px, so 27rem left ~70px of
+     dead glass at 1440×900; 23rem = 368px still fits them at 1440×900 and 1024×768. */
+  --orbit-panel-h: clamp(20rem, 48vh, 23rem);
 }
 .process { position: relative; width: var(--orbit-panel-w); height: var(--orbit-panel-h); }
 .process-panel {
@@ -265,6 +267,9 @@
 .process-panel__field {
   margin: 0 0 1.1rem; font-size: 0.95rem; line-height: 1.6; color: var(--gray-light);
 }
+/* The last field's trailing margin only adds scroll height to the fixed box (browser review:
+   it alone pushed step 1 into a 5px internal scroll at 1024×768). */
+.process-panel__field:last-child { margin-bottom: 0; }
 .process-panel__field span {
   display: block; margin-bottom: 0.3rem; text-transform: uppercase;
   font-family: var(--font-jetbrains-mono), monospace; font-size: 0.62rem; letter-spacing: 0.14em;

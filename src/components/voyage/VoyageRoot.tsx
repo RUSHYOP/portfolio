@@ -36,9 +36,15 @@ interface VoyageRootProps {
   settings: Settings;
   /** Chapter 02's panels. Untyped past Item's three base fields — narrowed in Services. */
   services: Item[];
+  /** Chapter 04's steps. Untyped past Item's three base fields — narrowed in Process. */
+  process: Item[];
 }
 
-export default function VoyageRoot({ settings, services }: VoyageRootProps) {
+// The prop is named `process` (the content key); it is destructured as `steps` so it never
+// shadows Node's `process` global inside this module.
+export default function VoyageRoot({ settings, services, process: steps }: VoyageRootProps) {
+  // TEMPORARY (Task 5): nothing reads `steps` until Task 8 mounts <Process>. Task 8 deletes this line.
+  void steps;
   const [tier, setTier] = useState<Tier | null>(null);
   const [ignited, setIgnited] = useState(false);
   const [letterbox, setLetterbox] = useState(false);

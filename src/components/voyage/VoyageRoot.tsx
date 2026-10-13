@@ -19,8 +19,9 @@ import FlightRail from "./FlightRail";
 import Dock from "@/components/dock/Dock";
 import Ignition from "./Ignition";
 import Launch from "./Launch";
-// Slice 3: chapter 02's panels and chapter 03's beat.
+// Slice 3: chapter 02's panels and chapter 03's beat. Slice 4: chapter 04's step panels.
 import Services from "./Services";
+import Process from "./Process";
 import { useJumpBeat } from "./useJumpBeat";
 
 const SceneRoot = dynamic(() => import("@/scene/SceneRoot"), { ssr: false });
@@ -43,8 +44,6 @@ interface VoyageRootProps {
 // The prop is named `process` (the content key); it is destructured as `steps` so it never
 // shadows Node's `process` global inside this module.
 export default function VoyageRoot({ settings, services, process: steps }: VoyageRootProps) {
-  // TEMPORARY (Task 5): nothing reads `steps` until Task 8 mounts <Process>. Task 8 deletes this line.
-  void steps;
   const [tier, setTier] = useState<Tier | null>(null);
   const [ignited, setIgnited] = useState(false);
   const [letterbox, setLetterbox] = useState(false);
@@ -110,9 +109,9 @@ export default function VoyageRoot({ settings, services, process: steps }: Voyag
   }, []);
   const onIgnitionComplete = useCallback(() => setIgnited(true), []);
 
-  // Chapters 01–03 own their own sections now; the rest are still placeholders.
+  // Chapters 01–04 own their own sections now; the rest are still placeholders.
   const placeholders = useMemo(
-    () => CHAPTERS.filter((c) => c.id !== "launch" && c.id !== "approach" && c.id !== "jump"),
+    () => CHAPTERS.filter((c) => c.id !== "launch" && c.id !== "approach" && c.id !== "jump" && c.id !== "orbit"),
     [],
   );
 
@@ -127,7 +126,11 @@ export default function VoyageRoot({ settings, services, process: steps }: Voyag
       <VoyageScroll smooth={animated} />
       {/* Narrowed on the literal: SceneRoot takes Exclude<Tier, "still">, and `animated` is a
           plain boolean TypeScript cannot tie back to `tier`. */}
-      {tier !== "still" ? <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} /> : <StillSky />}
+      {tier !== "still" ? (
+        <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} stepCount={steps.length} />
+      ) : (
+        <StillSky />
+      )}
 
       {/* Two independent sources, OR'd here. Ignition writes `letterbox` and clears it
           unconditionally in finish() (Ignition.tsx:49), so sharing one boolean would let it
@@ -154,6 +157,9 @@ export default function VoyageRoot({ settings, services, process: steps }: Voyag
           className="chapter chapter--micro"
           style={{ height: `${sectionHeightVh(jumpChapter)}vh` }}
         />
+        {/* Chapter 04, in chapter order (DOM order is scroll order). Inside the boot gate for the
+            same reason as Services: it calls useReducedMotion(). */}
+        <Process steps={steps} animated={animated} />
         {placeholders.map((c) => (
           <section
             key={c.id}

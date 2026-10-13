@@ -20,16 +20,15 @@ interface SceneRootProps {
   ignite: boolean;
   onContextLost: () => void;
   /** Chapter 04's process-step count (one ring node each). Comes from the CMS: stable after
-   *  load, never derived from scroll. Optional only until VoyageRoot passes it (Task 8
-   *  makes it required); 0 builds an empty, always-hidden ring. */
-  stepCount?: number;
+   *  load, never derived from scroll. 0 builds an empty, always-hidden ring. */
+  stepCount: number;
 }
 
 const IGNITE_SECONDS = 1.2;
 const POSE_LERP = 0.08;
 
 /** Owns the single WebGL context. Reads voyageStore imperatively — no React re-renders per frame. */
-export default function SceneRoot({ tier, ignite, onContextLost, stepCount = 0 }: SceneRootProps) {
+export default function SceneRoot({ tier, ignite, onContextLost, stepCount }: SceneRootProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const igniteRef = useRef(ignite);
   // Layout effect, not a render-phase write (react-hooks/refs). No dep array so it re-syncs

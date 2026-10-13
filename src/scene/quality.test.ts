@@ -92,5 +92,10 @@ describe("TIER_SETTINGS", () => {
     // Chapter 02's topology graph scales down by tier like the other counts.
     expect(TIER_SETTINGS.mid.topologyNodes).toBeLessThan(TIER_SETTINGS.high.topologyNodes);
     expect(TIER_SETTINGS.still.topologyNodes).toBe(0);
+    // Chapter 04's ring tessellation scales the same way; `still` never builds one.
+    expect(TIER_SETTINGS.high.ringSegments).toBe(128);
+    expect(TIER_SETTINGS.mid.ringSegments).toBe(64);
+    expect(TIER_SETTINGS.mid.ringSegments).toBeLessThan(TIER_SETTINGS.high.ringSegments);
+    expect(TIER_SETTINGS.still.ringSegments).toBe(0);
   });
 });

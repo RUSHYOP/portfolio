@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { Starfield, approachSoften } from "./Starfield";
 import { TIER_SETTINGS } from "@/scene/quality";
 import { voyageStore } from "@/scene/scroll/voyageStore";
+import { progressAt } from "@/scene/camera/flightPath";
 import { makeFrame } from "./testUtils";
 
 // The store is module-global; reset so scroll state cannot leak between tests.
@@ -137,14 +138,14 @@ describe("Starfield — chapter 02 focus pull", () => {
     const baseSize = field.material.size;
     const baseOpacity = field.material.opacity;
 
-    voyageStore.setScroll(0.12, 0);
+    voyageStore.setScroll(progressAt("approach", 1 / 3), 0);
     expect(voyageStore.getState().chapter.id).toBe("approach");
     // ~2s of frames: the ease is deliberate, so one frame proves nothing.
     for (let i = 0; i < 120; i++) field.update(makeFrame());
     expect(field.material.size).toBeGreaterThan(baseSize);
     expect(field.material.opacity).toBeLessThan(baseOpacity);
 
-    voyageStore.setScroll(0.5, 0);
+    voyageStore.setScroll(progressAt("worlds", 0.5), 0);
     for (let i = 0; i < 200; i++) field.update(makeFrame());
     expect(field.material.size).toBeCloseTo(baseSize, 4);
     expect(field.material.opacity).toBeCloseTo(baseOpacity, 4);
@@ -158,7 +159,7 @@ describe("Starfield — chapter 02 focus pull", () => {
     field.applyControls(1);
     const baseSize = field.material.size;            // BASE_SIZE at ignite 1, no soften, no audio
 
-    voyageStore.setScroll(0.08 + 0.12 * 0.12, 0);    // Approach, chapterProgress ≈ 0.12
+    voyageStore.setScroll(progressAt("approach", 0.12), 0); // Approach, chapterProgress 0.12
     const s = voyageStore.getState();
     const chapter = approachSoften(s.chapter.id, s.chapterProgress);
     expect(chapter).toBeCloseTo(0.5, 6);

@@ -5,6 +5,7 @@ import { render, cleanup } from "@testing-library/react";
 import { useReducedMotion } from "framer-motion";
 import type { Item } from "@/lib/collections/defineCollection";
 import { voyageStore } from "@/scene/scroll/voyageStore";
+import { progressAt } from "@/scene/camera/flightPath";
 import Services from "./Services";
 
 // useReducedMotion is mocked (default: motion allowed) so one test can flip it to true.
@@ -93,7 +94,7 @@ describe("Services", () => {
 
   it("drives the panels from scroll position when animation is on", () => {
     // chapterProgress 1/3 — the last frame the 100vh pin is stationary.
-    voyageStore.setScroll(0.12, 0);
+    voyageStore.setScroll(progressAt("approach", 1 / 3), 0);
     const { container } = render(
       <Services animated services={[svc("a"), svc("b"), svc("c")]} />,
     );
@@ -104,7 +105,7 @@ describe("Services", () => {
   });
 
   it("lays the desktop arc out left to right at the docked frame", () => {
-    voyageStore.setScroll(0.12, 0);
+    voyageStore.setScroll(progressAt("approach", 1 / 3), 0);
     const { container } = render(
       <Services animated services={[svc("a"), svc("b"), svc("c")]} />,
     );
@@ -115,7 +116,7 @@ describe("Services", () => {
 
   it("renders every panel fully visible when the reader prefers reduced motion", () => {
     vi.mocked(useReducedMotion).mockReturnValue(true);
-    voyageStore.setScroll(0.09, 0);                  // early Approach: animated poses would be dark
+    voyageStore.setScroll(progressAt("approach", 1 / 12), 0); // early Approach: animated poses would be dark
     const { container } = render(
       <Services animated services={[svc("a"), svc("b"), svc("c")]} />,
     );
@@ -137,7 +138,7 @@ describe("Services", () => {
   });
 
   it("keeps the panels dark before the chapter is reached", () => {
-    voyageStore.setScroll(0.01, 0);
+    voyageStore.setScroll(progressAt("launch", 0.125), 0);   // still in Launch
     const { container } = render(<Services animated services={[svc("a")]} />);
     expect(cssVar(panels(container)[0], "--dock")).toBe(0);
     // Fix pass 1: the lone mobile panel is dark too (it used to sit at --solo 0.573 here),
@@ -149,7 +150,7 @@ describe("Services", () => {
   it("marks the panels the mobile replacement has faded out, so the CSS can drop their blur", () => {
     // opacity: 0 does not skip a backdrop-filter, so the invisible panels need their own
     // hook. Same scroll position as the --solo test above: solos are [0, 1, 0].
-    voyageStore.setScroll(0.12, 0);
+    voyageStore.setScroll(progressAt("approach", 1 / 3), 0);
     const { container } = render(
       <Services animated services={[svc("a"), svc("b"), svc("c")]} />,
     );

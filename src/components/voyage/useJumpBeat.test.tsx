@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act, cleanup } from "@testing-library/react";
 import { voyageStore, PROGRAMMATIC_TIMEOUT_MS } from "@/scene/scroll/voyageStore";
+import { progressAt } from "@/scene/camera/flightPath";
 import { logClient } from "@/lib/clientLog";
 import { JUMP_HOLD_MS } from "./jumpBeat";
 import { useJumpBeat } from "./useJumpBeat";
@@ -34,25 +35,33 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+// Chapter-relative scroll positions (never absolute literals — see progressAt).
+const APPROACH = progressAt("approach", 0.6);       // a point before the band
+const JUMP_MID = progressAt("jump", 0.5);           // inside the 25vh band
+const ORBIT_EARLY = progressAt("orbit", 0.25);      // just past the band
+const ORBIT_MID = progressAt("orbit", 0.5);
+const FAR_TARGET = progressAt("worlds", 0.5);       // a scrollTo target far from the band
+const FARTHER_TARGET = progressAt("landing", 0.5);
+
 /** Store emits call setLetterbox outside React's event system, so each one goes in act(). */
 const scroll = (p: number, v = 0.5) => act(() => voyageStore.setScroll(p, v));
 
 describe("useJumpBeat", () => {
   it("drops the bars and fires the whoosh + log once on approach → jump", () => {
     const { result } = renderHook(() => useJumpBeat(true));
-    scroll(0.15);                                    // approach
+    scroll(APPROACH);                                // approach
     expect(result.current).toBe(false);
-    scroll(0.21);                                    // jump
+    scroll(JUMP_MID);                                // jump
     expect(result.current).toBe(true);
     expect(whoosh).toHaveBeenCalledTimes(1);
     expect(logClient).toHaveBeenCalledTimes(1);
-    expect(logClient).toHaveBeenCalledWith("voyage.jump", { progress: 0.21 });
+    expect(logClient).toHaveBeenCalledWith("voyage.jump", { progress: Number(JUMP_MID.toFixed(4)) });
   });
 
   it("does nothing when not animated (still tier)", () => {
     const { result } = renderHook(() => useJumpBeat(false));
-    scroll(0.15);
-    scroll(0.21);
+    scroll(APPROACH);
+    scroll(JUMP_MID);
     expect(result.current).toBe(false);
     expect(whoosh).not.toHaveBeenCalled();
     expect(logClient).not.toHaveBeenCalled();
@@ -61,8 +70,8 @@ describe("useJumpBeat", () => {
   it("is suppressed while a programmatic scrollTo is in flight", () => {
     voyageStore.registerScroller(vi.fn());
     const { result } = renderHook(() => useJumpBeat(true));
-    act(() => voyageStore.scrollTo(0.5));
-    scroll(0.25, 0.8);                               // crosses into orbit, target not reached
+    act(() => voyageStore.scrollTo(FAR_TARGET));
+    scroll(ORBIT_EARLY, 0.8);                        // crosses into orbit, target not reached
     expect(voyageStore.getState().programmatic).toBe(true);
     expect(result.current).toBe(false);
     expect(whoosh).not.toHaveBeenCalled();
@@ -75,19 +84,19 @@ describe("useJumpBeat", () => {
     const dateNow = vi.spyOn(Date, "now").mockReturnValue(0);
     voyageStore.registerScroller(vi.fn());
     const { result } = renderHook(() => useJumpBeat(true));
-    act(() => voyageStore.scrollTo(0.9));
-    scroll(0.15, 0.6);                               // interrupted in approach
+    act(() => voyageStore.scrollTo(FARTHER_TARGET));
+    scroll(APPROACH, 0.6);                           // interrupted in approach
     dateNow.mockReturnValue(PROGRAMMATIC_TIMEOUT_MS + 1);
     act(() => voyageStore.tick(250));                // idle tick past the deadline
-    scroll(0.25, 1);                                 // one-emit flick to orbit
+    scroll(ORBIT_EARLY, 1);                          // one-emit flick to orbit
     expect(result.current).toBe(true);
     expect(whoosh).toHaveBeenCalledTimes(1);
   });
 
   it("seeds from the store, so mounting past the band never fires", () => {
-    voyageStore.setScroll(0.3, 0);                   // already in orbit before mount
+    voyageStore.setScroll(ORBIT_MID, 0);             // already in orbit before mount
     const { result } = renderHook(() => useJumpBeat(true));
-    scroll(0.31, 0);                                 // next emit, still orbit
+    scroll(progressAt("orbit", 0.55), 0);            // next emit, still orbit
     expect(result.current).toBe(false);
     expect(whoosh).not.toHaveBeenCalled();
   });
@@ -96,19 +105,37 @@ describe("useJumpBeat", () => {
     const { result, rerender } = renderHook(({ animated }) => useJumpBeat(animated), {
       initialProps: { animated: true },
     });
-    scroll(0.15);
-    scroll(0.21);
+    scroll(APPROACH);
+    scroll(JUMP_MID);
     expect(result.current).toBe(true);
     rerender({ animated: false });
     expect(result.current).toBe(false);
   });
 
+  // Exercises the in-band renewal path (decideJumpBeat's `inBand` branch): every emit while
+  // the store still reports chapter "jump" pushes the deadline out, so a slow pass keeps the
+  // bars down well past the original 900 ms.
+  it("renews the hold on every in-band emit, so a slow pass keeps the bars down", () => {
+    const { result } = renderHook(() => useJumpBeat(true));
+    scroll(APPROACH);
+    scroll(JUMP_MID);                                // fires at 1000 → hold until 1900
+    expect(result.current).toBe(true);
+    // Each idle tick lands before the previous deadline, so each one renews it. 3400 is far
+    // past the original 1900: only renewal can be keeping the bars down.
+    for (const t of [1800, 2600, 3400]) {
+      nowMs = t;
+      act(() => voyageStore.tick(250));
+      expect(result.current).toBe(true);
+    }
+    expect(whoosh).toHaveBeenCalledTimes(1);         // renewal never re-fires the beat
+  });
+
   it("releases the hold on an idle tick once it lapses outside the band", () => {
     const { result } = renderHook(() => useJumpBeat(true));
-    scroll(0.15);
-    scroll(0.21);                                    // fires at 1000 → hold until 1900
+    scroll(APPROACH);
+    scroll(JUMP_MID);                                // fires at 1000 → hold until 1900
     nowMs = 1100;
-    scroll(0.25);                                    // left the band: deadline frozen
+    scroll(ORBIT_EARLY);                             // left the band: deadline frozen
     expect(result.current).toBe(true);
     nowMs = 1000 + JUMP_HOLD_MS + 100;
     act(() => voyageStore.tick(250));

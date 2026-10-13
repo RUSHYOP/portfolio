@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { voyageStore, normalizeVelocity, VELOCITY_NORMALIZER, PROGRAMMATIC_EPS, PROGRAMMATIC_TIMEOUT_MS } from "./voyageStore";
+import { progressAt } from "@/scene/camera/flightPath";
 
 beforeEach(() => voyageStore.reset());
 
@@ -14,9 +15,10 @@ describe("voyageStore", () => {
   });
 
   it("setScroll clamps progress and velocity and derives chapter + distance", () => {
-    voyageStore.setScroll(0.27, 0.4);
+    const inOrbit = progressAt("orbit", 0.4);
+    voyageStore.setScroll(inOrbit, 0.4);
     let s = voyageStore.getState();
-    expect(s.progress).toBe(0.27);
+    expect(s.progress).toBe(inOrbit);
     expect(s.velocity).toBe(0.4);
     expect(s.chapter.id).toBe("orbit");
     expect(s.distanceAU).toBeLessThan(9.4);

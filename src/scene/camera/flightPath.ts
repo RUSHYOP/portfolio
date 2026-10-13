@@ -9,32 +9,57 @@ export interface Chapter {
   label: string;
   /** Two-digit display index, e.g. "01". Micro-beats keep their index but are not rail ticks. */
   index: string;
+  /** Scroll length of the chapter's section in vh — the source of truth; `start`/`end` derive from it. */
+  spanVh: number;
+  /** Derived: cumulative vh before this chapter / VOYAGE_SCROLL_VH. */
   start: number;
+  /** Derived: cumulative vh through this chapter / VOYAGE_SCROLL_VH (1 for the last). */
   end: number;
   micro: boolean;
 }
 
-/** Normalized scroll ranges for every beat. Contiguous, ordered, sums to 1. */
-export const CHAPTERS: readonly Chapter[] = [
-  { id: "launch",        label: "LAUNCH",          index: "01", start: 0.00, end: 0.08, micro: false },
-  { id: "approach",      label: "APPROACH VECTOR", index: "02", start: 0.08, end: 0.20, micro: false },
-  { id: "jump",          label: "JUMP",            index: "03", start: 0.20, end: 0.22, micro: true  },
-  { id: "orbit",         label: "ORBIT",           index: "04", start: 0.22, end: 0.34, micro: false },
-  { id: "worlds",        label: "WORLDS",          index: "05", start: 0.34, end: 0.52, micro: false },
-  { id: "belt",          label: "THE BELT",        index: "06", start: 0.52, end: 0.60, micro: false },
-  { id: "passage",       label: "DARK PASSAGE",    index: "07", start: 0.60, end: 0.63, micro: true  },
-  { id: "constellation", label: "CONSTELLATION",   index: "08", start: 0.63, end: 0.74, micro: false },
-  { id: "pilot",         label: "THE PILOT",       index: "09", start: 0.74, end: 0.84, micro: false },
-  { id: "landing",       label: "LANDING",         index: "10", start: 0.84, end: 0.95, micro: false },
-  { id: "surface",       label: "SURFACE",         index: "11", start: 0.95, end: 1.00, micro: false },
+/** Scrollable range of the voyage in vh — the denominator the store's progress divides by.
+ *  Every chapter span below sums to it (pinned by a test). Spans, not fractions, are what is
+ *  declared: the smallest content chapters (Launch, Belt) are 100vh, exactly the 100vh sticky
+ *  `.chapter__pin`, so their pin hold is 0 but they still clear it; total travel = 14
+ *  viewports + 1 tail. Declared before CHAPTERS because the table reads it at module load. */
+export const VOYAGE_SCROLL_VH = 1400;
+
+type ChapterDef = Omit<Chapter, "start" | "end">;
+
+const CHAPTER_DEFS: readonly ChapterDef[] = [
+  { id: "launch",        label: "LAUNCH",          index: "01", spanVh: 100,   micro: false },
+  { id: "approach",      label: "APPROACH VECTOR", index: "02", spanVh: 150,   micro: false },
+  { id: "jump",          label: "JUMP",            index: "03", spanVh: 25,    micro: true  },
+  { id: "orbit",         label: "ORBIT",           index: "04", spanVh: 300,   micro: false },
+  { id: "worlds",        label: "WORLDS",          index: "05", spanVh: 225,   micro: false },
+  { id: "belt",          label: "THE BELT",        index: "06", spanVh: 100,   micro: false },
+  { id: "passage",       label: "DARK PASSAGE",    index: "07", spanVh: 37.5,  micro: true  },
+  { id: "constellation", label: "CONSTELLATION",   index: "08", spanVh: 137.5, micro: false },
+  { id: "pilot",         label: "THE PILOT",       index: "09", spanVh: 125,   micro: false },
+  { id: "landing",       label: "LANDING",         index: "10", spanVh: 137.5, micro: false },
+  { id: "surface",       label: "SURFACE",         index: "11", spanVh: 62.5,  micro: false },
 ];
 
-export const CONTENT_CHAPTERS: readonly Chapter[] = CHAPTERS.filter((c) => !c.micro);
+/** cumulativeVh[i] = vh before chapter i; the last entry is the total. Every span is a
+ *  multiple of 12.5, so each running sum is exactly representable in IEEE-754. */
+const cumulativeVh: number[] = CHAPTER_DEFS.reduce(
+  (acc, d) => [...acc, acc[acc.length - 1] + d.spanVh],
+  [0],
+);
 
-/** Scrollable range of the voyage in vh — the denominator the store's progress divides by.
- *  1250 is the minimum at which every content chapter (smallest span 0.08) still clears
- *  the 100vh sticky pin; total travel = 12.5 viewports + 1 tail. */
-export const VOYAGE_SCROLL_VH = 1250;
+/** Normalized scroll ranges for every beat. Contiguous, ordered, sums to 1.
+ *  CONSTRUCTION RULE: `end_i` and `start_{i+1}` are the *same expression* (`cumulativeVh[i+1] /
+ *  VOYAGE_SCROLL_VH`), so they are bit-identical. Never write `start + span / VOYAGE_SCROLL_VH`:
+ *  that leaves 1-ulp gaps at 6 of the 10 boundaries, and a progress value inside a gap falls
+ *  through chapterAt()'s `?? last` to Surface. */
+export const CHAPTERS: readonly Chapter[] = CHAPTER_DEFS.map((d, i) => ({
+  ...d,
+  start: cumulativeVh[i] / VOYAGE_SCROLL_VH,
+  end: i === CHAPTER_DEFS.length - 1 ? 1 : cumulativeVh[i + 1] / VOYAGE_SCROLL_VH,
+}));
+
+export const CONTENT_CHAPTERS: readonly Chapter[] = CHAPTERS.filter((c) => !c.micro);
 
 /** The last section carries one extra viewport beyond its chapter span, so the track is
  *  `VOYAGE_SCROLL_VH + VOYAGE_TAIL_VH` tall and `scrollHeight - innerHeight === VOYAGE_SCROLL_VH`.
@@ -45,7 +70,8 @@ export const VOYAGE_TAIL_VH = 100;
 
 /** DOM height of a chapter's section, in vh. The tail rides on the final chapter. */
 export function sectionHeightVh(chapter: Chapter): number {
-  return (chapter.end - chapter.start) * VOYAGE_SCROLL_VH + (chapter.id === "surface" ? VOYAGE_TAIL_VH : 0);
+  // The declared span, verbatim: deriving it from the fractions drifts by up to 1.4e-13 vh.
+  return chapter.spanVh + (chapter.id === "surface" ? VOYAGE_TAIL_VH : 0);
 }
 
 // One story with voyageStore.ts: Lenis reports `progress === 1` when `limit <= 0` (an
@@ -62,6 +88,21 @@ export function chapterAt(progress: number): { chapter: Chapter; chapterProgress
   const chapter = CHAPTERS.find((c) => p >= c.start && p < c.end) ?? last;
   const span = chapter.end - chapter.start;
   return { chapter, chapterProgress: span > 0 ? (p - chapter.start) / span : 1 };
+}
+
+/**
+ * Absolute progress for "position `t` (0..1) inside chapter `id`" — `start + t * (end - start)`.
+ * Tests and the browser review name scroll positions through this, never through a raw
+ * progress literal, so a change to the chapter table cannot silently retarget them.
+ * `t <= 0` and `t >= 1` return the chapter's own `start` / `end` bit-for-bit (no float
+ * round-trip); note `end` already belongs to the NEXT chapter, so use t < 1 to stay inside.
+ */
+export function progressAt(id: ChapterId, t: number): number {
+  const c = CHAPTERS.find((x) => x.id === id)!;
+  const u = clamp01(t);
+  if (u === 0) return c.start;
+  if (u === 1) return c.end;
+  return c.start + u * (c.end - c.start);
 }
 
 /** The star is fixed in world space; the whole voyage approaches it. */

@@ -8,6 +8,7 @@ import {
 } from "./WarpStreaks";
 import { TIER_SETTINGS } from "@/scene/quality";
 import { voyageStore } from "@/scene/scroll/voyageStore";
+import { progressAt } from "@/scene/camera/flightPath";
 import { makeFrame } from "./testUtils";
 
 // The store is module-global; reset so scroll state cannot leak between tests.
@@ -59,7 +60,7 @@ describe("WarpStreaks", () => {
 
     const scene = new THREE.Scene();
     streaks.build(scene, "mid");
-    voyageStore.setScroll(0.1, 1);
+    voyageStore.setScroll(progressAt("approach", 1 / 6), 1);
     streaks.update(makeFrame({ voyage: voyageStore.getState() }));
 
     expect(streaks.material.opacity).toBeCloseTo(streakOpacity(1), 5);
@@ -144,7 +145,7 @@ describe("WarpStreaks — chapter 03", () => {
     const scene = new THREE.Scene();
     const streaks = new WarpStreaks();
     streaks.build(scene, "mid");
-    voyageStore.setScroll(0.21, 0);
+    voyageStore.setScroll(progressAt("jump", 0.5), 0);
     const cp = voyageStore.getState().chapterProgress;
     expect(voyageStore.getState().chapter.id).toBe("jump");
     streaks.update(makeFrame());
@@ -162,7 +163,7 @@ describe("WarpStreaks — chapter 03", () => {
     const scene = new THREE.Scene();
     const streaks = new WarpStreaks();
     streaks.build(scene, "mid");
-    voyageStore.setScroll(0.215, 0);
+    voyageStore.setScroll(progressAt("jump", 0.75), 0);
     const cp = voyageStore.getState().chapterProgress;
     streaks.update(makeFrame());
 
@@ -181,7 +182,7 @@ describe("WarpStreaks — chapter 03", () => {
     const scene = new THREE.Scene();
     const streaks = new WarpStreaks();
     streaks.build(scene, "mid");
-    voyageStore.setScroll(0.2005, 1); // chapterProgress 0.025
+    voyageStore.setScroll(progressAt("jump", 0.025), 1); // chapterProgress 0.025
     streaks.update(makeFrame());
 
     expect(streaks.material.opacity).toBeCloseTo(streakOpacity(1), 5); // 0.65, not 0.0706
@@ -196,7 +197,7 @@ describe("WarpStreaks — chapter 03", () => {
     const scene = new THREE.Scene();
     const streaks = new WarpStreaks();
     streaks.build(scene, "mid");
-    voyageStore.setScroll(0.21, 0);
+    voyageStore.setScroll(progressAt("jump", 0.5), 0);
     const cp = voyageStore.getState().chapterProgress;
     streaks.update(makeFrame({ ignite: 0.5 }));
     expect(streaks.material.opacity).toBeCloseTo(hyperOpacity(cp) * 0.5, 5);
@@ -207,7 +208,7 @@ describe("WarpStreaks — chapter 03", () => {
     const scene = new THREE.Scene();
     const streaks = new WarpStreaks();
     streaks.build(scene, "mid");
-    voyageStore.setScroll(0.1, 1);
+    voyageStore.setScroll(progressAt("approach", 1 / 6), 1);
     expect(voyageStore.getState().chapter.id).toBe("approach");
     streaks.update(makeFrame());
 
@@ -222,10 +223,10 @@ describe("WarpStreaks — chapter 03", () => {
     const scene = new THREE.Scene();
     const streaks = new WarpStreaks();
     streaks.build(scene, "mid");
-    voyageStore.setScroll(0.219, 0); // chapterProgress ~0.95, the last in-band frame
+    voyageStore.setScroll(progressAt("jump", 0.95), 0); // chapterProgress ~0.95, the last in-band frame
     expect(voyageStore.getState().chapter.id).toBe("jump");
     streaks.update(makeFrame());
-    voyageStore.setScroll(0.221, 0);
+    voyageStore.setScroll(progressAt("orbit", 0.008), 0);
     expect(voyageStore.getState().chapter.id).toBe("orbit");
     streaks.update(makeFrame());
 

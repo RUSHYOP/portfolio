@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
 import { EnergyOrb, jumpGlare } from "./EnergyOrb";
-import { STAR_POSITION, starScale } from "@/scene/camera/flightPath";
+import { STAR_POSITION, starScale, progressAt } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { makeFrame } from "./testUtils";
 
@@ -91,7 +91,7 @@ describe("EnergyOrb — chapter 03 flare", () => {
     const scene = new THREE.Scene();
     const orb = new EnergyOrb();
     orb.build(scene, "mid");
-    voyageStore.setScroll(0.21, 0);
+    voyageStore.setScroll(progressAt("jump", 0.5), 0);
     const cp = voyageStore.getState().chapterProgress;
     expect(voyageStore.getState().chapter.id).toBe("jump");
     orb.update(makeFrame());
@@ -104,14 +104,14 @@ describe("EnergyOrb — chapter 03 flare", () => {
     const orb = new EnergyOrb();
     orb.build(scene, "mid");
     // chapterProgress 0 → jumpGlare 0, so the manual control wins.
-    voyageStore.setScroll(0.2, 0);
+    voyageStore.setScroll(progressAt("jump", 0), 0);
     orb.setGlare(1);
     orb.update(makeFrame());
     expect(orb.material.uniforms.uGlare.value).toBeCloseTo(1, 6);
     // Mid-ramp with two sub-1 drivers: max picks the larger, a sum (clamped or not) does not.
     // At chapterProgress 0.25 the drivers are 0.7071… and 0.2 — max gives 0.7071, a plain sum
     // 0.9071, a clamped sum 0.9071. A probe at the peak could not tell any of them apart.
-    voyageStore.setScroll(0.205, 0); // chapterProgress 0.25 → jumpGlare 0.7071067811865451
+    voyageStore.setScroll(progressAt("jump", 0.25), 0); // chapterProgress 0.25 → jumpGlare 0.7071067811865451
     orb.setGlare(0.2);
     orb.update(makeFrame());
     expect(orb.material.uniforms.uGlare.value)
@@ -122,7 +122,7 @@ describe("EnergyOrb — chapter 03 flare", () => {
     const scene = new THREE.Scene();
     const orb = new EnergyOrb();
     orb.build(scene, "mid");
-    voyageStore.setScroll(0.1, 0);
+    voyageStore.setScroll(progressAt("approach", 1 / 6), 0);
     orb.setGlare(0.25);
     orb.update(makeFrame());
     expect(orb.material.uniforms.uGlare.value).toBeCloseTo(0.25, 6);
@@ -136,7 +136,7 @@ describe("EnergyOrb — chapter 03 flare", () => {
     const scene = new THREE.Scene();
     const orb = new EnergyOrb();
     orb.build(scene, "mid");
-    voyageStore.setScroll(0.21, 0);
+    voyageStore.setScroll(progressAt("jump", 0.5), 0);
     expect(() => orb.update(makeFrame({ ignite: 0.5 }))).not.toThrow();
     expect(orb.object?.children).toHaveLength(1);
     // uGlare is deliberately NOT gated by ignite — the burst's opacity is.

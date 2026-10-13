@@ -3,10 +3,14 @@ import * as THREE from "three";
 import { Topology, visibleNodeCount, topologyFade } from "./Topology";
 import { TIER_SETTINGS } from "@/scene/quality";
 import { voyageStore } from "@/scene/scroll/voyageStore";
+import { progressAt } from "@/scene/camera/flightPath";
 import { makeFrame } from "./testUtils";
 
 // The store is module-global; reset so scroll state cannot leak between tests.
 beforeEach(() => voyageStore.reset());
+
+// Approach's chapterProgress 1/3 — the last frame the 100vh pin is stationary (graph whole).
+const DOCKED = progressAt("approach", 1 / 3);
 
 const nodesOf = (t: Topology) => (t.object!.children[0] as THREE.Points).geometry;
 const edgesOf = (t: Topology) => (t.object!.children[1] as THREE.LineSegments).geometry;
@@ -102,7 +106,7 @@ describe("Topology", () => {
     topo.update(makeFrame());                        // launch
     expect(topo.object?.visible).toBe(false);
 
-    voyageStore.setScroll(0.1, 0);                   // approach, mid-assembly
+    voyageStore.setScroll(progressAt("approach", 1 / 6), 0); // approach, mid-assembly
     const midProgress = voyageStore.getState().chapterProgress;
     topo.update(makeFrame());
     expect(topo.object?.visible).toBe(true);
@@ -112,12 +116,12 @@ describe("Topology", () => {
     expect(nodesOf(topo).drawRange.count).toBe(partial);
     expect(edgesOf(topo).drawRange.count).toBe((partial - 1) * 2);
 
-    voyageStore.setScroll(0.12, 0);                  // docked: whole graph
+    voyageStore.setScroll(DOCKED, 0);                // docked: whole graph
     topo.update(makeFrame());
     expect(nodesOf(topo).drawRange.count).toBe(TIER_SETTINGS.high.topologyNodes);
     expect(topo.nodeMaterial.opacity).toBeGreaterThan(0);
 
-    voyageStore.setScroll(0.21, 0);                  // jump: gone again
+    voyageStore.setScroll(progressAt("jump", 0.5), 0); // jump: gone again
     topo.update(makeFrame());
     expect(topo.object?.visible).toBe(false);
   });
@@ -127,7 +131,7 @@ describe("Topology", () => {
   it("sits at its camera-space offset in front of the camera and faces it", () => {
     const topo = new Topology();
     topo.build(new THREE.Scene(), "mid");
-    voyageStore.setScroll(0.12, 0);
+    voyageStore.setScroll(DOCKED, 0);
     const camera = new THREE.PerspectiveCamera();
     camera.position.set(5, 0, 0);
     camera.rotation.y = Math.PI / 2;                 // looking down world -x
@@ -150,7 +154,7 @@ describe("Topology", () => {
     expect(topo.count).toBe(0);
     expect(topo.edgeCount).toBe(0);
     expect(scene.children).toHaveLength(1);
-    voyageStore.setScroll(0.12, 0);
+    voyageStore.setScroll(DOCKED, 0);
     expect(() => topo.update(makeFrame())).not.toThrow();
   });
 
@@ -187,7 +191,7 @@ describe("Topology", () => {
     // while the graph popped in at full brightness behind the ignition curtain.
     const topo = new Topology();
     topo.build(new THREE.Scene(), "high");
-    voyageStore.setScroll(0.12, 0);                  // topologyFade === 1 at chapterProgress 1/3
+    voyageStore.setScroll(DOCKED, 0);                // topologyFade === 1 at chapterProgress 1/3
     topo.update(makeFrame({ ignite: 0.5 }));
     expect(topo.nodeMaterial.opacity).toBeCloseTo(0.45, 6);
     expect(topo.edgeMaterial.opacity).toBeCloseTo(0.14, 6);

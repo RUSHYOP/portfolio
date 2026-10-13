@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CHAPTERS, type ChapterId } from "@/scene/camera/flightPath";
+import { CHAPTERS, progressAt, type ChapterId } from "@/scene/camera/flightPath";
 import { useVoyage } from "@/scene/scroll/useVoyage";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { getAudioEngine } from "@/lib/audio/AudioEngine";
@@ -15,6 +15,10 @@ export const DOCK_LINKS: readonly { label: string; chapter: ChapterId }[] = [
   { label: "Work", chapter: "worlds" },
   { label: "About", chapter: "pilot" },
 ];
+
+/** The capsule compacts once the hero is 62.5% scrolled. Derived from Launch's own span (it
+ *  was the absolute literal 0.05 while Launch ended at 0.08), so it tracks the chapter table. */
+export const DOCK_COMPACT_PROGRESS = progressAt("launch", 0.625);
 
 const DOCK_OPTIONS = { proximity: 122, spring: 0.19, damping: 0.7, widthGrowth: 17, heightGrowth: 10, drop: 2.5 };
 
@@ -35,7 +39,7 @@ export default function Dock({ visible }: DockProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const s = useVoyage();
-  const compact = s.progress > 0.05;
+  const compact = s.progress > DOCK_COMPACT_PROGRESS;
 
   useEffect(() => {
     const root = capsuleRef.current;

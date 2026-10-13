@@ -288,6 +288,12 @@
      y ≈ 520-590, so the panel (y ≈ 113 → 400) stops short of both; long copy scrolls inside it
      (it is a tab stop). min() = 287 px at 844, 18rem on taller phones. */
   .process { flex: 0 0 auto; width: 100%; height: min(34vh, 18rem); }
+  /* Tighter mobile type so seed steps fit the capped box (browser review: up to 67px of hidden
+     internal scroll at 390x844 cut off "How long"). The cap stays — it keeps the star clear. */
+  .process-panel__index { margin-bottom: 0.5rem; }
+  .process-panel__title { font-size: 1.15rem; margin-bottom: 0.6rem; }
+  .process-panel__field { font-size: 0.85rem; line-height: 1.45; margin-bottom: 0.65rem; }
+  .process-panel__field span { margin-bottom: 0.15rem; }
 }
 
 /* Reduced motion / still tier: no pin, no scroll-derived motion — the steps just flow, stacked,

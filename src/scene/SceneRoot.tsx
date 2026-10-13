@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { getAudioEngine } from "@/lib/audio/AudioEngine";
-import { getCameraPose, fovForVelocity, type CameraPose } from "@/scene/camera/flightPath";
+import { getCameraPose, bankForProgress, fovForVelocity, type CameraPose } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { TIER_SETTINGS, type Tier } from "@/scene/quality";
 import { Starfield } from "@/scene/chapters/Starfield";
@@ -69,6 +69,9 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
     const pose: CameraPose = { position: new THREE.Vector3(), lookAt: new THREE.Vector3() };
     const smoothPos = new THREE.Vector3();
     const smoothLook = new THREE.Vector3(0, 0, -1);
+    // Orbit's roll about the camera's forward axis, eased like the pose so a Dock click or a
+    // scroll restore mid-orbit does not snap it while position and lookAt glide.
+    let smoothBank = 0;
     getCameraPose(0, pose);
     smoothPos.copy(pose.position);
     smoothLook.copy(pose.lookAt);
@@ -152,6 +155,11 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
       smoothLook.lerp(pose.lookAt, POSE_LERP);
       camera.position.set(smoothPos.x + mouse.x * 0.35, smoothPos.y + mouse.y * 0.25, smoothPos.z);
       camera.lookAt(smoothLook);
+      // After lookAt: lookAt rebuilds the orientation from scratch every frame, so the roll
+      // never accumulates, and rotating about local Z leaves the view direction (and the
+      // star's screen position) unchanged.
+      smoothBank += (bankForProgress(voyage.progress) - smoothBank) * POSE_LERP;
+      camera.rotateZ(smoothBank);
       const targetFov = fovForVelocity(voyage.velocity);
       if (Math.abs(camera.fov - targetFov) > 0.01) {
         camera.fov += (targetFov - camera.fov) * 0.1;

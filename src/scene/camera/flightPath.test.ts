@@ -4,7 +4,7 @@ import {
   CHAPTERS, CONTENT_CHAPTERS, chapterAt, getCameraPose, distanceAU, starScale,
   fovForVelocity, FOV_MIN, FOV_MAX, STAR_POSITION, LAUNCH_LOOK_OFFSET,
   CAMERA_WAYPOINTS, progressToCurveT, sectionHeightVh, VOYAGE_SCROLL_VH, VOYAGE_TAIL_VH,
-  progressAt,
+  progressAt, bankForProgress, BANK_MAX,
 } from "./flightPath";
 
 const STEPS = 400;
@@ -219,6 +219,71 @@ describe("curves", () => {
     expect(fovForVelocity(9)).toBe(FOV_MAX);
     expect(fovForVelocity(0.5)).toBeGreaterThan(FOV_MIN);
     expect(fovForVelocity(0.5)).toBeLessThan(FOV_MAX);
+  });
+});
+
+// Spec §3 row 04: "Camera banks ~30° and settles into orbit". Pure and orbit-scoped: SceneRoot
+// applies it as a roll AFTER lookAt, so none of the position/lookAt invariants above can see it.
+describe("bankForProgress", () => {
+  const bank = (t: number) => bankForProgress(progressAt("orbit", t));
+
+  it("is 30 degrees at most — the spec's figure", () => {
+    expect(BANK_MAX).toBeCloseTo(Math.PI / 6, 12);
+  });
+
+  it("is exactly 0 in every chapter but Orbit, so Approach, Jump and Worlds stay level", () => {
+    for (const c of CHAPTERS.filter((x) => x.id !== "orbit")) {
+      for (const t of [0, 0.25, 0.5, 0.75, 0.999]) expect(bankForProgress(progressAt(c.id, t))).toBe(0);
+    }
+  });
+
+  it("starts at 0 on Orbit's first frame and is back to ~0 on its last", () => {
+    expect(bank(0)).toBe(0);
+    expect(bank(0.999999)).toBeLessThan(1e-6);
+    expect(bank(0.999999)).toBeGreaterThanOrEqual(0);
+  });
+
+  it("holds BANK_MAX across the middle of the chapter", () => {
+    for (const t of [0.18, 0.3, 0.5, 0.7, 0.82]) expect(bank(t)).toBeCloseTo(BANK_MAX, 9);
+  });
+
+  it("eases in over the first 18% and out over the last 18%, monotonically", () => {
+    let prev = -1;
+    for (let k = 0; k <= 100; k++) {
+      const v = bank((k / 100) * 0.18);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
+    prev = BANK_MAX + 1;
+    for (let k = 0; k <= 100; k++) {
+      const v = bank(Math.min(0.999999, 0.82 + (k / 100) * 0.18));
+      expect(v).toBeLessThanOrEqual(prev);
+      prev = v;
+    }
+    // Smooth, not linear: the quarter point of the ramp is below a quarter of the way up.
+    expect(bank(0.18 * 0.25)).toBeLessThan(BANK_MAX * 0.25);
+  });
+
+  it("is symmetric about the middle of the chapter", () => {
+    for (const t of [0.03, 0.06, 0.1, 0.15]) expect(bank(t)).toBeCloseTo(bank(1 - t), 9);
+  });
+
+  it("is continuous across both chapter edges (no jump in the roll)", () => {
+    const orbit = CHAPTERS.find((c) => c.id === "orbit")!;
+    const justBefore = (x: number) => x * (1 - 1e-9);
+    expect(Math.abs(bankForProgress(justBefore(orbit.start)) - bankForProgress(orbit.start))).toBeLessThan(1e-6);
+    expect(Math.abs(bankForProgress(justBefore(orbit.end)) - bankForProgress(orbit.end))).toBeLessThan(1e-6);
+  });
+
+  it("stays inside [0, BANK_MAX] over the whole voyage and treats non-finite input as level", () => {
+    for (let i = 0; i <= STEPS; i++) {
+      const b = bankForProgress(i / STEPS);
+      expect(b).toBeGreaterThanOrEqual(0);
+      expect(b).toBeLessThanOrEqual(BANK_MAX);
+    }
+    expect(bankForProgress(NaN)).toBe(0);
+    expect(bankForProgress(Infinity)).toBe(0);
+    expect(bankForProgress(-Infinity)).toBe(0);
   });
 });
 

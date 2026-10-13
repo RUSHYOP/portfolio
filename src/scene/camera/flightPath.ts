@@ -215,3 +215,26 @@ export const FOV_MAX = 70;
 export function fovForVelocity(velocity01: number): number {
   return FOV_MIN + (FOV_MAX - FOV_MIN) * clamp01(velocity01);
 }
+
+/** Peak roll of the Orbit bank, in radians (spec §3 row 04: "banks ~30°"). The sign is the
+ *  direction of the roll; a browser-review tunable. */
+export const BANK_MAX = (30 * Math.PI) / 180;
+
+/** The bank eases in over Orbit's first 18% and out over its last 18%, so Jump hands over
+ *  level (the letterbox bars still hide the first of it) and Worlds starts level. */
+const BANK_IN_END = 0.18;
+const BANK_OUT_START = 0.82;
+
+/**
+ * Camera roll in radians for a voyage progress: 0 in every chapter but Orbit, `BANK_MAX`
+ * through the middle of it, smooth at both ends. Pure and kept out of `getCameraPose` on
+ * purpose — SceneRoot applies it as `camera.rotateZ(...)` after `lookAt`, a roll about the
+ * forward axis, so position, lookAt and the never-reverse invariant cannot be affected.
+ */
+export function bankForProgress(progress: number): number {
+  const { chapter, chapterProgress: t } = chapterAt(progress);
+  if (chapter.id !== "orbit") return 0;
+  if (t < BANK_IN_END) return BANK_MAX * smooth(t / BANK_IN_END);
+  if (t > BANK_OUT_START) return BANK_MAX * smooth((1 - t) / (1 - BANK_OUT_START));
+  return BANK_MAX;
+}

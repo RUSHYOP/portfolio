@@ -5,19 +5,20 @@
  * stationary for `section - pin`: 200vh on desktop (100vh pin) = chapterProgress 0..2/3, and
  * 236vh on mobile (64vh pin) = 0..0.787. ONE schedule serves both and every device: the ring is a
  * single WebGL instance and cannot be media-query-aware, so the schedule is sized to the
- * smaller (desktop) hold. The PANELS never fade out: the last step stays at 1 until the pin
+ * smaller (desktop) hold. The PANELS never fade out: the last step stays lit until the pin
  * releases (desktop cp 2/3, mobile 0.787), so a phone dwells on it for its extra 0.12 and the
  * pin's own release is the panel's exit. Only the ring and the starfield fade out (orbitPresence).
+ * The panels take a 0/1 target (stepTarget) and CSS animates it; the ring's cursor is scrubbed.
  *
  * Layout of chapterProgress (cp); the pin is stationary for cp 0 .. 0.667 (desktop) / 0.787 (mobile):
  *   0 ......... 0.04 ........................ 0.62 ........ 0.66 .... 0.667 ........ 0.787
- *   [ fade in ][ window: steps cross-fade   ][ ring/stars fade out ]
- *   panels:    [ step 0 .. step n-1 ........................ last step holds at 1 ........]
+ *   [ fade in ][ window: ring turns         ][ ring/stars fade out ]
+ *   panels: [ step 0 .. step n-1 (switch at each boundary) .. last step holds lit .........]
  *
- * Inside ORBIT_WINDOW the N steps share the window in equal slots. Between slot b-1 and slot b
- * there is a short cross-fade centred on the slot boundary, and the ring's cursor moves
- * between the same two steps over the same stretch, so a node arrives front-centre exactly as
- * its panel replaces the previous one.
+ * Inside ORBIT_WINDOW the N steps share the window in equal slots. Around each slot boundary the
+ * ring's cursor travels between two steps over a short stretch centred on it, and the panel
+ * switches at that stretch's midpoint, so a node arrives front-centre as its panel replaces
+ * the previous one.
  */
 import { CHAPTERS } from "@/scene/camera/flightPath";
 
@@ -35,13 +36,13 @@ const PIN_MOBILE_VH = 64;
 export const ORBIT_HOLD_DESKTOP = (orbit.spanVh - PIN_DESKTOP_VH) / orbit.spanVh;
 export const ORBIT_HOLD_MOBILE = (orbit.spanVh - PIN_MOBILE_VH) / orbit.spanVh;
 
-/** Where the steps dwell, as chapterProgress `[start, end]`. Inside it the summed panel
- *  visibility is never below 1. Sits inside the desktop hold with margin for the edge fades. */
+/** Where the steps dwell, as chapterProgress `[start, end]`. Sits inside the desktop hold with
+ *  margin for the edge fades. */
 export const ORBIT_WINDOW: readonly [number, number] = [0.04, 0.62];
 
-/** Width of the fade-in before the window and the fade-out after it, in chapterProgress. The
- *  fade-in serves the panels, the ring and the starfield; the fade-out only the ring and the
- *  starfield (the panels dwell until the pin releases). Both margins sit inside the desktop hold. */
+/** Width of the fade-in before the window and the fade-out after it, in chapterProgress — the
+ *  ring and the starfield only (the panels are lit by stepTarget and dwell until the pin
+ *  releases). Both margins sit inside the desktop hold. */
 export const ORBIT_EDGE_FADE = 0.04;
 
 /** Last chapterProgress at which the ring and the starfield pull are still held by the
@@ -49,7 +50,7 @@ export const ORBIT_EDGE_FADE = 0.04;
  *  The panels are not tied to it. */
 export const ORBIT_PRESENCE_END = ORBIT_WINDOW[1] + ORBIT_EDGE_FADE;
 
-/** Width of a cross-fade between two steps, as a fraction of one step's slot. */
+/** Width of the ring's travel between two steps, as a fraction of one step's slot. */
 export const STEP_CROSSFADE = 0.3;
 
 /** 0..1 presence of the RING and the STARFIELD pull: 0 at cp 0, ramps to 1 by the window start,
@@ -61,15 +62,6 @@ export function orbitPresence(chapterProgress: number): number {
   if (t <= end) return 1;
   if (t < ORBIT_PRESENCE_END) return smooth(1 - (t - end) / ORBIT_EDGE_FADE);
   return 0;
-}
-
-/** 0..1 presence of the PANELS only: fades in over [0, ORBIT_WINDOW[0]] and then stays 1, so the
- *  last step dwells until the pin releases (desktop cp 2/3, mobile 0.787) and leaves with the
- *  pin. The ring and the starfield keep `orbitPresence` (they do fade out). */
-export function panelPresence(chapterProgress: number): number {
-  const t = clamp01(chapterProgress);
-  const start = ORBIT_WINDOW[0];
-  return t < start ? smooth(t / start) : 1;
 }
 
 /** Whole numbers only: the CMS may hold any count, and a non-finite or negative one is empty. */
@@ -104,18 +96,19 @@ export function orbitCursor(chapterProgress: number, n: number): number {
 }
 
 /**
- * 0..1 visibility of step `i` of `n`: exactly one panel at a time except across a
- * cross-fade, where the two visibilities sum to 1. Inside ORBIT_WINDOW the sum over all steps
- * is exactly 1; before it only the first step is non-zero (fading in over the leading margin),
- * and after it the last step stays at 1 until the chapter ends — the pin's release is its exit,
- * so the caller (Process) must not show any step outside Orbit. Out-of-range or non-integer `i`,
- * and n <= 0, give 0.
+ * 0/1 TARGET visibility of step `i` of `n` for the DOM panels — never in between: the CSS
+ * transition on .process-panel is the cross-fade, so no scroll position can rest on two
+ * half-faded panels (slice 4 browser review; the old scrubbed stepSolo could). The lit step is
+ * the nearest whole cursor, so a panel changes exactly half-way through the ring's travel.
+ * Dark at chapterProgress 0, the first step from the chapter's first pixel (nav arrivals land
+ * on start + 0.001), and the last step from the window end until the chapter ends — the pin's
+ * release is its exit, so the caller (Process) must not show any step outside Orbit.
+ * Out-of-range or non-integer `i`, and n <= 0, give 0; NaN progress is the chapter start.
  */
-export function stepSolo(i: number, n: number, chapterProgress: number): number {
+export function stepTarget(i: number, n: number, chapterProgress: number): number {
   const count = sanitizeCount(n);
   if (!Number.isInteger(i) || i < 0 || i >= count) return 0;
-  const x = slotPosition(chapterProgress, count);
-  const enter = i === 0 ? 1 : crossed(i, x);
-  const leave = i === count - 1 ? 0 : crossed(i + 1, x);
-  return clamp01(panelPresence(chapterProgress) * (enter - leave));
+  const t = clamp01(chapterProgress);
+  if (t <= 0) return 0;
+  return Math.round(orbitCursor(t, count)) === i ? 1 : 0;
 }

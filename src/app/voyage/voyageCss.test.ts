@@ -45,5 +45,13 @@ describe("voyage.css — Orbit", () => {
     const still = body('.chapter--orbit[data-static="true"] .process-panel');
     expect(still).toMatch(/position:\s*static/);
     expect(still).toMatch(/opacity:\s*1/);
+    // Still tier / reduced motion: no cross-fade animation either.
+    expect(still).toMatch(/transition:\s*none/);
+  });
+  // --solo is a 0/1 target (orbitSchedule.stepTarget); this transition IS the cross-fade.
+  it("cross-fades the step panels with a CSS transition on opacity and transform", () => {
+    const r = body(".process-panel");
+    expect(r).toMatch(/transition:[^;]*opacity/);
+    expect(r).toMatch(/transition:[^;]*transform/);
   });
 });

@@ -219,8 +219,9 @@
 /* ====== Orbit (ch. 04) ====== */
 /* Orbit's section is 300vh and .chapter__pin (100vh) is stationary for 300 - 100 = 200vh =
    chapterProgress 0..2/3 (orbitSchedule.ts derives its window from exactly this). ONE panel is
-   up at a time on every device: the step panels overlap in one box and --solo (stepSolo) is
-   each one's opacity, so the ring's front-centre node and the panel always change together.
+   up at a time on every device: the step panels overlap in one box and --solo (stepTarget, 0/1,
+   animated by the transition below) is each one's opacity, so the ring's front-centre node and
+   the panel change together.
    The layout knobs are custom properties so the browser review can retune them without
    touching JS: the panel takes the left of the frame, the ring + star read centre-right. */
 .chapter--orbit {
@@ -234,6 +235,11 @@
   padding: clamp(1.25rem, 2vw, 2rem);
   opacity: var(--solo);
   transform: translateY(calc((1 - var(--solo)) * 14px));
+  /* --solo is a 0/1 target (orbitSchedule.stepTarget), so this transition IS the cross-fade:
+     no scroll position can rest on two half-faded panels (slice 4 browser review). */
+  transition:
+    opacity 0.45s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 /* A scrollable panel is a tab stop, so it needs a visible focus ring. */
 .process-panel:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.6); outline-offset: 3px; }
@@ -266,7 +272,7 @@
 }
 
 /* Mobile: a 64vh pin is stationary for 300 - 64 = 236vh (chapterProgress 0..0.787); the shared
-   schedule's window ends at 0.62 and the last panel then holds (panelPresence stays 1), so a
+   schedule's window ends at 0.62 and the last panel then holds (stepTarget stays 1), so a
    phone dwells on the last step until the pin releases.
    padding-top, NOT top: an inner inset keeps the sticky hold at 236vh (a `top` offset would cut
    it), and 4.5rem clears the fixed mobile dock exactly as Approach's pin does. Top-anchored and
@@ -294,6 +300,8 @@
 }
 .chapter--orbit[data-static="true"] .process-panel {
   position: static; inset: auto; opacity: 1; transform: none; overflow: visible;
+  /* Reduced motion: no cross-fade animation either. */
+  transition: none;
 }
 @media (max-width: 767px) {
   .chapter--orbit[data-static="true"] .process { flex: 0 0 auto; }

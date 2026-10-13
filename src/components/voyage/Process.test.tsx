@@ -104,14 +104,22 @@ describe("Process — one panel at a time", () => {
     }
   });
 
-  it("cross-fades two neighbours through the middle of a step change", () => {
-    scrollToOrbit(ORBIT_WINDOW[0] + (1 / 4) * (ORBIT_WINDOW[1] - ORBIT_WINDOW[0])); // boundary 0|1
+  // Slice 4 browser review: no rest frame may hold two half-faded panels. The panel takes a 0/1
+  // target and the CSS transition (voyage.css) is the cross-fade.
+  it("switches panels at the middle of a step change, never resting on a mix", () => {
+    const slot = (ORBIT_WINDOW[1] - ORBIT_WINDOW[0]) / 4;
+    scrollToOrbit(ORBIT_WINDOW[0] + slot - 0.01 * slot); // just before boundary 0|1
+    const { container, rerender } = render(<Process animated steps={four()} />);
+    expect(solos(container)).toEqual([1, 0, 0, 0]);
+    scrollToOrbit(ORBIT_WINDOW[0] + slot + 0.01 * slot); // just after it
+    rerender(<Process animated steps={four()} />);
+    expect(solos(container)).toEqual([0, 1, 0, 0]);
+  });
+
+  it("lights the first step from the chapter's first pixel (nav arrival at start + 0.001)", () => {
+    voyageStore.setScroll(progressAt("orbit", 0) + 0.001, 0);
     const { container } = render(<Process animated steps={four()} />);
-    const s = solos(container);
-    expect(s[0]).toBeCloseTo(0.5, 6);
-    expect(s[1]).toBeCloseTo(0.5, 6);
-    expect(s[2]).toBe(0);
-    expect(s[3]).toBe(0);
+    expect(solos(container)).toEqual([1, 0, 0, 0]);
   });
 
   it("is dark before the chapter and after it", () => {
@@ -130,8 +138,8 @@ describe("Process — one panel at a time", () => {
     panels(first.container).forEach((p, j) => {
       expect(p.getAttribute("tabindex")).toBe(j === 2 ? "0" : null);
     });
-    // Mid cross-fade (0.1 of a slot past boundary 0|1: panel 1 ≈ 93% up, panel 0 ≈ 7%): the
-    // fading-out panel is not a second tab stop.
+    // Just past boundary 0|1 (0.1 of a slot): the panel that is transitioning out is not a
+    // second tab stop.
     scrollToOrbit(ORBIT_WINDOW[0] + (1.1 / 4) * (ORBIT_WINDOW[1] - ORBIT_WINDOW[0]));
     first.rerender(<Process animated steps={four()} />);
     expect(panels(first.container).map((p) => p.getAttribute("tabindex"))).toEqual([null, "0", null, null]);

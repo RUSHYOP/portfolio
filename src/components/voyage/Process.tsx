@@ -5,7 +5,7 @@ import { useReducedMotion } from "framer-motion";
 // Type-only: erased at compile time, so no mongoose reaches the client bundle.
 import type { Item } from "@/lib/collections/defineCollection";
 import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
-import { stepSolo, ORBIT_HOLD_MOBILE } from "@/scene/chapters/orbitSchedule";
+import { stepTarget, ORBIT_HOLD_MOBILE } from "@/scene/chapters/orbitSchedule";
 import { useVoyage } from "@/scene/scroll/useVoyage";
 
 interface ProcessProps {
@@ -17,7 +17,8 @@ interface ProcessProps {
 const chapter = CHAPTERS.find((c) => c.id === "orbit")!;
 
 /** CSS custom properties are not part of React's CSSProperties, so the one value CSS needs
- *  (a panel's visibility, 0..1) is handed over through this widened record. */
+ *  (a panel's target visibility, 0 or 1 — the CSS transition animates it) is handed over
+ *  through this widened record. */
 type SoloStyle = CSSProperties & Record<"--solo", number>;
 
 /** `Item` is untyped past its three base fields, so every read is narrowed here at the leaf.
@@ -44,8 +45,9 @@ function Field({ label, value }: { label: string; value: string }) {
 }
 
 /** Chapter 04. One glass panel at a time, replaced in place as the ring turns the next node
- *  front-centre. The schedule (orbitSchedule.stepSolo) is shared with the ring, so panel and
- *  node always change together. Same panel on desktop and mobile; only the CSS box differs. */
+ *  front-centre. The schedule is shared with the ring (stepTarget switches at the middle of the
+ *  ring's travel), so panel and node change together. Same panel on desktop and mobile; only
+ *  the CSS box differs. */
 export default function Process({ steps, animated }: ProcessProps) {
   const s = useVoyage();
   const reduce = useReducedMotion();
@@ -67,9 +69,9 @@ export default function Process({ steps, animated }: ProcessProps) {
           <div className="process">
             {steps.map((item, i) => {
               const { title, what, deliverable, duration } = readStep(item);
-              // Outside Orbit nothing shows (stepSolo(last) is 1 at the chapter's end, and the
+              // Outside Orbit nothing shows (stepTarget(last) is 1 at the chapter's end, and the
               // panels have no fade-out of their own: the pin's release is their exit).
-              const solo = still ? 1 : s.chapter.id === "orbit" ? stepSolo(i, steps.length, s.chapterProgress) : 0;
+              const solo = still ? 1 : s.chapter.id === "orbit" ? stepTarget(i, steps.length, s.chapterProgress) : 0;
               // `opacity: 0` does not skip a backdrop filter, so the CSS gates the blur and the
               // pointer events on this attribute (not on visibility, which would also pull the
               // panel out of the accessibility tree).
@@ -83,7 +85,7 @@ export default function Process({ steps, animated }: ProcessProps) {
                   data-solo-off={off ? "true" : undefined}
                   // The panel scrolls (`overflow-y: auto`) when a long step does not fit the
                   // pin, and a scroll region needs a tab stop. Only the ACTIVE panel gets one
-                  // (solo >= 0.5 — not every panel mid-cross-fade, and none once Orbit is over);
+                  // (solo is a 0/1 target — never the panel transitioning out, and none once Orbit is over);
                   // the static tier does not scroll at all. Also none once the longest pin hold
                   // (mobile, cp 0.787) is over: on desktop the last panel stays at full solo while
                   // its pin scrolls off-screen, and an off-screen tab stop would pull the page back.

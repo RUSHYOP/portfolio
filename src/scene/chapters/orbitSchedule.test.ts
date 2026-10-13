@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { progressAt, chapterAt } from "@/scene/camera/flightPath";
 import {
   ORBIT_WINDOW, ORBIT_EDGE_FADE, ORBIT_PRESENCE_END, ORBIT_HOLD_DESKTOP, ORBIT_HOLD_MOBILE,
-  STEP_CROSSFADE, orbitPresence, orbitCursor, stepSolo,
+  STEP_CROSSFADE, orbitPresence, orbitCursor, stepTarget,
 } from "./orbitSchedule";
 
 const [W0, W1] = ORBIT_WINDOW;
@@ -13,8 +13,8 @@ const centre = (i: number, n: number) => W0 + ((i + 0.5) / n) * (W1 - W0);
 const boundary = (b: number, n: number) => W0 + (b / n) * (W1 - W0);
 const sweep = (from: number, to: number, steps: number) =>
   Array.from({ length: steps + 1 }, (_, k) => from + ((to - from) * k) / steps);
-const sum = (n: number, cp: number) =>
-  Array.from({ length: n }, (_, i) => stepSolo(i, n, cp)).reduce((a, b) => a + b, 0);
+/** Every step's target at `cp`, in order. */
+const targets = (n: number, cp: number) => Array.from({ length: n }, (_, i) => stepTarget(i, n, cp));
 
 describe("schedule constants", () => {
   it("derive the pin holds from Orbit's 300vh section", () => {
@@ -120,16 +120,13 @@ describe("orbitCursor", () => {
   });
 });
 
-describe("stepSolo", () => {
-  // E4 "each step dwells front-centre": a hard cut (STEP_CROSSFADE → 0) or a schedule that never
+describe("orbitCursor — dwell and travel", () => {
+  // E4 "each step dwells front-centre": a hard cut (STEP_CROSSFADE → 0) or a cursor that never
   // rests (STEP_CROSSFADE → 1) would pass every other test here, so the plateau is pinned directly.
-  it("dwells at least ±0.25 of a slot around each centre, and cross-fades over at least ±0.1 of a slot at each boundary", () => {
+  it("rests on step i for at least ±0.25 of a slot around each centre, and travels over at least ±0.1 of a slot at each boundary", () => {
     const n = 4, slot = (W1 - W0) / n;
     for (let i = 0; i < n; i++) {
-      for (const d of [-0.25, -0.1, 0, 0.1, 0.25]) {
-        expect(orbitCursor(centre(i, n) + d * slot, n)).toBeCloseTo(i, 9);
-        expect(stepSolo(i, n, centre(i, n) + d * slot)).toBeCloseTo(1, 9);
-      }
+      for (const d of [-0.25, -0.1, 0, 0.1, 0.25]) expect(orbitCursor(centre(i, n) + d * slot, n)).toBeCloseTo(i, 9);
     }
     for (let b = 1; b < n; b++) {
       for (const d of [-0.1, 0.1]) {
@@ -139,88 +136,82 @@ describe("stepSolo", () => {
       }
     }
   });
+});
 
-  it("shows exactly one step at the centre of each slot", () => {
-    for (const n of [1, 2, 4, 6]) {
-      for (let i = 0; i < n; i++) {
-        for (let j = 0; j < n; j++) expect(stepSolo(j, n, centre(i, n))).toBe(i === j ? 1 : 0);
-      }
-    }
-  });
-
-  it("never lets the summed visibility drop below 1 inside the window (N >= 1)", () => {
+// Slice 4 browser review: a scroll-scrubbed cross-fade can rest half-way (two ghosted panels),
+// the same fault as the old Approach dock. The panels now take a 0/1 TARGET and the CSS
+// transition on .process-panel supplies the cross-fade; the ring's cursor stays scrubbed.
+describe("stepTarget", () => {
+  it("is exactly 0 or 1, with exactly one step lit everywhere past the chapter start", () => {
     for (const n of COUNTS) {
-      for (const cp of sweep(W0, W1, 1000)) {
-        expect(sum(n, cp)).toBeGreaterThanOrEqual(1 - 1e-9);
-        expect(sum(n, cp)).toBeLessThanOrEqual(1 + 1e-9);
-      }
-    }
-  });
-
-  it("shows at most two steps at once, and only neighbours", () => {
-    for (const n of COUNTS) {
-      for (const cp of sweep(0, 1, 1000)) {
-        const lit = Array.from({ length: n }, (_, i) => i).filter((i) => stepSolo(i, n, cp) > 0);
-        expect(lit.length).toBeLessThanOrEqual(2);
-        if (lit.length === 2) expect(lit[1] - lit[0]).toBe(1);
-      }
-    }
-  });
-
-  it("keeps every cross-fade inside the window: only the first step before it, only the last after", () => {
-    for (const n of [2, 4, 6]) {
-      for (const cp of sweep(0, W0, 50)) {
-        for (let i = 1; i < n; i++) expect(stepSolo(i, n, cp)).toBe(0);
-      }
-      for (const cp of sweep(W1, 1, 50)) {
-        for (let i = 0; i < n - 1; i++) expect(stepSolo(i, n, cp)).toBe(0);
+      for (const cp of sweep(0, 1, 1000).slice(1)) {
+        const t = targets(n, cp);
+        for (const v of t) expect([0, 1]).toContain(v);
+        expect(t.reduce((a, b) => a + b, 0)).toBe(1);
       }
     }
   });
 
   it("is dark at the chapter start, for every step", () => {
-    for (const n of COUNTS) for (let i = 0; i < n; i++) expect(stepSolo(i, n, 0)).toBe(0);
+    for (const n of COUNTS) expect(targets(n, 0)).toEqual(Array(n).fill(0));
   });
 
-  it("fades the first step in across the leading margin", () => {
-    expect(stepSolo(0, 4, W0 / 2)).toBeGreaterThan(0);
-    expect(stepSolo(0, 4, W0 / 2)).toBeLessThan(1);
+  it("lights the first step from the chapter's first pixel (no scrubbed fade-in)", () => {
+    expect(targets(4, 0.001)).toEqual([1, 0, 0, 0]);
+    expect(targets(4, W0 / 2)).toEqual([1, 0, 0, 0]);
+  });
+
+  it("lights step i at the centre of its slot", () => {
+    for (const n of [1, 2, 4, 6]) {
+      for (let i = 0; i < n; i++) expect(targets(n, centre(i, n))).toEqual([...Array(n)].map((_, j) => (j === i ? 1 : 0)));
+    }
+  });
+
+  it("switches at the middle of the ring's travel: the lit step is the nearest whole cursor", () => {
+    for (const n of [2, 4, 6]) {
+      for (const cp of sweep(W0, W1, 400)) {
+        const lit = targets(n, cp).indexOf(1);
+        expect(Math.abs(lit - orbitCursor(cp, n))).toBeLessThanOrEqual(0.5);
+      }
+      const slot = (W1 - W0) / n;
+      for (let b = 1; b < n; b++) {
+        expect(targets(n, boundary(b, n) - 0.01 * slot).indexOf(1)).toBe(b - 1);
+        expect(targets(n, boundary(b, n) + 0.01 * slot).indexOf(1)).toBe(b);
+      }
+    }
+  });
+
+  it("never moves backwards as the reader scrolls forward", () => {
+    for (const n of COUNTS) {
+      let prev = 0;
+      for (const cp of sweep(0.0005, 1, 1000)) {
+        const lit = targets(n, cp).indexOf(1);
+        expect(lit).toBeGreaterThanOrEqual(prev);
+        prev = lit;
+      }
+    }
   });
 
   // E4: ONE schedule for every device — on a phone (pin held to ORBIT_HOLD_MOBILE) the last
-  // step simply dwells; on desktop it leaves with the pin. The panels have no fade-out of
-  // their own: the pin's release is their exit.
-  it("keeps the last step up from the window end through the mobile pin release, and no other", () => {
+  // step simply dwells; on desktop it leaves with the pin.
+  it("keeps the last step lit from the window end through the mobile pin release, and no other", () => {
     for (const n of COUNTS) {
       for (const cp of sweep(W1, ORBIT_HOLD_MOBILE, 50)) {
-        for (let i = 0; i < n; i++) expect(stepSolo(i, n, cp)).toBe(i === n - 1 ? 1 : 0);
+        expect(targets(n, cp)).toEqual([...Array(n)].map((_, i) => (i === n - 1 ? 1 : 0)));
       }
     }
   });
 
-  it("agrees with the cursor: the visibility-weighted step index IS the cursor", () => {
-    for (const n of [2, 4, 6]) {
-      for (const cp of sweep(W0, W1, 400)) {
-        let weighted = 0;
-        for (let i = 0; i < n; i++) weighted += i * stepSolo(i, n, cp);
-        expect(weighted).toBeCloseTo(orbitCursor(cp, n), 9);
-      }
-    }
+  it("is 0 for no steps, an out-of-range index, or a non-integer index, and NaN progress is the start", () => {
+    expect(stepTarget(0, 0, centre(0, 1))).toBe(0);
+    expect(stepTarget(0, NaN, 0.3)).toBe(0);
+    expect(stepTarget(-1, 4, 0.3)).toBe(0);
+    expect(stepTarget(4, 4, 0.3)).toBe(0);
+    expect(stepTarget(0.5, 4, 0.3)).toBe(0);
+    expect(stepTarget(0, 4, NaN)).toBe(0);
   });
 
-  it("is 0 for no steps, an out-of-range index, or a non-integer index", () => {
-    expect(stepSolo(0, 0, centre(0, 1))).toBe(0);
-    expect(stepSolo(0, NaN, 0.3)).toBe(0);
-    expect(stepSolo(-1, 4, 0.3)).toBe(0);
-    expect(stepSolo(4, 4, 0.3)).toBe(0);
-    expect(stepSolo(0.5, 4, 0.3)).toBe(0);
-  });
-
-  it("gives a lone step the whole window (N = 1) and halves the window for N = 2", () => {
-    for (const cp of sweep(W0, W1, 50)) expect(stepSolo(0, 1, cp)).toBe(1);
-    expect(stepSolo(0, 2, centre(0, 2))).toBe(1);
-    expect(stepSolo(1, 2, centre(1, 2))).toBe(1);
-    expect(stepSolo(0, 2, boundary(1, 2))).toBeCloseTo(0.5, 10);
-    expect(stepSolo(1, 2, boundary(1, 2))).toBeCloseTo(0.5, 10);
+  it("gives a lone step the whole chapter past its start", () => {
+    for (const cp of sweep(0.001, 1, 50)) expect(stepTarget(0, 1, cp)).toBe(1);
   });
 });

@@ -10,6 +10,8 @@ import { Starfield } from "@/scene/chapters/Starfield";
 import { EnergyOrb } from "@/scene/chapters/EnergyOrb";
 import { WarpStreaks } from "@/scene/chapters/WarpStreaks";
 import { Topology } from "@/scene/chapters/Topology";
+// Chapter 04 ring (Task 6).
+import { OrbitRing } from "@/scene/chapters/OrbitRing";
 import type { FrameContext, SetPiece } from "@/scene/chapters/types";
 
 interface SceneRootProps {
@@ -17,13 +19,17 @@ interface SceneRootProps {
   /** Flip to true when Ignition completes; the scene fades in over ~1.2s. */
   ignite: boolean;
   onContextLost: () => void;
+  /** Chapter 04's process-step count (one ring node each). Comes from the CMS: stable after
+   *  load, never derived from scroll. Optional only until VoyageRoot passes it (Task 8
+   *  makes it required); 0 builds an empty, always-hidden ring. */
+  stepCount?: number;
 }
 
 const IGNITE_SECONDS = 1.2;
 const POSE_LERP = 0.08;
 
 /** Owns the single WebGL context. Reads voyageStore imperatively — no React re-renders per frame. */
-export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProps) {
+export default function SceneRoot({ tier, ignite, onContextLost, stepCount = 0 }: SceneRootProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const igniteRef = useRef(ignite);
   // Layout effect, not a render-phase write (react-hooks/refs). No dep array so it re-syncs
@@ -63,7 +69,10 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
 
     // Array order sets update() order only, not draw order: the orb's ShaderMaterial is opaque,
     // so three draws it first; the transparent pieces are depth-sorted after it.
-    const pieces: SetPiece[] = [new Starfield(), new WarpStreaks(), new Topology(), new EnergyOrb()];
+    // OrbitRing (chapter 04) is transparent too: depth-sorted with the others, drawn after the orb.
+    const pieces: SetPiece[] = [
+      new Starfield(), new WarpStreaks(), new Topology(), new OrbitRing(stepCount), new EnergyOrb(),
+    ];
     for (const p of pieces) p.build(scene, tier);
 
     const pose: CameraPose = { position: new THREE.Vector3(), lookAt: new THREE.Vector3() };
@@ -193,7 +202,9 @@ export default function SceneRoot({ tier, ignite, onContextLost }: SceneRootProp
       renderer.dispose();
       if (host.contains(canvas)) host.removeChild(canvas);
     };
-  }, [tier, onContextLost]);
+    // stepCount rebuilds the context if the CMS count ever changes under a live page (rare:
+    // it is server-rendered with revalidate 300).
+  }, [tier, onContextLost, stepCount]);
 
   return <div ref={hostRef} className="voyage-scene" aria-hidden="true" />;
 }

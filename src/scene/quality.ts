@@ -6,14 +6,16 @@ export interface TierSettings {
   streakCount: number;
   /** Chapter 02's topology graph. Edges are count-1, so this drives both buffers. */
   topologyNodes: number;
+  /** Chapter 04's orbital ring: tubular segments of the torus (smoothness of the ellipse). */
+  ringSegments: number;
 }
 
 // "still" never reaches the GL path at all — VoyageRoot renders StillSky instead of
 // SceneRoot — so its zeroed counts are documentation, not a branch anything reads.
 export const TIER_SETTINGS: Record<Tier, TierSettings> = {
-  high:  { dpr: 1.5, starCount: 2400, streakCount: 260, topologyNodes: 42 },
-  mid:   { dpr: 1,   starCount: 1200, streakCount: 120, topologyNodes: 22 },
-  still: { dpr: 1,   starCount: 0,    streakCount: 0,   topologyNodes: 0  },
+  high:  { dpr: 1.5, starCount: 2400, streakCount: 260, topologyNodes: 42, ringSegments: 128 },
+  mid:   { dpr: 1,   starCount: 1200, streakCount: 120, topologyNodes: 22, ringSegments: 64  },
+  still: { dpr: 1,   starCount: 0,    streakCount: 0,   topologyNodes: 0,  ringSegments: 0   },
 };
 
 export interface QualityEnv {

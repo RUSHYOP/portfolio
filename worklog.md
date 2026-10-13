@@ -162,3 +162,73 @@ No criterion failed.
 - Open follow-up: `Launch.tsx` has no `useReducedMotion()` guard (GAP-3, deliberately not retrofitted in slice 3).
 - Open follow-up: Playwright integration tests are deferred to slice 8 (spec §7 deviation, user decision Q4).
 - Still offered: Resend key rotation.
+
+## Slice 4 — Orbit / the process ring (feat/voyage-slice-4)
+
+Executed 2026-10-13 / 14 from the reviewed plan `docs/superpowers/plans/2026-10-13-voyage-slice-4.md` (base `fc91f88`, 10 tasks). Task 1 ran alone; Tasks 2 ∥ 3 ∥ 5 and 4 ∥ 6 ∥ 7 ran in parallel git worktrees (`s4/task-N`), merged one at a time with the suite green after each; Task 8 alone; Task 9 was the controller's browser review. Sonnet implementers and reviewers; every task review approved on the first pass (no fix pass). Shas are the task commits on this branch.
+
+### Per task
+- **Task 1 — vh chapter table + `progressAt`** (`dc84fe4`, 421 tests). `CHAPTERS` is declared as `spanVh` spans; every `start`/`end` derives from one cumulative array (`end_i` and `start_{i+1}` are the same expression, last `end` forced to 1), so all 11 boundaries are bit-exact and `chapterAt` never falls through to `surface`. Orbit 150 → 300vh, `VOYAGE_SCROLL_VH` 1250 → 1400, track 1500vh with the `scrollHeight − innerHeight === VOYAGE_SCROLL_VH` identity intact. `progressAt(id, t)` exported; every absolute progress literal in the slice 1–3 tests converted under the old table first (pure refactor), then the geometry swapped. `Dock` compaction point is now `DOCK_COMPACT_PROGRESS = progressAt("launch", 0.625)`.
+- **Task 2 — the bank** (`ccf2bae`, 429). Pure `bankForProgress` (0 outside Orbit, eases to `BANK_MAX` = 30° over orbit cp [0, 0.18], holds, eases back over [0.82, 1]); `SceneRoot` applies `camera.rotateZ(smoothBank)` after `lookAt`, `smoothBank` lerped at `POSE_LERP`. Kept out of `getCameraPose`, so the never-reverse test is untouched.
+- **Task 3 — `orbitSchedule.ts`** (`8164413`, 23 schedule tests). The one clock for the panels, the ring and the starfield: `ORBIT_WINDOW = [0.04, 0.62]`, `orbitPresence`, `orbitCursor`, `ORBIT_HOLD_DESKTOP` (2/3) / `ORBIT_HOLD_MOBILE` (0.787). Its panel half (`stepSolo` / `panelPresence`) was replaced in Task 9 — see below.
+- **Task 4 — star limb + focus pull** (`f42b8d3`, 464). `orbitLimb` + the `uLimb` uniform in `EnergyOrb` (`LIMB_POWER` 0.6, `LIMB_RIM` 0.3); `Starfield` gains `orbitSoften` (`ORBIT_SOFTEN_PEAK` 0.75) and `chapterSoften(chapterId, cp)`, with `approachSoften` unchanged.
+- **Task 5 — data wiring** (`75dc916`). `page.tsx` passes `process`; `VoyageRootProps.process`, destructured as `steps` so it never shadows Node's `process`.
+- **Task 6 — `OrbitRing`** (`481d15e`, 473). Thin 6-radial-segment torus (`TierSettings.ringSegments` 128 / 64 / 0) plus sphere nodes sharing one geometry and one material; world space around `STAR_POSITION`; `OrbitRing(stepCount)` joined `SceneRoot`'s `pieces`. The reviewer projected the geometry through the real camera path: the front node is the nearest ring point, below the star at every chapterProgress, ≥ 24.8 units from the camera.
+- **Task 7 — `Process.tsx` + Orbit CSS** (`44b83a3`, 470; 15 `Process` + 3 `voyageCss` tests). One glass step panel at a time, three mono-labelled fields, desktop panel in the left ~38% via `--orbit-panel-w` / `--orbit-panel-h`, mobile 64vh pin with a top-anchored `min(34vh, 18rem)` box, still tier stacks every step inside the fixed 300vh. Controller's tab-stop gate: the active panel is a tab stop only while `chapterProgress < ORBIT_HOLD_MOBILE`.
+- **Task 8 — `VoyageRoot` wiring** (`b184b94`, 503 / 40 files, build OK). Mounts `<Process steps animated>`, `SceneRoot.stepCount` made required, `orbit` dropped from the placeholder filter. The controller checked all 14 Task 9 capture points against the plan to 6 dp.
+- **Task 9 — browser review** (controller; two fix commits `b4fec31`, `5c462b2`, tuning `b591511`, `b86844f`, baselines `dc821d8`).
+- **Task 10 — docs + closing verification** (this section, `insights.md`, `design.md`, the content-model spec's pacing note).
+
+### Browser review: the trigger fixes (plan superseded)
+- **Approach dock** (`b4fec31`). The user flagged a half-built Approach frame (panel 1 up, panel 2 ghosted, panel 3 missing). Root cause was slice-3 behaviour, not a slice-4 regression: `servicesLayout` scrubbed the desktop dock over chapterProgress 0.02 … 0.28, so every rest point inside it was half-built (reproduced at cp 0.12). The same review found the arrivals from Dock / FlightRail / the Launch CTA land at `approach.start + 0.001` (cp ≈ 0.009), before the scrub window, so a SERVICES click landed on an empty chapter. The dock is now a 0/1 trigger (`dock` is `1` from cp > 0); a CSS transition on `.service-panel` (opacity 0.7 s, transform 0.9 s) staggered by `--dock-delay` (0 / 120 / 240 ms, fixed 240 ms in total whatever N is) is the animation. Mobile Approach `--solo` stays scrubbed (`transition: none`). Tests added or rewritten in `servicesLayout`, `Services` and `voyageCss` (suite 503 → 506).
+- **Orbit panels** (`5c462b2`, user: "Proceed" on the recommendation to apply the same). `stepSolo` and `panelPresence` no longer exist. `orbitSchedule.stepTarget(i, n, cp)` gives each panel a 0/1 target: the lit step is `Math.round(orbitCursor)`, all dark at cp 0, the first step from the chapter's first pixel, the last step held through the mobile pin release. The `.process-panel` transition (opacity 0.45 s, transform 0.6 s) is the cross-fade; still tier `transition: none`. The ring's cursor is still scroll-scrubbed. Topology's node assembly was deliberately left scrubbed. Suite 506 → 507 (the two trigger commits added 4 in all).
+- Earlier "drift" in the captures (scrollY overshooting 1974 → 2503) was a stale Lenis tween fighting the harness's native `scrollTo`, not a page bug; captures now poll `scrollY` until it is stable.
+
+### Browser review verdicts
+- **FPS probe** (Launch window): 112–121 fps, no demotion — baseline tier held through Launch (chapter 04 frame cost on a real phone is measured at slice 8, spec §7). In chapter: desktop 1440 `high` tier 120 fps median (p95 10.1 ms) through steps 1 → 4; mobile 390×844 with 4× CPU throttle, `mid` tier, steady-state Orbit 10.1 ms vs Approach 9.4 ms median. The FIRST entry into Orbit after a reload measured **23.7 ms median / p95 40 ms** — shader warm-up (ring + `EnergyOrb` programs compile on first use); follow-up below.
+- Checklist: **1** bank reads as an ellipse roll and is level at worlds-entry ✓ · **2** limb darkening visible at step 4 and pin-release, reads as a dot at step 1 (accepted) ✓ · **3** the ring reads as an orbit, monochrome nodes ✓ · **4** the active node sits at the front of the near arc, larger than the rest, clear of the panel and the star, does not out-shine the star ✓ · **5** panel legible, node and star clear at 1440 and 1024 ✓ · **6** one panel at a time — now a trigger; `desktop-crossfade-1-2.png` shows one panel with the ring mid-travel ✓ · **7** slice-3 money frames unchanged (approach-docked, prejump, jump-mid match slice-3 p12 / p195 / p21 on both sizes; only the DIST readout, rail ticks and the real `04 / ORBIT` label differ) ✓ · **8** rail Orbit 19.6% / Worlds 41.1%, DIST 7.0 AU at Orbit start, the Process dock link lands with step 1 lit ✓ · **9** no judder (numbers above); off panels drop their backdrop blur ✓ · **10** console clean — 0 errors / warnings over a full scroll ✓ · **11** optional edge data (0 / 1 / 2 steps) skipped in the browser, covered by unit tests.
+- Whether the browser review re-measured the plan-time finding that depth occlusion never engages is not recorded; `RING_TILT` stayed 72° and no ring constant was changed.
+- The **still tier** was captured too: `StillSky`, steps stacked, nothing clipped, no horizontal overflow, `#worlds` lands at top 0 after the smooth native scroll.
+- 26 baselines in `screenshots/voyage/slice-4/` (25 in the brief + `desktop-approach-nav-arrival.png`); no x-overflow at 390. The desktop step / crossfade / pin-release retakes were shot on a long-lived tab, so their HUD clock reads `T+ 59:59` (the clock's cap) — cosmetic.
+
+### Retuned in the browser review
+| Commit | Constant / rule | Old | New | Why |
+|---|---|---|---|---|
+| `b4fec31` | desktop Approach dock | scrubbed over cp 0.02 … 0.28 | 0/1 trigger at cp > 0, `--dock-delay` stagger (0 / 120 / 240 ms) | half-built rest frames; nav arrivals landed on an empty chapter |
+| `5c462b2` | Orbit panel visibility | `stepSolo` / `panelPresence`, scrubbed | `stepTarget`, 0/1 + CSS transition (opacity 0.45 s / transform 0.6 s) | same cause: a scrubbed fade can be caught at rest mid-way |
+| `b591511` | `--orbit-panel-h` | `clamp(20rem, 48vh, 27rem)` | `clamp(20rem, 48vh, 23rem)` | seed steps need ≤ 357 px; 27rem left ~70 px of dead glass at 1440×900 |
+| `b591511` | `.process-panel__field:last-child` `margin-bottom` | 1.1rem | 0 | the trailing margin alone pushed step 1 into a 5 px internal scroll at 1024×768 |
+| `b86844f` | mobile Orbit type scale (new, `max-width: 767px`) | inherited desktop scale | index `margin-bottom` 0.5rem; title 1.15rem / `margin-bottom` 0.6rem; field 0.85rem, `line-height` 1.45, `margin-bottom` 0.65rem; field label span `margin-bottom` 0.15rem | seed steps overflowed the `min(34vh, 18rem)` box by up to 67 px at 390×844 and hid "How long"; the cap stays because it keeps the star clear |
+
+No `BANK_MAX`, ring, limb or schedule constant was changed.
+
+### Plan amendments made during execution
+- Recorded in the plan's "Execution amendments" section: the two trigger fixes (the plan's `stepSolo` / `panelPresence` text and decisions 5 and 7 are historical), the three retunes, the controller's tab-stop gate, 26 baselines, and the 503 → 507 test count.
+
+### Closing verification (2026-10-14, HEAD `dc821d8`)
+- `npx tsc --noEmit` — 0 errors.
+- `npx vitest run` — **507 passed / 40 files** (baseline 413 / 36 at `fc91f88`: +94 tests, +4 files; the plan expected 503 — the extra 4 are the two trigger commits' tests).
+- `npx eslint .` — 16 problems (10 errors, 6 warnings), the pre-existing repo baseline in files this branch never touched.
+- `npx eslint src/scene src/components/voyage src/components/dock src/lib src/app/voyage` — 0 errors; only the 2 pre-existing warnings in `src/lib/auth.ts` and `src/lib/mongodb.ts`.
+- `npm run build` — succeeds, `/voyage` in the route table.
+
+### Spec §8 check — chapter 04 only
+| Criterion | Verdict | Evidence |
+|---|---|---|
+| Reachable and legible on desktop and mobile | PASS | steps 1–4 at 1440×900 and 390×844, plus a 1024×768 step, in `screenshots/voyage/slice-4/`; no clipped copy after the mobile type scale; no x-overflow at 390 |
+| Exactly one WebGL context for the scene | PASS | `grep -rn "new THREE.WebGLRenderer" src` → `SceneRoot.tsx:51` and `ThreeBackground.tsx:46` (mounted only by `PageClient`, the `/` route); `grep -rn "EffectComposer\|Line2" src` → no matches. `OrbitRing` is in `SceneRoot`'s `pieces` array (`SceneRoot.tsx:73`) |
+| ≥ 55 fps desktop `high` / ≥ 45 fps mid-tier phone | PASS for steady state; one named follow-up | Launch probe 112–121 fps, no demotion; desktop `high` 120 fps median through steps 1 → 4; mobile emulation (4× throttle, desktop GPU) steady-state Orbit 10.1 ms median. The first entry into Orbit after a reload cost 23.7 ms median (≈ 42 fps) / p95 40 ms — shader warm-up, **not a silent pass**: see Next. Real-phone fps is slice 8's |
+| Zero console errors | PASS | 0 errors / warnings over a full scroll |
+| Reduced-motion path fully usable | PASS | `still` tier renders `StillSky`; `Process` sets `data-static`, drops the pin and stacks every step inside the fixed 300vh section; `desktop-still.png` / `mobile-still.png`, nothing clipped |
+| Spec §3 row 04 content | PASS | banked camera (item 1), star visibly a sphere (item 2, a dot at step 1 — accepted), one ring with N luminous nodes (item 3), each node front-centre as its panel takes over (items 4, 6), each panel shows what happens / what you get / how long |
+| LCP / CLS / Lighthouse a11y | Not in scope | slice 8 |
+
+### Next
+- **Slice 5 — Worlds + `/work/[slug]`.** Carry forward the tuned constants: `BANK_MAX` 30°, `RING_RADIUS` 20, `RING_TILT` 72°, `RING_TUBE` 0.1, `NODE_RADIUS` 0.55, `NODE_ACTIVE_BOOST` 0.9, `LIMB_POWER` 0.6, `LIMB_RIM` 0.3, `ORBIT_SOFTEN_PEAK` 0.75, `ORBIT_WINDOW` [0.04, 0.62], `--orbit-panel-w` `min(30rem, 32vw)`, `--orbit-panel-h` `clamp(20rem, 48vh, 23rem)`; plus the prefixed-first `backdrop-filter` order for any new glass.
+- **Shader precompile (slice 8).** The first entry into Orbit costs 23.7 ms median / p95 40 ms: precompile the ring and `EnergyOrb` programs at scene init (`renderer.compile`).
+- HUD clock caps at `T+ 59:59` on long-lived tabs (seen in some baselines) — cosmetic.
+- Approach mobile `--solo` and Topology's node assembly remain scroll-scrubbed (deliberate); revisit only if a half-built rest frame is reported there.
+- Desktop keeps a stale off-screen tab stop on the last Orbit panel for cp 0.667 – 0.787 (the tab-stop gate is device-agnostic); `Process.tsx` comments it.
+- Open from the plan: `Launch.tsx` has no `useReducedMotion()` guard; Playwright integration tests deferred to slice 8; `Services` and `Process` re-render on every store emit (add a selector); `getVoyageContent` fetches case studies and testimonials that slice 5 / 6 will finally use; the scroll-region `tabIndex` is fixed for `Process` only, not `Services`; spec §5:129 (empty data hides the chapter and drops its waypoint) is still not implemented; still-tier `Process` overflows the fixed 300vh section once copy averages ≳ 330 chars per step on a phone.
+- Open post-merge follow-ups from `.superpowers/sdd/slice3-final-review.md` that this slice did not touch: `globals.css:2443-2444` has `backdrop-filter` before `-webkit-backdrop-filter` (verified still true); `favicon.ico` 404 (no favicon in `public/` or `src/app`); burst flare fade-out and Topology parallax; blur cost on `mid` at ≥ 768 px coarse pointer; Safari / Firefox late scroll restoration may fire a spurious Jump beat; background-tab interval throttling lifting the letterbox; `WarpStreaks` convergence toward world (0, 0) rather than the camera's x/y; still-tier Approach overflow with 4 services; `getVoyageContent` projection. Not independently re-verified in this pass except where marked.
+- Still offered: Resend key rotation.

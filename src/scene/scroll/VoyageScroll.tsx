@@ -38,7 +38,10 @@ export default function VoyageScroll({ smooth }: VoyageScrollProps) {
         if (!Number.isFinite(e.progress)) return;
         voyageStore.setScroll(e.progress, normalizeVelocity(e.velocity));
       });
-      voyageStore.registerScroller((p) => lenis.scrollTo(p * maxScroll(), { duration: 1.4 }));
+      // `immediate` (a /voyage#<chapter> arrival) skips the 1.4s tween.
+      voyageStore.registerScroller((p, immediate) =>
+        lenis.scrollTo(p * maxScroll(), immediate ? { immediate: true } : { duration: 1.4 }),
+      );
       return () => {
         clearInterval(tick);
         voyageStore.unregisterScroller();
@@ -63,7 +66,10 @@ export default function VoyageScroll({ smooth }: VoyageScrollProps) {
       voyageStore.setScroll(progress, vel);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    voyageStore.registerScroller((p) => window.scrollTo({ top: p * maxScroll(), behavior: "auto" }));
+    // "instant" for an arrival: `auto` defers to the page's `scroll-behavior: smooth` (globals.css).
+    voyageStore.registerScroller((p, immediate) =>
+      window.scrollTo({ top: p * maxScroll(), behavior: immediate ? "instant" : "auto" }),
+    );
     onScroll();
     return () => {
       clearInterval(tick);

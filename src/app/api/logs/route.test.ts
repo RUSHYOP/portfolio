@@ -79,4 +79,11 @@ describe("POST /api/logs", () => {
     expect(res.status).toBe(204);
     expect(appendLog).toHaveBeenCalledWith("client", expect.objectContaining({ event: "voyage.jump" }));
   });
+
+  // Slice 5: SceneRoot logs a failed shader precompile instead of throwing out of its effect.
+  it("accepts the scene.compile_failed event SceneRoot emits", async () => {
+    const res = await POST(post(JSON.stringify({ event: "scene.compile_failed", message: "boom" })));
+    expect(res.status).toBe(204);
+    expect(appendLog).toHaveBeenCalledWith("client", expect.objectContaining({ event: "scene.compile_failed" }));
+  });
 });

@@ -21,8 +21,11 @@ import Dock from "@/components/dock/Dock";
 import Ignition from "./Ignition";
 import Launch from "./Launch";
 // Slice 3: chapter 02's panels and chapter 03's beat. Slice 4: chapter 04's step panels.
+// Slice 5: chapter 05's case panels and the /voyage#<chapter> arrival.
 import Services from "./Services";
 import Process from "./Process";
+import Worlds from "./Worlds";
+import { useHashArrival } from "./useHashArrival";
 import { useJumpBeat } from "./useJumpBeat";
 
 const SceneRoot = dynamic(() => import("@/scene/SceneRoot"), { ssr: false });
@@ -47,8 +50,6 @@ interface VoyageRootProps {
 // The prop is named `process` (the content key); it is destructured as `steps` so it never
 // shadows Node's `process` global inside this module.
 export default function VoyageRoot({ settings, services, process: steps, worlds }: VoyageRootProps) {
-  // Plumbed in slice 5 task 3; chapter 05 mounts it in task 7, which deletes this line.
-  void worlds;
   const [tier, setTier] = useState<Tier | null>(null);
   const [ignited, setIgnited] = useState(false);
   const [letterbox, setLetterbox] = useState(false);
@@ -114,9 +115,13 @@ export default function VoyageRoot({ settings, services, process: steps, worlds 
   }, []);
   const onIgnitionComplete = useCallback(() => setIgnited(true), []);
 
-  // Chapters 01–04 own their own sections now; the rest are still placeholders.
+  // /voyage#<chapter> arrivals land here once the boot gate below has lifted (see the hook).
+  useHashArrival(tier);
+
+  // Chapters 01–05 own their own sections now; the rest are still placeholders. (`worlds` is
+  // filtered out so its `id="worlds"` lives in <Worlds> alone — the dock and #worlds target it.)
   const placeholders = useMemo(
-    () => CHAPTERS.filter((c) => c.id !== "launch" && c.id !== "approach" && c.id !== "jump" && c.id !== "orbit"),
+    () => CHAPTERS.filter((c) => c.id !== "launch" && c.id !== "approach" && c.id !== "jump" && c.id !== "orbit" && c.id !== "worlds"),
     [],
   );
 
@@ -132,7 +137,13 @@ export default function VoyageRoot({ settings, services, process: steps, worlds 
       {/* Narrowed on the literal: SceneRoot takes Exclude<Tier, "still">, and `animated` is a
           plain boolean TypeScript cannot tie back to `tier`. */}
       {tier !== "still" ? (
-        <SceneRoot tier={tier} ignite={ignited} onContextLost={onContextLost} stepCount={steps.length} />
+        <SceneRoot
+          tier={tier}
+          ignite={ignited}
+          onContextLost={onContextLost}
+          stepCount={steps.length}
+          planets={worlds.map((w) => w.planetFeature)}
+        />
       ) : (
         <StillSky />
       )}
@@ -165,6 +176,8 @@ export default function VoyageRoot({ settings, services, process: steps, worlds 
         {/* Chapter 04, in chapter order (DOM order is scroll order). Inside the boot gate for the
             same reason as Services: it calls useReducedMotion(). */}
         <Process steps={steps} animated={animated} />
+        {/* Chapter 05, same reason (useReducedMotion, useMediaQuery). Owns id="worlds". */}
+        <Worlds cases={worlds} animated={animated} />
         {placeholders.map((c) => (
           <section
             key={c.id}

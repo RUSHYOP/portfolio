@@ -3,6 +3,9 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { getAudioEngine } from "@/lib/audio/AudioEngine";
+import { logClient } from "@/lib/clientLog";
+import type { PlanetFeature } from "@/lib/planetFeature";
+import { shaderErrorMessage } from "@/scene/shaderLog";
 import { getCameraPose, bankForProgress, fovForVelocity, type CameraPose } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { TIER_SETTINGS, type Tier } from "@/scene/quality";
@@ -10,8 +13,9 @@ import { Starfield } from "@/scene/chapters/Starfield";
 import { EnergyOrb } from "@/scene/chapters/EnergyOrb";
 import { WarpStreaks } from "@/scene/chapters/WarpStreaks";
 import { Topology } from "@/scene/chapters/Topology";
-// Chapter 04 ring.
+// Chapter 04 ring, chapter 05 planets.
 import { OrbitRing } from "@/scene/chapters/OrbitRing";
+import { Planet, planetsKey, planetsFromKey } from "@/scene/chapters/Planet";
 import type { FrameContext, SetPiece } from "@/scene/chapters/types";
 
 interface SceneRootProps {
@@ -22,14 +26,21 @@ interface SceneRootProps {
   /** Chapter 04's process-step count (one ring node each). Comes from the CMS: stable after
    *  load, never derived from scroll. 0 builds an empty, always-hidden ring. */
   stepCount: number;
+  /** Chapter 05's planet features, one per published case study, in CMS order. Like `stepCount`
+   *  it is CMS data, stable after load. Pass any array: the GL effect depends on its VALUE
+   *  (planetsKey), never on its identity, so a fresh array every render rebuilds nothing. */
+  planets: readonly PlanetFeature[];
 }
 
 const IGNITE_SECONDS = 1.2;
 const POSE_LERP = 0.08;
 
 /** Owns the single WebGL context. Reads voyageStore imperatively — no React re-renders per frame. */
-export default function SceneRoot({ tier, ignite, onContextLost, stepCount }: SceneRootProps) {
+export default function SceneRoot({ tier, ignite, onContextLost, stepCount, planets }: SceneRootProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+  // The effect below depends on this string, not on `planets`: VoyageRoot re-renders on every
+  // letterbox / ignite / tier change and would otherwise rebuild the WebGL context each time.
+  const planetKey = planetsKey(planets);
   const igniteRef = useRef(ignite);
   // Layout effect, not a render-phase write (react-hooks/refs). No dep array so it re-syncs
   // every commit; the RAF loop reads igniteRef.current, always after the commit has landed.
@@ -68,11 +79,31 @@ export default function SceneRoot({ tier, ignite, onContextLost, stepCount }: Sc
 
     // Array order sets update() order only, not draw order: the orb's ShaderMaterial is opaque,
     // so three draws it first; the transparent pieces are depth-sorted after it.
-    // OrbitRing (chapter 04) is transparent too: depth-sorted with the others, drawn after the orb.
+    // OrbitRing (chapter 04) and Planet (chapter 05) are transparent too: depth-sorted with the
+    // others, drawn after the orb (a planet in front of the star occludes its halo).
     const pieces: SetPiece[] = [
-      new Starfield(), new WarpStreaks(), new Topology(), new OrbitRing(stepCount), new EnergyOrb(),
+      new Starfield(), new WarpStreaks(), new Topology(), new OrbitRing(stepCount),
+      new Planet(planetsFromKey(planetKey)), new EnergyOrb(),
     ];
     for (const p of pieces) p.build(scene, tier);
+    // Compile every program now instead of on the first frame that draws it (the slice-4
+    // first-entry hitch into Orbit: 23.7 ms median / p95 40 ms). On a first visit Ignition's
+    // curtain is up and hides the block; on a repeat visit (sessionStorage says it played)
+    // Ignition ends at mount, so the block lands before the first frame — Task 8 measures it.
+    // It walks hidden objects too (scene.traverse), so the planets' and the ring's programs are
+    // included. Synchronous on purpose: async would still stall the first render.
+    // three reports a GLSL compile / link ERROR through renderer.debug.onShaderError (and
+    // console.error), not as an exception, so that hook is what feeds the log; the try/catch only
+    // guards the call itself. Neither may throw out of the effect — a failure only means programs
+    // compile lazily, as before.
+    renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
+      logClient("scene.compile_failed", { message: shaderErrorMessage(gl, program, vertexShader, fragmentShader) });
+    };
+    try {
+      renderer.compile(scene, camera);
+    } catch (e) {
+      logClient("scene.compile_failed", { message: String(e).slice(0, 300) });
+    }
 
     const pose: CameraPose = { position: new THREE.Vector3(), lookAt: new THREE.Vector3() };
     const smoothPos = new THREE.Vector3();
@@ -201,9 +232,9 @@ export default function SceneRoot({ tier, ignite, onContextLost, stepCount }: Sc
       renderer.dispose();
       if (host.contains(canvas)) host.removeChild(canvas);
     };
-    // stepCount rebuilds the context if the CMS count ever changes under a live page (rare:
-    // it is server-rendered with revalidate 300).
-  }, [tier, onContextLost, stepCount]);
+    // stepCount and planetKey rebuild the context if the CMS data ever changes under a live page
+    // (rare: it is server-rendered with revalidate 300).
+  }, [tier, onContextLost, stepCount, planetKey]);
 
   return <div ref={hostRef} className="voyage-scene" aria-hidden="true" />;
 }

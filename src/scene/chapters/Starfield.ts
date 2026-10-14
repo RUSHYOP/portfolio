@@ -7,6 +7,7 @@ import type { FrameContext, SetPiece } from "./types";
 // Chapter ids drive the Approach focus pull (slice 3).
 import { type ChapterId } from "@/scene/camera/flightPath";
 import { orbitPresence } from "./orbitSchedule";
+import { worldsPresence } from "./worldsSchedule";
 
 const CORRIDOR_Z_NEAR = 20;
 const CORRIDOR_Z_FAR = -220;
@@ -47,11 +48,25 @@ export function orbitSoften(chapterProgress: number): number {
   return ORBIT_SOFTEN_PEAK * orbitPresence(chapterProgress);
 }
 
-/** The focus pull for whichever chapter is current: Approach and Orbit pull, the rest don't.
- *  (Distinct from the `chapterSoften` instance field on `Starfield`, which is the eased value.) */
+/** How far the field is pulled out of focus while Worlds' planets are carried across the frame,
+ *  at the peak of WORLDS_WINDOW. The planets and the case panel are the subject, so like Orbit it
+ *  is lighter than Approach's 1.0. Browser-review tunable. */
+export const WORLDS_SOFTEN_PEAK = 0.6;
+
+/** 0..1 focus pull inside Worlds. Its window IS WORLDS_WINDOW (plus the schedule's edge fades),
+ *  the same clock as the planets and the case panels, so the stars soften while a planet is up
+ *  and sharpen back as the pin releases. */
+export function worldsSoften(chapterProgress: number): number {
+  return WORLDS_SOFTEN_PEAK * worldsPresence(chapterProgress);
+}
+
+/** The focus pull for whichever chapter is current: Approach, Orbit and Worlds pull, the rest
+ *  don't. (Distinct from the `chapterSoften` instance field on `Starfield`, which is the eased
+ *  value.) */
 export function chapterSoften(chapterId: ChapterId, chapterProgress: number): number {
   if (chapterId === "approach") return approachSoften(chapterId, chapterProgress);
   if (chapterId === "orbit") return orbitSoften(chapterProgress);
+  if (chapterId === "worlds") return worldsSoften(chapterProgress);
   return 0;
 }
 
@@ -170,7 +185,7 @@ export class Starfield implements SetPiece {
 
   update(ctx: FrameContext): void {
     if (!this.points) return;
-    // Chapters 02 and 04 own the focus pull. Eased (tau ~0.33s) so a flick through either
+    // Chapters 02, 04 and 05 own the focus pull. Eased (tau ~0.33s) so a flick through either
     // blurs and recovers rather than strobing.
     const target = chapterSoften(ctx.voyage.chapter.id, ctx.voyage.chapterProgress);
     this.chapterSoften += (target - this.chapterSoften) * Math.min(1, ctx.dt * 3);

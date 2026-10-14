@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
-import { Starfield, approachSoften, orbitSoften, chapterSoften, ORBIT_SOFTEN_PEAK } from "./Starfield";
+import { Starfield, approachSoften, orbitSoften, worldsSoften, chapterSoften, ORBIT_SOFTEN_PEAK, WORLDS_SOFTEN_PEAK } from "./Starfield";
 import { ORBIT_WINDOW, ORBIT_PRESENCE_END } from "./orbitSchedule";
+import { WORLDS_WINDOW, WORLDS_PRESENCE_END } from "./worldsSchedule";
 import { TIER_SETTINGS } from "@/scene/quality";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { progressAt } from "@/scene/camera/flightPath";
@@ -171,18 +172,40 @@ describe("chapterSoften", () => {
     expect(approachSoften("orbit", 0.3)).toBe(0);
   });
 
-  it("is orbitSoften inside Orbit and zero everywhere else", () => {
+  it("is orbitSoften inside Orbit, worldsSoften inside Worlds, and zero everywhere else", () => {
     for (let k = 0; k <= 100; k++) {
       expect(chapterSoften("orbit", k / 100)).toBe(orbitSoften(k / 100));
+      expect(chapterSoften("worlds", k / 100)).toBe(worldsSoften(k / 100));
     }
-    for (const id of ["launch", "jump", "worlds", "belt", "passage", "constellation", "pilot", "landing", "surface"] as const) {
+    for (const id of ["launch", "jump", "belt", "passage", "constellation", "pilot", "landing", "surface"] as const) {
       expect(chapterSoften(id, 0.5)).toBe(0);
     }
   });
 });
 
+// Slice 5: the focus pull reaches Worlds, on the same clock as the planets.
+describe("worldsSoften", () => {
+  it("is the schedule's presence scaled to WORLDS_SOFTEN_PEAK, so it matches WORLDS_WINDOW", () => {
+    expect(worldsSoften(0)).toBe(0);
+    expect(worldsSoften(WORLDS_WINDOW[0])).toBeCloseTo(WORLDS_SOFTEN_PEAK, 12);
+    expect(worldsSoften((WORLDS_WINDOW[0] + WORLDS_WINDOW[1]) / 2)).toBeCloseTo(WORLDS_SOFTEN_PEAK, 12);
+    expect(worldsSoften(WORLDS_WINDOW[1])).toBeCloseTo(WORLDS_SOFTEN_PEAK, 12);
+    expect(worldsSoften(WORLDS_PRESENCE_END)).toBe(0);
+    expect(worldsSoften(1)).toBe(0);
+    expect(WORLDS_SOFTEN_PEAK).toBeGreaterThan(0);
+    expect(WORLDS_SOFTEN_PEAK).toBeLessThanOrEqual(1);
+  });
+
+  it("ramps in and out inside the margins of the hold", () => {
+    expect(worldsSoften(WORLDS_WINDOW[0] / 2)).toBeGreaterThan(0);
+    expect(worldsSoften(WORLDS_WINDOW[0] / 2)).toBeLessThan(WORLDS_SOFTEN_PEAK);
+    expect(worldsSoften((WORLDS_WINDOW[1] + WORLDS_PRESENCE_END) / 2)).toBeGreaterThan(0);
+    expect(worldsSoften((WORLDS_WINDOW[1] + WORLDS_PRESENCE_END) / 2)).toBeLessThan(WORLDS_SOFTEN_PEAK);
+  });
+});
+
 describe("Starfield — chapter 04 focus pull", () => {
-  it("eases the field out of focus inside Orbit's window, and back in Worlds", () => {
+  it("eases the field out of focus inside Orbit's window, and back in The Belt", () => {
     const field = new Starfield();
     field.build(new THREE.Scene(), "mid");
     field.applyControls(1);
@@ -195,7 +218,29 @@ describe("Starfield — chapter 04 focus pull", () => {
     expect(field.material.size).toBeCloseTo(baseSize * (1 + ORBIT_SOFTEN_PEAK * 0.6), 3);
     expect(field.material.opacity).toBeLessThan(baseOpacity);
 
-    voyageStore.setScroll(progressAt("worlds", 0.5), 0);
+    // Worlds pulls focus now (slice 5), so "back in focus" is The Belt, the next quiet chapter.
+    voyageStore.setScroll(progressAt("belt", 0.5), 0);
+    for (let i = 0; i < 200; i++) field.update(makeFrame());
+    expect(field.material.size).toBeCloseTo(baseSize, 4);
+    expect(field.material.opacity).toBeCloseTo(baseOpacity, 4);
+  });
+});
+
+describe("Starfield — chapter 05 focus pull", () => {
+  it("eases the field out of focus inside Worlds' window, and back in The Belt", () => {
+    const field = new Starfield();
+    field.build(new THREE.Scene(), "mid");
+    field.applyControls(1);
+    const baseSize = field.material.size;
+    const baseOpacity = field.material.opacity;
+
+    voyageStore.setScroll(progressAt("worlds", 0.4), 0);
+    expect(voyageStore.getState().chapter.id).toBe("worlds");
+    for (let i = 0; i < 120; i++) field.update(makeFrame());
+    expect(field.material.size).toBeCloseTo(baseSize * (1 + WORLDS_SOFTEN_PEAK * 0.6), 3);
+    expect(field.material.opacity).toBeLessThan(baseOpacity);
+
+    voyageStore.setScroll(progressAt("belt", 0.5), 0);
     for (let i = 0; i < 200; i++) field.update(makeFrame());
     expect(field.material.size).toBeCloseTo(baseSize, 4);
     expect(field.material.opacity).toBeCloseTo(baseOpacity, 4);
@@ -218,7 +263,7 @@ describe("Starfield — chapter 02 focus pull", () => {
     expect(field.material.size).toBeGreaterThan(baseSize);
     expect(field.material.opacity).toBeLessThan(baseOpacity);
 
-    voyageStore.setScroll(progressAt("worlds", 0.5), 0);
+    voyageStore.setScroll(progressAt("belt", 0.5), 0);
     for (let i = 0; i < 200; i++) field.update(makeFrame());
     expect(field.material.size).toBeCloseTo(baseSize, 4);
     expect(field.material.opacity).toBeCloseTo(baseOpacity, 4);

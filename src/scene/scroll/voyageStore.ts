@@ -69,7 +69,10 @@ function initialState(): VoyageState {
 
 let state: VoyageState = initialState();
 const listeners = new Set<Listener>();
-let scroller: ((progress: number) => void) | null = null;
+/** `immediate` is only ever passed as `true` (see scrollTo): a plain scrollTo keeps the
+ *  one-argument call, so a scroller that ignores it behaves exactly as before. */
+type Scroller = (progress: number, immediate?: boolean) => void;
+let scroller: Scroller | null = null;
 
 function emit() {
   for (const l of listeners) l(state);
@@ -109,7 +112,7 @@ export const voyageStore = {
     emit();
   },
 
-  registerScroller(fn: (progress: number) => void): void {
+  registerScroller(fn: Scroller): void {
     scroller = fn;
   },
 
@@ -119,10 +122,15 @@ export const voyageStore = {
     scroller = null;
   },
 
-  scrollTo(progress: number): void {
+  /** `{ immediate: true }` asks the scroller to jump instead of tween (a /voyage#<chapter>
+   *  arrival must land at once). It is still a programmatic scroll: the flag, the target and the
+   *  deadline are armed exactly as for a tween, so crossing the Jump band fires no beat. */
+  scrollTo(progress: number, opts?: { immediate?: boolean }): void {
     // No scroller means nothing will move, so there is no programmatic travel to suppress.
     if (!scroller) return;
     const p = clamp01(progress);
+    const run = scroller;
+    const drive = () => (opts?.immediate ? run(p, true) : run(p));
     // Already there: no scroll event will fire, so nothing would ever clear the flag. This
     // call also replaces any earlier target, so disarm it (and emit) before re-asserting.
     if (Math.abs(p - state.progress) < PROGRAMMATIC_EPS) {
@@ -131,7 +139,7 @@ export const voyageStore = {
         state = { ...state, programmatic: false };
         emit();
       }
-      scroller(p);
+      drive();
       return;
     }
     programmaticTarget = p;
@@ -140,7 +148,7 @@ export const voyageStore = {
       state = { ...state, programmatic: true };
       emit();
     }
-    scroller(p);
+    drive();
   },
 
   /** Test-only: clears listeners as well as state. */

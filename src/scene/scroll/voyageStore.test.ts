@@ -88,6 +88,32 @@ describe("voyageStore", () => {
     expect(scroller).toHaveBeenNthCalledWith(2, 1);
   });
 
+  // Slice 5 (A9): a hash arrival (/voyage#worlds) must land at once, not tween for 1.4s.
+  it("scrollTo with { immediate: true } tells the scroller to skip the tween, and still clamps", () => {
+    const scroller = vi.fn();
+    voyageStore.registerScroller(scroller);
+    voyageStore.scrollTo(0.5, { immediate: true });
+    voyageStore.scrollTo(-2, { immediate: true });
+    expect(scroller).toHaveBeenNthCalledWith(1, 0.5, true);
+    expect(scroller).toHaveBeenNthCalledWith(2, 0, true);
+  });
+
+  it("scrollTo without options (or immediate: false) keeps the one-argument call the tween relies on", () => {
+    const scroller = vi.fn();
+    voyageStore.registerScroller(scroller);
+    voyageStore.scrollTo(0.4, {});
+    voyageStore.scrollTo(0.6, { immediate: false });
+    expect(scroller.mock.calls).toEqual([[0.4], [0.6]]);
+  });
+
+  it("an immediate scrollTo is still programmatic, so crossing the Jump band fires no beat", () => {
+    voyageStore.registerScroller(vi.fn());
+    voyageStore.scrollTo(0.5, { immediate: true });
+    expect(voyageStore.getState().programmatic).toBe(true);
+    voyageStore.setScroll(0.5, 0);                                  // the scroll event lands on the target
+    expect(voyageStore.getState().programmatic).toBe(false);
+  });
+
   it("scrollTo is a no-op without a scroller", () => {
     expect(() => voyageStore.scrollTo(0.3)).not.toThrow();
   });

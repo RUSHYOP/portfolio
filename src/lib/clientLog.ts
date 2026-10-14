@@ -13,6 +13,9 @@ export const LOG_EVENTS = [
   // Slice 3: one line per Jump beat that actually fired, so the browser review can tell a
   // missed beat apart from a suppressed one.
   "voyage.jump",
+  // Slice 5: the shader precompile in SceneRoot threw; the scene still runs (programs compile
+  // lazily on first draw), so this is a record, not a fallback.
+  "scene.compile_failed",
 ] as const;
 
 export type LogEvent = (typeof LOG_EVENTS)[number];

@@ -1,7 +1,11 @@
 import mongoose from "mongoose";
 import { Project, Skill, Settings } from "../src/lib/models";
 // Consulting collections (sub-project 2): seeded alongside the portfolio content.
-import { services, processSteps } from "../src/lib/collections";
+import { services, processSteps, caseStudies } from "../src/lib/collections";
+// Slice 5: three published placeholder case studies for chapter 05, behind a local-database guard.
+import { appendLog } from "../src/lib/log";
+import { canSeedPlaceholders } from "../src/lib/seedGuard";
+import { seedPlaceholdersIfAllowed } from "../src/lib/placeholderCases";
 import projectsData from "../data/projects.json";
 import skillsData from "../data/skills.json";
 import settingsData from "../data/settings.json";
@@ -11,6 +15,16 @@ async function seed() {
   if (!uri) {
     console.error("MONGODB_URI env variable is required");
     process.exit(1);
+  }
+
+  // The placeholder guard is evaluated BEFORE the pre-existing wipe below, so the notice precedes
+  // the destructive step: a refusal skips the case studies only, it does not stop the rest of
+  // the seed (that wipe is pre-existing and unguarded; this guard deliberately does not widen it).
+  if (!canSeedPlaceholders(uri, process.argv)) {
+    await appendLog("seed", {
+      level: "warn",
+      message: "non-local database without --placeholders: case studies will be skipped; the rest of the seed will still run",
+    });
   }
 
   await mongoose.connect(uri);
@@ -137,6 +151,18 @@ async function seed() {
     await processSteps.create(v.value);
   }
   console.log("Seeded 4 process steps");
+
+  // Placeholder case studies (slice 5). They are PUBLISHED, so they are only written to a local
+  // database or when --placeholders is passed (the decision and its logging live in
+  // seedPlaceholdersIfAllowed, where they are tested). A refusal writes no case studies and makes
+  // the run exit non-zero, but it does not undo the seeding above.
+  const placeholders = await seedPlaceholdersIfAllowed({
+    uri,
+    argv: process.argv,
+    store: caseStudies,
+    log: (record) => appendLog("seed", record),
+  });
+  if (!placeholders.ran) process.exitCode = 1;
 
   await mongoose.disconnect();
   console.log("Done! Disconnected from MongoDB");

@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { StrictMode } from "react";
 import { renderHook, cleanup } from "@testing-library/react";
 import { CHAPTERS } from "@/scene/camera/flightPath";
-import { voyageStore } from "@/scene/scroll/voyageStore";
+import { voyageStore, PROGRAMMATIC_EPS } from "@/scene/scroll/voyageStore";
 import type { Tier } from "@/scene/quality";
 import { useHashArrival } from "./useHashArrival";
 
@@ -109,5 +109,109 @@ describe("useHashArrival", () => {
     setHash("#belt");                                              // a navigation landed while the voyage was booting
     rerender({ tier: "high" });
     expect(scrollTo).toHaveBeenCalledWith(CHAPTERS.find((c) => c.id === "belt")!.start + 0.001, { immediate: true });
+  });
+
+  // M1 (final review): one cold load once landed at 0.2416 with the hash already cleared and no way
+  // back. The hook now verifies the landing on the next frame and after ~300 ms and re-asserts it.
+  describe("landing verification", () => {
+    const target = worlds.start + 0.001;
+    let frames: Map<number, FrameRequestCallback>;
+    let nextId: number;
+    const flushFrame = () => {
+      const due = [...frames.values()];
+      frames.clear();
+      due.forEach((cb) => cb(0));
+    };
+    beforeEach(() => {
+      vi.useFakeTimers();
+      frames = new Map();
+      nextId = 1;
+      vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+        frames.set(nextId, cb);
+        return nextId++;
+      });
+      vi.stubGlobal("cancelAnimationFrame", (id: number) => void frames.delete(id));
+      setHash("#worlds");
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it("re-asserts the target when the store has not reached it on the next frame, and again at ~300 ms", () => {
+      renderHook(() => useHashArrival("high"));
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      flushFrame();
+      expect(scrollTo).toHaveBeenCalledTimes(2);
+      expect(scrollTo).toHaveBeenLastCalledWith(target, { immediate: true });
+      vi.advanceTimersByTime(300);
+      expect(scrollTo).toHaveBeenCalledTimes(3);
+      expect(scrollTo).toHaveBeenLastCalledWith(target, { immediate: true });
+    });
+
+    it("does not retry when the store is within the programmatic epsilon of the target at both checks", () => {
+      renderHook(() => useHashArrival("high"));
+      voyageStore.setScroll(target + PROGRAMMATIC_EPS / 2, 0);
+      flushFrame();
+      vi.advanceTimersByTime(300);
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+    });
+
+    it("retries only the check that fails (frame ok, 300 ms late displacement)", () => {
+      renderHook(() => useHashArrival("high"));
+      voyageStore.setScroll(target, 0);
+      flushFrame();
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      voyageStore.setScroll(0.2416, 0);                            // a late native scroll displaced it
+      vi.advanceTimersByTime(300);
+      expect(scrollTo).toHaveBeenCalledTimes(2);
+    });
+
+    it("caps the retries at two however long the store stays off target", () => {
+      renderHook(() => useHashArrival("high"));
+      flushFrame();
+      vi.advanceTimersByTime(300);
+      flushFrame();
+      vi.advanceTimersByTime(5000);
+      expect(scrollTo).toHaveBeenCalledTimes(3);                   // the arrival + at most two retries
+      expect(frames.size).toBe(0);
+    });
+
+    it("cancels the pending checks on unmount (no retry after the hook is gone)", () => {
+      const { unmount } = renderHook(() => useHashArrival("high"));
+      unmount();
+      expect(frames.size).toBe(0);
+      flushFrame();
+      vi.advanceTimersByTime(1000);
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps its checks alive through StrictMode's simulated unmount, still scrolling once", () => {
+      renderHook(() => useHashArrival("high"), { wrapper: StrictMode });
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      flushFrame();
+      expect(scrollTo).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not re-arm the checks when a later tier change re-runs the effect", () => {
+      const { rerender } = renderHook(({ tier }: { tier: Tier | null }) => useHashArrival(tier), {
+        initialProps: { tier: "high" as Tier | null },
+      });
+      flushFrame();
+      vi.advanceTimersByTime(300);
+      expect(scrollTo).toHaveBeenCalledTimes(3);
+      rerender({ tier: "mid" });
+      expect(frames.size).toBe(0);
+      vi.advanceTimersByTime(1000);
+      expect(scrollTo).toHaveBeenCalledTimes(3);
+    });
+
+    it("schedules no checks for an unknown hash", () => {
+      setHash("#nope");
+      renderHook(() => useHashArrival("high"));
+      expect(frames.size).toBe(0);
+      vi.advanceTimersByTime(1000);
+      expect(scrollTo).not.toHaveBeenCalled();
+    });
   });
 });

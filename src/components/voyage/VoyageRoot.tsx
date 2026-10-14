@@ -116,6 +116,7 @@ export default function VoyageRoot({ settings, services, process: steps, worlds 
   const onIgnitionComplete = useCallback(() => setIgnited(true), []);
 
   // /voyage#<chapter> arrivals land here once the boot gate below has lifted (see the hook).
+  // ORDER: useHashArrival must stay BEFORE useJumpBeat (below): the beat listener seeds from the post-jump state; the programmatic flag is the backup.
   useHashArrival(tier);
 
   // Chapters 01–05 own their own sections now; the rest are still placeholders. (`worlds` is

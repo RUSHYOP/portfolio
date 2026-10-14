@@ -124,6 +124,19 @@ describe("Worlds", () => {
     expect(panel.querySelector("img")).toBeNull();
   });
 
+  // M3 (final review): `title !== ""` rendered a blank <h2> for "   " (a direct DB write can skip the API's trim).
+  it("treats a whitespace-only title, client and context as missing, and trims the ones it renders", () => {
+    const blank = world("a", { title: "   ", client: " \t", context: "\n ", slug: "a" });
+    const { container, rerender } = render(<Worlds animated cases={[blank]} />);
+    const [panel] = panels(container);
+    expect(panel.querySelector("h2")).toBeNull();
+    expect(panel.querySelector(".world-panel__meta")).toBeNull();
+    expect(panel.querySelector("a")?.getAttribute("aria-label")).toBeNull();      // no title, so no title in the label either
+    rerender(<Worlds animated cases={[world("a", { title: "  Ledger  ", client: " Acme ", context: " Payments " })]} />);
+    expect(container.querySelector("h2")?.textContent).toBe("Ledger");
+    expect(container.querySelector(".world-panel__meta")?.textContent).toBe("Acme · Payments");
+  });
+
   it("encodes the slug in the href so a hostile value cannot leave /work/", () => {
     const { container } = render(<Worlds animated cases={[world("a", { slug: "a/../b?x=1#h" })]} />);
     expect(links(container)[0].getAttribute("href")).toBe("/work/a%2F..%2Fb%3Fx%3D1%23h");

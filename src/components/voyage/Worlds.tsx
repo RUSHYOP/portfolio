@@ -32,6 +32,9 @@ const COLUMNS = [
 type SoloStyle = CSSProperties & Record<"--solo", number>;
 
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
+/** M3: a title/client/context of only whitespace (a direct DB write can skip the API's trim) is missing text,
+ *  so it can never render a blank <h2> or an empty meta line. */
+const text = (v: unknown): string => str(v).trim();
 
 /** The DTO is typed, but the CMS is data: every field is narrowed again here at the leaf, as
  *  Services and Process do, so a malformed case degrades to missing text and never throws. */
@@ -40,9 +43,9 @@ function readCase(c: WorldCase) {
     typeof c.excerpts === "object" && c.excerpts !== null ? (c.excerpts as unknown as Record<string, unknown>) : {};
   return {
     slug: str(c.slug),
-    title: str(c.title),
-    client: str(c.client),
-    context: str(c.context),
+    title: text(c.title),
+    client: text(c.client),
+    context: text(c.context),
     diagram: str(c.diagram),
     stack: Array.isArray(c.stack) ? c.stack.filter((s): s is string => typeof s === "string" && s !== "") : [],
     excerpts: COLUMNS.map(([key, label]) => ({ key, label, text: str(excerpts[key]) })).filter((e) => e.text !== ""),

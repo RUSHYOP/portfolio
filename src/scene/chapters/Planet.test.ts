@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import * as THREE from "three";
 import {
-  Planet, planetPosition, planetTarget, planetPresenceTarget, planetFadeOut, planetWeight, planetOpacity,
+  Planet, planetPosition, planetTarget, planetPresenceTarget, planetFadeOut, planetOpacity,
   planetsKey, planetsFromKey,
   PLANET_RADIUS, PLANET_DEPTH, PLANET_TARGET_LANDSCAPE, PLANET_TARGET_PORTRAIT, PLANET_TARGET_PORTRAIT_WIDE, PHONE_MAX_WIDTH,
   PLANET_FADE_OUT_END,
-  PLANET_FADE_IN_RATE, PLANET_RING_OPACITY, MOON_SPEED,
+  PLANET_FADE_IN_RATE, PLANET_SWAP_OUT_RATE, PLANET_SWAP_IN_RATE, PLANET_SWAP_CLEAR, PLANET_RING_OPACITY, MOON_SPEED,
 } from "./Planet";
 import {
-  WORLDS_WINDOW, WORLDS_PRESENCE_END, WORLDS_HOLD_DESKTOP, WORLDS_HOLD_MOBILE, caseCentre, caseTarget, worldsCursor,
+  WORLDS_WINDOW, WORLDS_PRESENCE_END, WORLDS_HOLD_DESKTOP, WORLDS_HOLD_MOBILE, caseCentre, caseTarget,
 } from "./worldsSchedule";
 import { TIER_SETTINGS } from "@/scene/quality";
 import { AMBER } from "./EnergyOrb";
@@ -131,7 +131,7 @@ describe("planetPosition", () => {
         let sampled = 0;
         for (const d of [-0.5, -0.4, -0.25, -0.1, 0, 0.1, 0.25, 0.4, 0.5]) {
           const cp = caseCentre(k, n) + d * slot;
-          if (planetOpacity("worlds", cp, k, n) <= 0.5) continue;       // only where the planet is mostly shown
+          if (planetOpacity("worlds", cp, k, n) < 1) continue;           // only where its case is lit (the settled planet)
           sampled++;
           const cam = cameraAt(cp, w, h);
           const planetNdc = pos.clone().project(cam);
@@ -220,8 +220,11 @@ describe("planetPosition", () => {
   });
 
   // The corridor after Worlds passes within ~4 units of this spot, so a planet that stays drawn
-  // there would swallow the camera: clearance is only required while it is visible (A6).
-  it("keeps the camera at least 3 units off the surface for as long as each planet is visible", () => {
+  // there would swallow the camera: clearance is only required while it is visible (A6). Since F1 a
+  // planet is visible while its case is lit PLUS the ~0.2 s timed fade-out after the case changes, in
+  // which a flick can still carry the camera on: SWAP_TAIL_CP (~22vh of scroll) covers that tail.
+  it("keeps the camera at least 3 units off the surface for as long as each planet is visible, tail of the timed swap included", () => {
+    const SWAP_TAIL_CP = 0.05;
     // [aspect, wide]: the wide-portrait placement (F2) must clear the camera too.
     for (const [aspect, wide] of [[1.6, false], [4 / 3, false], [390 / 844, false], [768 / 1024, true], [1024 / 1366, true]] as const) {
       for (const n of [3, 6, 8]) {
@@ -229,7 +232,8 @@ describe("planetPosition", () => {
           const pos = planetPosition(k, n, aspect, undefined, wide);
           for (let i = 0; i <= 400; i++) {
             const cp = (0.9 * i) / 400;
-            if (planetOpacity("worlds", cp, k, n) <= 0.001) continue;
+            const litNearby = [-SWAP_TAIL_CP, -SWAP_TAIL_CP / 2, 0, SWAP_TAIL_CP / 2, SWAP_TAIL_CP].some((d) => planetOpacity("worlds", cp + d, k, n) > 0.001);
+            if (!litNearby) continue;
             const camPos = getCameraPose(progressAt("worlds", cp)).position;
             expect(pos.distanceTo(camPos) - PLANET_RADIUS, `aspect ${aspect.toFixed(2)} n${n} k${k} cp ${cp.toFixed(3)}`).toBeGreaterThanOrEqual(3);
           }
@@ -273,7 +277,10 @@ describe("planetPresenceTarget / planetFadeOut", () => {
   });
 });
 
-describe("planetWeight / planetOpacity", () => {
+// F1: planetOpacity is the SETTLED value the swap follower converges to: presence x fade-out x the
+// 0/1 caseTarget the panels use. There is no scrubbed weight any more (planetWeight was deleted), so
+// "exactly one planet is lit" holds by construction rather than by an invariant test.
+describe("planetOpacity (settled)", () => {
   it("shows exactly one planet while its case dwells, and none of the others", () => {
     for (const n of [2, 3, 6]) {
       for (let k = 0; k < n; k++) {
@@ -285,39 +292,24 @@ describe("planetWeight / planetOpacity", () => {
     }
   });
 
-  it("cross-fades only inside the cursor's travel: weights always sum to 1 and never show two full planets", () => {
-    const n = 3;
-    for (let i = 0; i <= 600; i++) {
-      const cp = W0 + ((W1 - W0) * i) / 600;
-      const w = Array.from({ length: n }, (_, k) => planetOpacity("worlds", cp, k, n));
-      expect(w.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9);
-      expect(Math.max(...w)).toBeGreaterThanOrEqual(0.5);
-    }
-    expect(planetWeight(0.5, 0)).toBeCloseTo(0.5, 12);
-    expect(planetWeight(0.5, 1)).toBeCloseTo(0.5, 12);
-    expect(planetWeight(0, 2)).toBe(0);
-  });
-
-  // Planet and Worlds are each tested against caseCentre, but not against each other: a future edit
-  // to either Math.round (panel) or planetWeight (planet) must not let them disagree about which
-  // case is "current". Exact .5 ties (the middle of a cross-fade) have no single answer.
-  it("shows the planet of the case whose panel is lit: the max-weight index equals the caseTarget-lit index", () => {
+  it("is presence x fade-out x caseTarget at every progress, so exactly one planet is lit through the window, boundaries included", () => {
     for (const n of [2, 3, 6]) {
-      for (let i = 1; i <= 600; i++) {
-        const cp = i / 600;
-        const cursor = worldsCursor(cp, n);
-        const weights = Array.from({ length: n }, (_, k) => planetWeight(cursor, k));
-        const max = Math.max(...weights);
-        if (weights.filter((w) => Math.abs(w - max) < 1e-9).length > 1) continue;          // an exact tie
-        const lit = Array.from({ length: n }, (_, k) => caseTarget(k, n, cp)).indexOf(1);
-        expect(weights.indexOf(max), `n${n} cp ${cp.toFixed(4)}`).toBe(lit);
+      const slot = (W1 - W0) / n;
+      const cps = [0.0001, W0, W1, WORLDS_PRESENCE_END];
+      for (let b = 1; b < n; b++) for (const d of [-0.002, 0, 0.002]) cps.push(W0 + b * slot + d);
+      for (let i = 1; i <= 300; i++) cps.push(W0 + ((W1 - W0) * i) / 300);
+      for (const cp of cps) {
+        const o = Array.from({ length: n }, (_, k) => planetOpacity("worlds", cp, k, n));
+        o.forEach((v, k) => expect(v, `n${n} cp ${cp.toFixed(4)} k${k}`).toBe(planetPresenceTarget("worlds", cp) * planetFadeOut("worlds", cp) * caseTarget(k, n, cp)));
+        expect(o.reduce((a, b) => a + b, 0), `n${n} cp ${cp.toFixed(4)} sum`).toBe(1);   // one planet, never two or none
       }
     }
   });
 
-  it("is 0 for every planet outside the chapter", () => {
+  it("is 0 for every planet outside the chapter, at its first frame, and once the last planet's fade-out has finished", () => {
     expect(planetOpacity("orbit", 0.4, 0, 3)).toBe(0);
     expect(planetOpacity("worlds", 0.95, 2, 3)).toBe(0);
+    for (let k = 0; k < 3; k++) expect(planetOpacity("worlds", 0, k, 3)).toBe(0);
   });
 });
 
@@ -518,8 +510,7 @@ describe("Planet update", () => {
 
 // The planets' chapter-level fade-in is a TRIGGER eased by dt (the panels' CSS transition does the
 // same for caseTarget): a nav / rail / back-link arrival lands at start + 0.001 and must show the
-// planet at once, not after 18vh of scroll. The per-planet cross-fade and the last planet's long
-// fade-out stay scroll-scrubbed.
+// planet at once, not after 18vh of scroll. The last planet's long fade-out stays scroll-scrubbed.
 describe("Planet update — the fade-in follower", () => {
   const opacity = (planet: Planet, k = 0) => planet.planets[k].material.uniforms.uOpacity.value as number;
 
@@ -574,7 +565,7 @@ describe("Planet update — the fade-in follower", () => {
     expect(p2.object!.visible).toBe(false);
   });
 
-  it("keeps the per-planet cross-fade and the last planet's fade-out scrubbed by scroll, not eased", () => {
+  it("keeps the last planet's long fade-out scrubbed by scroll, not eased", () => {
     const { planet } = built();
     scrollToWorlds(caseCentre(2, 3));
     settle(planet);
@@ -584,6 +575,152 @@ describe("Planet update — the fade-in follower", () => {
     scrollToWorlds(PLANET_FADE_OUT_END);
     planet.update(makeFrame({ dt: 1 / 60 }));
     expect(planet.object!.visible).toBe(false);                        // gone the same frame
+  });
+});
+
+// F1: the swap between planets is a TRIGGER too: each planet follows a 0/1 target (caseTarget, the one
+// the panels use) with dt, and the outgoing planet clears BEFORE the incoming one eases in, so no
+// frame ever shows two translucent planets (the standing "never rest half-built" rule).
+describe("Planet update — the timed swap", () => {
+  const swaps = (planet: Planet) => Array.from(planet.swaps);
+  /** Opacity as drawn: a hidden group keeps a stale uniform, so it reads as 0. */
+  const drawn = (planet: Planet, k: number) => (planet.planets[k].group.visible ? (planet.planets[k].material.uniforms.uOpacity.value as number) : 0);
+
+  it("exports positive tunables with PLANET_SWAP_CLEAR a small fraction", () => {
+    expect(PLANET_SWAP_OUT_RATE).toBeGreaterThan(0);
+    expect(PLANET_SWAP_IN_RATE).toBeGreaterThan(0);
+    expect(PLANET_SWAP_CLEAR).toBeGreaterThan(0);
+    expect(PLANET_SWAP_CLEAR).toBeLessThan(0.1);
+  });
+
+  it("settles on exactly one visible planet, the caseTarget-lit one, at every progress incl. every boundary +/- 0.002", () => {
+    for (const n of [2, 3, 6]) {
+      const features = Array.from({ length: n }, (_, k) => FEATURES[k % FEATURES.length]);
+      const { planet } = built(features);
+      const slot = (W1 - W0) / n;
+      const cps = [W0 + 0.001, W1];
+      for (let b = 1; b < n; b++) for (const d of [-0.002, 0, 0.002]) cps.push(W0 + b * slot + d);
+      for (let i = 1; i < 12; i++) cps.push(W0 + ((W1 - W0) * i) / 12);
+      for (const cp of cps) {
+        scrollToWorlds(cp);
+        settle(planet, 60);                                           // 1 s at 60 fps, fixed cp
+        const stored = voyageStore.getState().chapterProgress;         // not cp: the store round-trips through absolute progress (matters on an exact tie)
+        const lit = Array.from({ length: n }, (_, k) => caseTarget(k, n, stored)).indexOf(1);
+        const up = Array.from({ length: n }, (_, k) => k).filter((k) => drawn(planet, k) > 0.01);
+        expect(up, `n${n} cp ${cp.toFixed(4)}`).toEqual([lit]);
+      }
+    }
+  });
+
+  it("never shows two planets above PLANET_SWAP_CLEAR during a swap, and the incoming one reaches 95% by 0.6 s (60 and 30 fps)", () => {
+    for (const fps of [60, 30]) {
+      const { planet } = built();
+      scrollToWorlds(caseCentre(0, 3));
+      settle(planet, 90);
+      expect(swaps(planet)[0]).toBeGreaterThan(0.999);
+      scrollToWorlds(W0 + (W1 - W0) / 3 + 0.01);                     // jump across the 0|1 boundary
+      expect(caseTarget(1, 3, voyageStore.getState().chapterProgress)).toBe(1);
+      let reached = -1;
+      const frames = Math.round(fps * 1.2);
+      for (let f = 1; f <= frames; f++) {
+        planet.update(makeFrame({ dt: 1 / fps }));
+        const above = swaps(planet).filter((v) => v > PLANET_SWAP_CLEAR);
+        expect(above.length, `${fps} fps frame ${f}: ${swaps(planet).map((v) => v.toFixed(3))}`).toBeLessThanOrEqual(1);
+        const visibleNow = [0, 1, 2].filter((k) => drawn(planet, k) > PLANET_SWAP_CLEAR);
+        expect(visibleNow.length, `${fps} fps frame ${f} drawn`).toBeLessThanOrEqual(1);
+        if (reached < 0 && swaps(planet)[1] >= 0.95) reached = f / fps;
+      }
+      expect(reached, `${fps} fps`).toBeGreaterThan(0);
+      expect(reached, `${fps} fps`).toBeLessThanOrEqual(0.6);
+    }
+  });
+
+  it("the outgoing planet clears below PLANET_SWAP_CLEAR within about 0.2 s", () => {
+    const { planet } = built();
+    scrollToWorlds(caseCentre(0, 3));
+    settle(planet, 90);
+    scrollToWorlds(caseCentre(1, 3));
+    settle(planet, 12);                                               // 0.2 s at 60 fps
+    expect(swaps(planet)[0]).toBeLessThan(PLANET_SWAP_CLEAR);
+  });
+
+  it("holds the incoming planet at its start until every other planet is clear (the stage), then lets it in", () => {
+    const { planet } = built();
+    scrollToWorlds(caseCentre(0, 3));
+    settle(planet, 90);
+    scrollToWorlds(caseCentre(1, 3));
+    planet.update(makeFrame({ dt: 1 / 60 }));                         // outgoing is still above CLEAR: incoming holds
+    expect(swaps(planet)[0]).toBeGreaterThan(PLANET_SWAP_CLEAR);
+    expect(swaps(planet)[1]).toBe(0);
+  });
+
+  it("a reader who scrolls back mid-swap never gets two planets either", () => {
+    const { planet } = built();
+    scrollToWorlds(caseCentre(0, 3));
+    settle(planet, 90);
+    for (let round = 0; round < 6; round++) {
+      scrollToWorlds(caseCentre(round % 2 === 0 ? 1 : 0, 3));
+      for (let f = 0; f < 5; f++) {                                   // a flip every 5 frames, well inside a swap
+        planet.update(makeFrame({ dt: 1 / 60 }));
+        expect(swaps(planet).filter((v) => v > PLANET_SWAP_CLEAR).length).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it("treats a NaN, zero or negative dt as no step and a huge dt as landing exactly on the targets", () => {
+    const { planet } = built();
+    scrollToWorlds(caseCentre(0, 3));
+    settle(planet, 90);
+    scrollToWorlds(caseCentre(1, 3));                                 // targets change; swaps must not move on a bad dt
+    const before = swaps(planet);
+    for (const dt of [NaN, 0, -1, -Infinity]) planet.update(makeFrame({ dt }));
+    expect(swaps(planet)).toEqual(before);
+    expect(swaps(planet).every(Number.isFinite)).toBe(true);
+    planet.update(makeFrame({ dt: 10 }));                             // a resumed tab: out and in land in one frame
+    expect(swaps(planet)).toEqual([0, 1, 0]);
+  });
+
+  it("snaps to the targets while the whole group is hidden, so an arrival shows the lit planet with no extra delay", () => {
+    const { planet } = built();
+    voyageStore.setScroll(progressAt("orbit", 0.5), 0);                // outside Worlds: shown stays ~0
+    settle(planet, 5);
+    expect(swaps(planet)).toEqual([0, 0, 0]);
+    scrollToWorlds(caseCentre(2, 3));                                  // jump straight to the last case
+    planet.update(makeFrame({ dt: 1 / 60 }));                         // first in-chapter frame
+    expect(swaps(planet)).toEqual([0, 0, 1]);
+    expect(planet.planets[2].group.visible).toBe(true);
+    expect(drawn(planet, 2)).toBeGreaterThan(0.05);                    // = shown after one frame, with no swap delay on top
+  });
+
+  it("is hidden outside Worlds even if a stale chapterProgress would light a case (the follower targets 0 there)", () => {
+    const { planet } = built();
+    scrollToWorlds(caseCentre(1, 3));
+    settle(planet, 90);
+    voyageStore.setScroll(progressAt("belt", caseCentre(1, 3)), 0);
+    settle(planet, 90);
+    expect(swaps(planet)).toEqual([0, 0, 0]);
+    expect(planet.object!.visible).toBe(false);
+  });
+
+  it("allocates its follower once: the swaps array is the same object across frames and rebuilds clear it", () => {
+    const { planet } = built();
+    const first = planet.swaps;
+    scrollToWorlds(caseCentre(0, 3));
+    settle(planet, 30);
+    expect(planet.swaps).toBe(first);
+    expect(planet.swaps).toHaveLength(3);
+    planet.dispose();
+    expect(planet.swaps).toHaveLength(0);
+  });
+
+  it("draws opacity as shown x fade-out x swap x ignite", () => {
+    const { planet } = built();
+    scrollToWorlds(caseCentre(0, 3));
+    settle(planet, 90, { ignite: 0.25 });
+    expect(drawn(planet, 0)).toBeCloseTo(0.25, 4);
+    scrollToWorlds(WORLDS_HOLD_MOBILE);                               // inside the scrubbed fade-out of case 2
+    settle(planet, 90, { ignite: 1 });
+    expect(drawn(planet, 2)).toBeCloseTo(planetFadeOut("worlds", WORLDS_HOLD_MOBILE), 3);
   });
 });
 

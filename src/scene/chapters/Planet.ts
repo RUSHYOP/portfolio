@@ -18,7 +18,7 @@ import { STAR_POSITION, FOV_MIN, getCameraPose, progressAt, type CameraPose, typ
 import { TIER_SETTINGS, type Tier } from "@/scene/quality";
 import { toPlanetFeature, type PlanetFeature } from "@/lib/planetFeature";
 import { AMBER } from "./EnergyOrb";
-import { WORLDS_PRESENCE_END, caseCentre, worldsCursor } from "./worldsSchedule";
+import { WORLDS_PRESENCE_END, caseCentre, caseTarget } from "./worldsSchedule";
 import type { FrameContext, SetPiece } from "./types";
 
 const clamp01 = (v: number) => (Number.isNaN(v) ? 0 : Math.min(1, Math.max(0, v)));
@@ -63,6 +63,19 @@ export const PLANET_FADE_OUT_END = 0.9;
  *  back-link arrival at `start + 0.001` must land on a complete frame, so the planet cannot wait
  *  for scroll to bring it in. 8 reaches 95 % in ~0.37 s at 60 fps (a test pins <= 0.5 s). */
 export const PLANET_FADE_IN_RATE = 8;
+
+/** Rate (1/s) at which a planet whose case is NOT lit eases to 0 (F1: the swap is a timed trigger, not
+ *  scroll-scrubbed, so no scroll position can rest on two half-faded planets). 20 drops it below
+ *  PLANET_SWAP_CLEAR in ~0.17 s at 60 fps. */
+export const PLANET_SWAP_OUT_RATE = 20;
+
+/** Rate (1/s) at which the planet whose case IS lit eases in, once every other planet is clear.
+ *  8 reaches 95 % in ~0.35 s, so a whole swap lands in ~0.5 s at 60 fps (outgoing 0.17 + incoming 0.35). */
+export const PLANET_SWAP_IN_RATE = 8;
+
+/** Swap level (0..1) below which an outgoing planet counts as gone: the incoming planet waits for it, so
+ *  no frame shows two planets above this opacity (the panels' staged 0.16 s / 0.32 s, as a follower). */
+export const PLANET_SWAP_CLEAR = 0.02;
 
 /** Ring (feature `ring`): inner / outer radius in planet radii, how far its plane is inclined
  *  toward the camera (radians) and its roll about the view axis. Additive grey. */
@@ -155,20 +168,14 @@ export function planetFadeOut(chapterId: ChapterId, chapterProgress: number): nu
   return smooth(1 - (t - WORLDS_PRESENCE_END) / (PLANET_FADE_OUT_END - WORLDS_PRESENCE_END));
 }
 
-/** How much of planet `k` shows for a cursor value: 1 while its case dwells, a straight
- *  cross-fade with its neighbour only inside the cursor's travel stretch, 0 otherwise. The
- *  weights of all planets sum to 1, so exactly one planet is ever fully shown. */
-export function planetWeight(cursor: number, k: number): number {
-  return clamp01(1 - Math.abs(cursor - k));
-}
-
-/** STEADY-STATE opacity of planet `k` of `n` (the fade-in follower fully settled, before the
- *  ignition curtain): presence target x scrubbed fade-out x its own weight. The pure function
- *  tests and the clearance sweep use; Planet.update multiplies the live follower in instead. */
+/** SETTLED opacity of planet `k` of `n` (every follower at its target, before the ignition curtain):
+ *  presence target x scrubbed fade-out x the 0/1 caseTarget the panels use. Planet.update does not
+ *  scrub this: it eases a per-planet `swap` toward caseTarget with dt and multiplies the live follower
+ *  in. Tests and the clearance sweep read this pure steady-state value. */
 export function planetOpacity(chapterId: ChapterId, chapterProgress: number, k: number, n: number): number {
   const fade = planetPresenceTarget(chapterId, chapterProgress) * planetFadeOut(chapterId, chapterProgress);
   if (fade <= 0) return 0;
-  return fade * planetWeight(worldsCursor(chapterProgress, n), k);
+  return fade * caseTarget(k, n, chapterProgress);
 }
 
 /** SceneRoot's GL effect depends on this string, never on the `planets` array's identity: a new
@@ -304,6 +311,9 @@ export class Planet implements SetPiece {
   private wide = false;
   /** The dt-eased chapter-level fade-in (0..1): eased toward planetPresenceTarget every frame. */
   private shown = 0;
+  /** F1: per-planet dt-eased swap followers (0..1), preallocated in build(); the planet's own 0/1 target
+   *  is caseTarget. Float64 so a step of 1 lands exactly on the target. */
+  private swap = new Float64Array(0);
   private readonly scratch = new THREE.Vector3();
 
   constructor(features: readonly PlanetFeature[]) {
@@ -320,6 +330,10 @@ export class Planet implements SetPiece {
   get planets(): readonly PlanetView[] {
     return this.views;
   }
+  /** The per-planet swap followers, exposed read-only for tests and debug overlays. */
+  get swaps(): ArrayLike<number> {
+    return this.swap;
+  }
 
   build(scene: THREE.Scene, tier: Tier): void {
     // An unpaired second build() would leak the previous Group into the scene.
@@ -333,6 +347,7 @@ export class Planet implements SetPiece {
         this.ringGeometry = new THREE.RingGeometry(PLANET_RING_INNER, PLANET_RING_OUTER, Math.max(32, segments));
       }
       this.features.forEach((feature, k) => this.views.push(this.buildPlanet(feature, k)));
+      this.swap = new Float64Array(this.views.length);                // F1: once, never per frame
       this.place(DEFAULT_ASPECT);
     }
     this.scene = scene;
@@ -407,7 +422,9 @@ export class Planet implements SetPiece {
     // is clamped to 1 (a resumed tab's long dt lands on the target, never past it); a non-finite
     // or non-positive dt is a zero step, so NaN can never reach a uniform.
     const step = ctx.dt > 0 ? Math.min(1, ctx.dt * PLANET_FADE_IN_RATE) : 0;
+    const wasHidden = this.shown < 0.01;                              // F1: judged BEFORE this frame's fade-in step
     this.shown += (planetPresenceTarget(chapter.id, chapterProgress) - this.shown) * step;
+    this.stepSwap(chapter.id, chapterProgress, ctx.dt, wasHidden);
     const fade = this.shown * planetFadeOut(chapter.id, chapterProgress);
     this.group.visible = fade > 0.001;
     if (!this.group.visible) return;
@@ -416,10 +433,9 @@ export class Planet implements SetPiece {
     const wide = ctx.viewportWidth !== undefined && ctx.viewportWidth > PHONE_MAX_WIDTH;
     if (Number.isFinite(aspect) && aspect > 0 && (aspect !== this.aspect || wide !== this.wide)) this.place(aspect, wide);
     const n = this.views.length;
-    const cursor = worldsCursor(chapterProgress, n);
     for (let k = 0; k < n; k++) {
       const view = this.views[k];
-      const opacity = fade * planetWeight(cursor, k) * ctx.ignite;
+      const opacity = fade * this.swap[k] * ctx.ignite;
       view.group.visible = opacity > 0.001;
       if (!view.group.visible) continue;
       view.material.uniforms.uOpacity.value = opacity;
@@ -429,6 +445,30 @@ export class Planet implements SetPiece {
         view.moon.pivot.rotation.y = k * MOON_PHASE_STEP + ctx.t * MOON_SPEED;
       }
     }
+  }
+
+  /**
+   * F1: eases every planet's `swap` toward its 0/1 target (caseTarget while in Worlds, else 0) with dt,
+   * staged like the panels: planets whose target is 0 ease out first; the lit planet eases in only once
+   * every other swap is below PLANET_SWAP_CLEAR, so no frame shows two planets. While the whole group is
+   * hidden (`shown` ~ 0 before this frame's step) the swaps snap to their targets, so an arrival lands on the lit planet with no
+   * extra delay. dt is handled as the fade-in follower does: non-finite or <= 0 is no step, a huge dt
+   * lands on the target. Allocation-free.
+   */
+  private stepSwap(chapterId: ChapterId, chapterProgress: number, dt: number, snap: boolean): void {
+    const n = this.views.length;
+    const outStep = dt > 0 ? Math.min(1, dt * PLANET_SWAP_OUT_RATE) : 0;
+    let lit = -1;
+    for (let k = 0; k < n; k++) {
+      const target = chapterId === "worlds" ? caseTarget(k, n, chapterProgress) : 0;
+      if (snap) this.swap[k] = target;
+      else if (target === 1) lit = k;
+      else this.swap[k] -= this.swap[k] * outStep;
+    }
+    if (snap || lit < 0) return;
+    for (let k = 0; k < n; k++) if (k !== lit && this.swap[k] >= PLANET_SWAP_CLEAR) return;   // hold: the stage
+    const inStep = dt > 0 ? Math.min(1, dt * PLANET_SWAP_IN_RATE) : 0;
+    this.swap[lit] += (1 - this.swap[lit]) * inStep;
   }
 
   dispose(): void {
@@ -448,6 +488,7 @@ export class Planet implements SetPiece {
     this.scene = null;
     this.aspect = Number.NaN;
     this.wide = false;
+    this.swap = new Float64Array(0);
     this.shown = 0;
   }
 }

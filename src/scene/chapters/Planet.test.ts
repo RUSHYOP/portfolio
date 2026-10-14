@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import * as THREE from "three";
 import {
-  Planet, planetPosition, planetTarget, planetPresenceTarget, planetFadeOut, planetOpacity,
+  Planet, planetPosition, planetTarget, planetPresenceTarget, planetLeaveTarget, planetOpacity,
   planetsKey, planetsFromKey,
   PLANET_RADIUS, PLANET_DEPTH, PLANET_TARGET_LANDSCAPE, PLANET_TARGET_PORTRAIT, PLANET_TARGET_PORTRAIT_WIDE, PHONE_MAX_WIDTH,
-  PLANET_FADE_OUT_END,
+  PLANET_FADE_OUT_END, PLANET_LEAVE_AT, PLANET_LEAVE_RATE,
   PLANET_FADE_IN_RATE, PLANET_SWAP_OUT_RATE, PLANET_SWAP_IN_RATE, PLANET_SWAP_CLEAR, PLANET_RING_OPACITY, MOON_SPEED,
 } from "./Planet";
 import {
@@ -243,7 +243,7 @@ describe("planetPosition", () => {
   });
 });
 
-describe("planetPresenceTarget / planetFadeOut", () => {
+describe("planetPresenceTarget / planetLeaveTarget", () => {
   it("the fade-in target is 0 outside Worlds and at its first frame, 1 for any progress past it", () => {
     for (const id of ["launch", "approach", "jump", "orbit", "belt", "pilot", "surface"] as const) {
       expect(planetPresenceTarget(id, 0.4)).toBe(0);
@@ -253,31 +253,35 @@ describe("planetPresenceTarget / planetFadeOut", () => {
     for (const cp of [0.0036, W0 / 2, 0.3, W1, WORLDS_HOLD_MOBILE, 0.95, 1]) expect(planetPresenceTarget("worlds", cp)).toBe(1);
   });
 
-  it("the fade-out is 0 outside Worlds, 1 from its first frame through the window and its edge margin", () => {
+  // M2 (final review): the last planet's leave is a 0/1 TARGET (a dt follower eases it), not a scroll
+  // scrub, so no resting scroll position shows it half-faded beside a fully lit panel.
+  it("the leave target is 0 outside Worlds, 1 from its first frame up to PLANET_LEAVE_AT, 0 from there on", () => {
     for (const id of ["launch", "approach", "jump", "orbit", "belt", "pilot", "surface"] as const) {
-      expect(planetFadeOut(id, 0.4)).toBe(0);
+      expect(planetLeaveTarget(id, 0.4)).toBe(0);
     }
-    for (const cp of [0, 0.0036, W0, 0.3, (W0 + W1) / 2, W1, WORLDS_PRESENCE_END]) expect(planetFadeOut("worlds", cp)).toBe(1);
+    for (const cp of [0, 0.0036, W0, 0.3, (W0 + W1) / 2, W1, WORLDS_PRESENCE_END, WORLDS_HOLD_DESKTOP, PLANET_LEAVE_AT - 1e-9]) {
+      expect(planetLeaveTarget("worlds", cp), `cp ${cp}`).toBe(1);
+    }
+    for (const cp of [PLANET_LEAVE_AT, 0.85, WORLDS_HOLD_MOBILE, PLANET_FADE_OUT_END, 0.95, 1]) {
+      expect(planetLeaveTarget("worlds", cp), `cp ${cp}`).toBe(0);
+    }
+    expect([0, 1]).toContain(planetLeaveTarget("worlds", NaN));
   });
 
-  it("is still showing when the desktop pin releases and when the phone's does, and gone by PLANET_FADE_OUT_END", () => {
-    expect(planetFadeOut("worlds", WORLDS_HOLD_DESKTOP)).toBeGreaterThan(0.9);
-    expect(planetFadeOut("worlds", WORLDS_HOLD_MOBILE)).toBeGreaterThan(0);          // the last planet, on a phone
-    expect(planetFadeOut("worlds", WORLDS_HOLD_MOBILE)).toBeLessThan(1);
-    for (const cp of [PLANET_FADE_OUT_END, 0.95, 1]) expect(planetFadeOut("worlds", cp)).toBe(0);
+  it("exports the leave tunables: after the schedule's presence, before the safety cut, a positive rate", () => {
+    expect(PLANET_LEAVE_AT).toBe(0.8);
+    expect(PLANET_LEAVE_AT).toBeGreaterThanOrEqual(WORLDS_PRESENCE_END);
+    expect(PLANET_LEAVE_AT).toBeLessThan(PLANET_FADE_OUT_END);
+    expect(PLANET_LEAVE_RATE).toBeGreaterThan(0);
   });
 
-  it("never rises while fading out", () => {
-    let prev = 2;
-    for (let k = 0; k <= 100; k++) {
-      const v = planetFadeOut("worlds", WORLDS_PRESENCE_END + (k / 100) * (PLANET_FADE_OUT_END - WORLDS_PRESENCE_END));
-      expect(v).toBeLessThanOrEqual(prev);
-      prev = v;
-    }
+  it("is still the target-1 side when the desktop pin releases (0.778) and has left by the phone's (0.858), the accepted M2 trade-off", () => {
+    expect(planetLeaveTarget("worlds", WORLDS_HOLD_DESKTOP)).toBe(1);
+    expect(planetLeaveTarget("worlds", WORLDS_HOLD_MOBILE)).toBe(0);
   });
 });
 
-// F1: planetOpacity is the SETTLED value the swap follower converges to: presence x fade-out x the
+// F1: planetOpacity is the SETTLED value the swap follower converges to: presence x leave target x the
 // 0/1 caseTarget the panels use. There is no scrubbed weight any more (planetWeight was deleted), so
 // "exactly one planet is lit" holds by construction rather than by an invariant test.
 describe("planetOpacity (settled)", () => {
@@ -292,7 +296,7 @@ describe("planetOpacity (settled)", () => {
     }
   });
 
-  it("is presence x fade-out x caseTarget at every progress, so exactly one planet is lit through the window, boundaries included", () => {
+  it("is presence x leave target x caseTarget at every progress, so exactly one planet is lit through the window, boundaries included", () => {
     for (const n of [2, 3, 6]) {
       const slot = (W1 - W0) / n;
       const cps = [0.0001, W0, W1, WORLDS_PRESENCE_END];
@@ -300,15 +304,17 @@ describe("planetOpacity (settled)", () => {
       for (let i = 1; i <= 300; i++) cps.push(W0 + ((W1 - W0) * i) / 300);
       for (const cp of cps) {
         const o = Array.from({ length: n }, (_, k) => planetOpacity("worlds", cp, k, n));
-        o.forEach((v, k) => expect(v, `n${n} cp ${cp.toFixed(4)} k${k}`).toBe(planetPresenceTarget("worlds", cp) * planetFadeOut("worlds", cp) * caseTarget(k, n, cp)));
+        o.forEach((v, k) => expect(v, `n${n} cp ${cp.toFixed(4)} k${k}`).toBe(planetPresenceTarget("worlds", cp) * planetLeaveTarget("worlds", cp) * caseTarget(k, n, cp)));
         expect(o.reduce((a, b) => a + b, 0), `n${n} cp ${cp.toFixed(4)} sum`).toBe(1);   // one planet, never two or none
       }
     }
   });
 
-  it("is 0 for every planet outside the chapter, at its first frame, and once the last planet's fade-out has finished", () => {
+  it("is 0 for every planet outside the chapter, at its first frame, and from PLANET_LEAVE_AT on (full before it)", () => {
     expect(planetOpacity("orbit", 0.4, 0, 3)).toBe(0);
     expect(planetOpacity("worlds", 0.95, 2, 3)).toBe(0);
+    for (const cp of [PLANET_LEAVE_AT, 0.85, WORLDS_HOLD_MOBILE, 1]) for (let k = 0; k < 3; k++) expect(planetOpacity("worlds", cp, k, 3)).toBe(0);
+    for (const cp of [W1, WORLDS_PRESENCE_END, WORLDS_HOLD_DESKTOP, PLANET_LEAVE_AT - 1e-9]) expect(planetOpacity("worlds", cp, 2, 3)).toBe(1);
     for (let k = 0; k < 3; k++) expect(planetOpacity("worlds", 0, k, 3)).toBe(0);
   });
 });
@@ -435,13 +441,18 @@ describe("Planet update", () => {
     }
   });
 
-  it("keeps the last planet up through the desktop and phone pin releases (A6)", () => {
+  // M2 (user decision 2026-10-14, "timed fade + safety cut"): the last planet leaves on a timer once
+  // chapterProgress passes PLANET_LEAVE_AT (0.80). The desktop pin releases at 0.778, so the planet is
+  // still up there; the phone pin releases at 0.858, AFTER the leave, so on a phone the planet has
+  // already gone by then. That trade-off replaces A6's "up through both releases".
+  it("keeps the last planet up at the desktop pin release and has it gone by the phone's (M2 trade-off)", () => {
     const { planet } = built();
-    for (const cp of [WORLDS_HOLD_DESKTOP, WORLDS_HOLD_MOBILE]) {
-      scrollToWorlds(cp);
-      settle(planet);
-      expect(planet.planets.map((v) => v.group.visible)).toEqual([false, false, true]);
-    }
+    scrollToWorlds(WORLDS_HOLD_DESKTOP);
+    settle(planet);
+    expect(planet.planets.map((v) => v.group.visible)).toEqual([false, false, true]);
+    scrollToWorlds(WORLDS_HOLD_MOBILE);
+    settle(planet);
+    expect(planet.object!.visible).toBe(false);                       // the parent group hides every planet at once
   });
 
   it("scales the surface, ring and moon opacity by the fade and by the ignition curtain", () => {
@@ -510,7 +521,7 @@ describe("Planet update", () => {
 
 // The planets' chapter-level fade-in is a TRIGGER eased by dt (the panels' CSS transition does the
 // same for caseTarget): a nav / rail / back-link arrival lands at start + 0.001 and must show the
-// planet at once, not after 18vh of scroll. The last planet's long fade-out stays scroll-scrubbed.
+// planet at once, not after 18vh of scroll. The last planet's leave is a timed 0/1 follower too (M2), with a positional safety cut.
 describe("Planet update — the fade-in follower", () => {
   const opacity = (planet: Planet, k = 0) => planet.planets[k].material.uniforms.uOpacity.value as number;
 
@@ -565,16 +576,118 @@ describe("Planet update — the fade-in follower", () => {
     expect(p2.object!.visible).toBe(false);
   });
 
-  it("keeps the last planet's long fade-out scrubbed by scroll, not eased", () => {
-    const { planet } = built();
-    scrollToWorlds(caseCentre(2, 3));
-    settle(planet);
-    scrollToWorlds(WORLDS_HOLD_MOBILE);                                // 0.858: inside the scrubbed fade-out
-    planet.update(makeFrame({ dt: 1 / 60 }));
-    expect(opacity(planet, 2)).toBeCloseTo(planetOpacity("worlds", WORLDS_HOLD_MOBILE, 2, 3), 2);
-    scrollToWorlds(PLANET_FADE_OUT_END);
-    planet.update(makeFrame({ dt: 1 / 60 }));
-    expect(planet.object!.visible).toBe(false);                        // gone the same frame
+  // M2: the last planet's leave is a 0/1 target eased by dt (PLANET_LEAVE_RATE), with a positional safety cut.
+  describe("the last planet's timed leave and safety cut (M2)", () => {
+    /** Opacity as drawn: a hidden parent group (or child) keeps a stale child flag and uniform, so it reads as 0. */
+    const drawnLast = (planet: Planet) => (planet.object!.visible && planet.planets[2].group.visible ? opacity(planet, 2) : 0);
+    const lit = () => {
+      const { planet } = built();
+      scrollToWorlds(caseCentre(2, 3));
+      settle(planet);
+      return planet;
+    };
+
+    it("is at its full steady value at rest anywhere in [W1, PLANET_LEAVE_AT)", () => {
+      const planet = lit();
+      for (const cp of [W1, WORLDS_HOLD_DESKTOP, 0.79, PLANET_LEAVE_AT - 1e-6]) {
+        scrollToWorlds(cp);
+        settle(planet);
+        expect(drawnLast(planet), `cp ${cp}`).toBeCloseTo(1, 4);
+      }
+    });
+
+    it("is 0 at rest anywhere in [PLANET_LEAVE_AT, 1] after settling", () => {
+      const planet = lit();
+      for (const cp of [PLANET_LEAVE_AT, 0.82, WORLDS_HOLD_MOBILE, 0.88, PLANET_FADE_OUT_END, 0.95, 1]) {
+        scrollToWorlds(cp);
+        settle(planet);
+        expect(drawnLast(planet), `cp ${cp}`).toBe(0);
+      }
+    });
+
+    it("is not scrub-driven: at an in-between rest the opacity is 0 or 1, never a half value", () => {
+      const planet = lit();
+      for (const cp of [0.78, 0.8, 0.82, 0.85]) {
+        scrollToWorlds(cp);
+        settle(planet, 120);
+        expect([0, 1]).toContain(Math.round(drawnLast(planet) * 1e4) / 1e4);
+      }
+    });
+
+    it("crosses PLANET_LEAVE_AT to <= 0.05 within 0.3 s at 60 fps and at 30 fps", () => {
+      for (const fps of [60, 30]) {
+        const planet = lit();
+        scrollToWorlds(0.79);
+        settle(planet, 5);
+        scrollToWorlds(PLANET_LEAVE_AT);
+        const dt = 1 / fps;
+        const frames = Math.round(0.3 * fps);
+        for (let i = 0; i < frames; i++) planet.update(makeFrame({ dt }));
+        expect(drawnLast(planet), `${fps} fps`).toBeLessThanOrEqual(0.05);
+        expect(drawnLast(planet), `${fps} fps`).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it("eases rather than pops: the frame after crossing is still mostly up", () => {
+      const planet = lit();
+      scrollToWorlds(PLANET_LEAVE_AT);
+      planet.update(makeFrame({ dt: 1 / 60 }));
+      expect(drawnLast(planet)).toBeGreaterThan(0.5);
+      expect(drawnLast(planet)).toBeLessThan(1);
+    });
+
+    it("safety cut: cp >= PLANET_FADE_OUT_END is invisible on the very first frame, even with dt = 0", () => {
+      for (const dt of [0, NaN, -1, 1 / 60]) {
+        const planet = lit();
+        scrollToWorlds(PLANET_FADE_OUT_END);
+        planet.update(makeFrame({ dt }));
+        expect(planet.object!.visible, `dt ${dt}`).toBe(false);          // the parent group hides every planet at once
+      }
+    });
+
+    it("scrolling back below PLANET_LEAVE_AT brings the planet back on the same timer", () => {
+      const planet = lit();
+      scrollToWorlds(0.85);
+      settle(planet);
+      expect(drawnLast(planet)).toBe(0);
+      scrollToWorlds(0.79);
+      planet.update(makeFrame({ dt: 1 / 60 }));
+      expect(drawnLast(planet)).toBeGreaterThan(0);
+      expect(drawnLast(planet)).toBeLessThan(0.5);                    // eased in, not popped
+      settle(planet);
+      expect(drawnLast(planet)).toBeCloseTo(1, 4);
+    });
+
+    it("snaps while hidden: arriving from below (already past PLANET_LEAVE_AT) replays no fade, and the planet stays out", () => {
+      const { planet } = built();
+      scrollToWorlds(0.85);                                            // e.g. scrolling up from the Belt with the group hidden
+      for (let i = 0; i < 90; i++) {
+        planet.update(makeFrame({ dt: 1 / 60 }));
+        expect(planet.object!.visible, `frame ${i}`).toBe(false);
+      }
+      // ...and it still returns on the timer when the reader scrolls up past 0.80.
+      scrollToWorlds(0.79);
+      settle(planet);
+      expect(drawnLast(planet)).toBeCloseTo(1, 4);
+    });
+
+    it("treats a NaN, zero or negative dt as no step of the leave follower", () => {
+      const planet = lit();
+      const before = drawnLast(planet);
+      scrollToWorlds(0.85);
+      for (const dt of [NaN, 0, -1]) {
+        planet.update(makeFrame({ dt }));
+        expect(drawnLast(planet), `dt ${dt}`).toBe(before);
+        expect(Number.isFinite(opacity(planet, 2))).toBe(true);
+      }
+    });
+
+    it("never overshoots on a huge dt (a resumed tab): it lands on the target", () => {
+      const planet = lit();
+      scrollToWorlds(0.85);
+      planet.update(makeFrame({ dt: 30 }));
+      expect(drawnLast(planet)).toBe(0);
+    });
   });
 });
 
@@ -584,7 +697,7 @@ describe("Planet update — the fade-in follower", () => {
 describe("Planet update — the timed swap", () => {
   const swaps = (planet: Planet) => Array.from(planet.swaps);
   /** Opacity as drawn: a hidden group keeps a stale uniform, so it reads as 0. */
-  const drawn = (planet: Planet, k: number) => (planet.planets[k].group.visible ? (planet.planets[k].material.uniforms.uOpacity.value as number) : 0);
+  const drawn = (planet: Planet, k: number) => (planet.object!.visible && planet.planets[k].group.visible ? (planet.planets[k].material.uniforms.uOpacity.value as number) : 0);
 
   it("exports positive tunables with PLANET_SWAP_CLEAR a small fraction", () => {
     expect(PLANET_SWAP_OUT_RATE).toBeGreaterThan(0);
@@ -713,14 +826,17 @@ describe("Planet update — the timed swap", () => {
     expect(planet.swaps).toHaveLength(0);
   });
 
-  it("draws opacity as shown x fade-out x swap x ignite", () => {
+  it("draws opacity as shown x leave x swap x ignite", () => {
     const { planet } = built();
     scrollToWorlds(caseCentre(0, 3));
     settle(planet, 90, { ignite: 0.25 });
     expect(drawn(planet, 0)).toBeCloseTo(0.25, 4);
-    scrollToWorlds(WORLDS_HOLD_MOBILE);                               // inside the scrubbed fade-out of case 2
+    scrollToWorlds(WORLDS_HOLD_DESKTOP);                              // case 2 lit, leave target 1
+    settle(planet, 90, { ignite: 0.5 });
+    expect(drawn(planet, 2)).toBeCloseTo(0.5, 4);
+    scrollToWorlds(WORLDS_HOLD_MOBILE);                               // past PLANET_LEAVE_AT: the leave follower has reached 0
     settle(planet, 90, { ignite: 1 });
-    expect(drawn(planet, 2)).toBeCloseTo(planetFadeOut("worlds", WORLDS_HOLD_MOBILE), 3);
+    expect(drawn(planet, 2)).toBe(0);
   });
 });
 

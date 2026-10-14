@@ -49,7 +49,8 @@ export const WORLDS_WINDOW: readonly [number, number] = [0.04, 0.73];
 export const WORLDS_EDGE_FADE = 0.04;
 
 /** Last chapterProgress at which the planets' and the starfield pull's envelope still holds
- *  (0.77 < 0.7778); the last planet then finishes its own fade by PLANET_FADE_OUT_END. */
+ *  (0.77 < 0.7778); the last planet then leaves on a timer
+ *  at PLANET_LEAVE_AT (0.80) and is cut at PLANET_FADE_OUT_END (Planet.ts). */
 export const WORLDS_PRESENCE_END = WORLDS_WINDOW[1] + WORLDS_EDGE_FADE;
 
 /** Width of the cursor's travel between two cases, as a fraction of one case's slot. */

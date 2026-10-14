@@ -18,11 +18,10 @@ import { STAR_POSITION, FOV_MIN, getCameraPose, progressAt, type CameraPose, typ
 import { TIER_SETTINGS, type Tier } from "@/scene/quality";
 import { toPlanetFeature, type PlanetFeature } from "@/lib/planetFeature";
 import { AMBER } from "./EnergyOrb";
-import { WORLDS_PRESENCE_END, caseCentre, caseTarget } from "./worldsSchedule";
+import { caseCentre, caseTarget } from "./worldsSchedule";
 import type { FrameContext, SetPiece } from "./types";
 
 const clamp01 = (v: number) => (Number.isNaN(v) ? 0 : Math.min(1, Math.max(0, v)));
-const smooth = (t: number) => t * t * (3 - 2 * t);
 
 /* ---- Browser-review tunables (spec §3). Exported so the review can retune a value without
  * touching any logic below. ---- */
@@ -55,9 +54,20 @@ export const PLANET_TARGET_PORTRAIT_WIDE = { x: 0.5, y: -0.55 } as const;
  *  A portrait window of PHONE_MAX_WIDTH + 1 or more is a "wide portrait". */
 export const PHONE_MAX_WIDTH = 767;
 
-/** The last planet's fade-out runs from WORLDS_PRESENCE_END to here (like OrbitRing's ringFade),
- *  so a phone, whose pin holds to cp 0.858, still shows it. Clearance holds to this point. */
+/** Safety cut (M2): from this chapterProgress on the group is forced invisible, whatever the leave
+ *  follower says, because the camera's later path passes within ~4 units of the last planet. The
+ *  clearance test only covers the visible interval, so this position is load-bearing. */
 export const PLANET_FADE_OUT_END = 0.9;
+
+/** M2 (user decision 2026-10-14, "timed fade + safety cut"): the last planet's leave TARGET flips to 0
+ *  here, inside Worlds, and a dt follower eases it out. Past the schedule's presence end (0.77) and the
+ *  desktop pin release (0.778), so desktop still shows it; a phone (pin to 0.858) sees it gone. */
+export const PLANET_LEAVE_AT = 0.8;
+
+/** Rate of the leave follower, per second (dt-scaled like PLANET_FADE_IN_RATE): the remaining
+ *  fraction after 0.3 s is ~(1 - rate*dt)^(0.3/dt) = 0.018 at 60 fps and 0.010 at 30 fps, so it is
+ *  95% gone within 0.3 s at either. */
+export const PLANET_LEAVE_RATE = 12;
 
 /** Rate (1/s) of the planets' chapter-level fade-IN, a trigger like the panels: a nav, rail or
  *  back-link arrival at `start + 0.001` must land on a complete frame, so the planet cannot wait
@@ -154,26 +164,25 @@ export function planetPresenceTarget(chapterId: ChapterId, chapterProgress: numb
 }
 
 /**
- * 0..1 SCROLL-SCRUBBED fade-out of the planets: 0 outside Worlds, 1 through the window and its
- * edge margin, then the LAST planet's long fade to PLANET_FADE_OUT_END (the schedule's own
- * presence ends at 0.77, but a phone's pin holds the last case to 0.858). The camera flies through
- * this region in the chapters that follow, so it is 0 from PLANET_FADE_OUT_END on — hiding the
- * planet there is load-bearing (the clearance test only covers the visible interval).
+ * The 0/1 TARGET of the last planet's leave (M2): 0 outside Worlds, 1 inside it while
+ * chapterProgress < PLANET_LEAVE_AT, 0 from there on. Planet.update eases a private follower toward
+ * it with dt (never scroll), so no resting scroll position shows the planet half-faded beside a
+ * fully lit panel. Non-last planets are unaffected: the timed swap already clears them.
+ * The positional safety cut at PLANET_FADE_OUT_END is separate (see update): it hides the group
+ * regardless of the follower.
  */
-export function planetFadeOut(chapterId: ChapterId, chapterProgress: number): number {
+export function planetLeaveTarget(chapterId: ChapterId, chapterProgress: number): number {
   if (chapterId !== "worlds") return 0;
-  const t = clamp01(chapterProgress);
-  if (t >= PLANET_FADE_OUT_END) return 0;
-  if (t <= WORLDS_PRESENCE_END) return 1;
-  return smooth(1 - (t - WORLDS_PRESENCE_END) / (PLANET_FADE_OUT_END - WORLDS_PRESENCE_END));
+  return clamp01(chapterProgress) < PLANET_LEAVE_AT ? 1 : 0;
 }
 
 /** SETTLED opacity of planet `k` of `n` (every follower at its target, before the ignition curtain):
- *  presence target x scrubbed fade-out x the 0/1 caseTarget the panels use. Planet.update does not
- *  scrub this: it eases a per-planet `swap` toward caseTarget with dt and multiplies the live follower
- *  in. Tests and the clearance sweep read this pure steady-state value. */
+ *  presence target x leave target x the 0/1 caseTarget the panels use. Planet.update does not
+ *  scrub this: it eases a per-planet `swap` toward caseTarget and the group's `shown` / `leave`
+ *  followers with dt and multiplies the live followers in. Tests and the clearance sweep read this
+ *  pure steady-state value: 1 for the lit planet before PLANET_LEAVE_AT, 0 at and after it. */
 export function planetOpacity(chapterId: ChapterId, chapterProgress: number, k: number, n: number): number {
-  const fade = planetPresenceTarget(chapterId, chapterProgress) * planetFadeOut(chapterId, chapterProgress);
+  const fade = planetPresenceTarget(chapterId, chapterProgress) * planetLeaveTarget(chapterId, chapterProgress);
   if (fade <= 0) return 0;
   return fade * caseTarget(k, n, chapterProgress);
 }
@@ -311,6 +320,8 @@ export class Planet implements SetPiece {
   private wide = false;
   /** The dt-eased chapter-level fade-in (0..1): eased toward planetPresenceTarget every frame. */
   private shown = 0;
+  /** M2: the dt-eased leave follower (0..1) of the last planet, eased toward planetLeaveTarget. */
+  private leave = 0;
   /** F1: per-planet dt-eased swap followers (0..1), preallocated in build(); the planet's own 0/1 target
    *  is caseTarget. Float64 so a step of 1 lands exactly on the target. */
   private swap = new Float64Array(0);
@@ -425,7 +436,16 @@ export class Planet implements SetPiece {
     const wasHidden = this.shown < 0.01;                              // F1: judged BEFORE this frame's fade-in step
     this.shown += (planetPresenceTarget(chapter.id, chapterProgress) - this.shown) * step;
     this.stepSwap(chapter.id, chapterProgress, ctx.dt, wasHidden);
-    const fade = this.shown * planetFadeOut(chapter.id, chapterProgress);
+    // M2: the leave follower eases toward its 0/1 target with the same dt rules as `shown` (a clamped
+    // step, none for a non-finite or non-positive dt). While the group is hidden it snaps straight to
+    // the target, so arriving from below (scrolling up past PLANET_LEAVE_AT from the Belt) replays no fade.
+    const leaveTarget = planetLeaveTarget(chapter.id, chapterProgress);
+    if (wasHidden) this.leave = leaveTarget;
+    else this.leave += (leaveTarget - this.leave) * (ctx.dt > 0 ? Math.min(1, ctx.dt * PLANET_LEAVE_RATE) : 0);
+    // Safety cut: positional, so it holds on the very first frame and with dt = 0. Outside Worlds
+    // nothing shows either (the old scrubbed fade-out was 0 there too).
+    const cut = chapter.id !== "worlds" || clamp01(chapterProgress) >= PLANET_FADE_OUT_END;
+    const fade = cut ? 0 : this.shown * this.leave;
     this.group.visible = fade > 0.001;
     if (!this.group.visible) return;
     const aspect = ctx.camera.aspect;
@@ -490,5 +510,6 @@ export class Planet implements SetPiece {
     this.wide = false;
     this.swap = new Float64Array(0);
     this.shown = 0;
+    this.leave = 0;
   }
 }

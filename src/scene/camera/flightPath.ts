@@ -21,9 +21,9 @@ export interface Chapter {
 /** Scrollable range of the voyage in vh — the denominator the store's progress divides by.
  *  Every chapter span below sums to it (pinned by a test). Spans, not fractions, are what is
  *  declared: the smallest content chapters (Launch, Belt) are 100vh, exactly the 100vh sticky
- *  `.chapter__pin`, so their pin hold is 0 but they still clear it; total travel = 14
+ *  `.chapter__pin`, so their pin hold is 0 but they still clear it; total travel = 16.25
  *  viewports + 1 tail. Declared before CHAPTERS because the table reads it at module load. */
-export const VOYAGE_SCROLL_VH = 1400;
+export const VOYAGE_SCROLL_VH = 1625;
 
 type ChapterDef = Omit<Chapter, "start" | "end">;
 
@@ -32,7 +32,7 @@ const CHAPTER_DEFS: readonly ChapterDef[] = [
   { id: "approach",      label: "APPROACH VECTOR", index: "02", spanVh: 150,   micro: false },
   { id: "jump",          label: "JUMP",            index: "03", spanVh: 25,    micro: true  },
   { id: "orbit",         label: "ORBIT",           index: "04", spanVh: 300,   micro: false },
-  { id: "worlds",        label: "WORLDS",          index: "05", spanVh: 225,   micro: false },
+  { id: "worlds",        label: "WORLDS",          index: "05", spanVh: 450,   micro: false },
   { id: "belt",          label: "THE BELT",        index: "06", spanVh: 100,   micro: false },
   { id: "passage",       label: "DARK PASSAGE",    index: "07", spanVh: 37.5,  micro: true  },
   { id: "constellation", label: "CONSTELLATION",   index: "08", spanVh: 137.5, micro: false },
@@ -187,9 +187,34 @@ export function getCameraPose(progress: number, out?: CameraPose): CameraPose {
   return pose;
 }
 
-const PILOT_START = CHAPTERS.find((c) => c.id === "pilot")!.start;
-
 const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/** The star's growth is paced on a "star clock" in which Worlds counts as its slice-4 length
+ *  (225vh), however long its section is. starScale / distanceAU used to divide ABSOLUTE progress
+ *  by The Pilot's start, so lengthening Worlds (225 → 450vh, slice 5) would have pushed that
+ *  start out and shrunk the star 10-21% at Approach and Orbit. Keyed by (chapter,
+ *  chapterProgress) instead, every position outside Worlds keeps its slice-3/4 size exactly
+ *  (pinned by golden values in flightPath.test.ts); inside Worlds the star grows at half the
+ *  old rate per scroll-vh (accepted: Worlds is twice as long for the same growth). */
+const STAR_CLOCK_WORLDS_VH = 225;
+const starClockVh = (c: Chapter) => (c.id === "worlds" ? STAR_CLOCK_WORLDS_VH : c.spanVh);
+/** Star-clock vh before each chapter; the last entry is the total. Spans are multiples of
+ *  12.5, so every running sum is exact. */
+const starClockStartVh: number[] = CHAPTERS.reduce(
+  (acc, c) => [...acc, acc[acc.length - 1] + starClockVh(c)],
+  [0],
+);
+const PILOT_INDEX = CHAPTERS.findIndex((c) => c.id === "pilot");
+/** Star-clock vh at which The Pilot starts — the old `PILOT_START`, on the star clock. */
+const STAR_CLOCK_PILOT_VH = starClockStartVh[PILOT_INDEX];
+
+/** 0..1 position on the star clock (1 from The Pilot's start on): the shared helper behind
+ *  starScale and distanceAU. Exported for tests. */
+export function starClock(progress: number): number {
+  const { chapter, chapterProgress } = chapterAt(progress);
+  const i = CHAPTERS.indexOf(chapter);
+  return clamp01((starClockStartVh[i] + chapterProgress * starClockVh(chapter)) / STAR_CLOCK_PILOT_VH);
+}
 
 /** The camera approach already magnifies the star ~6x, and The Pilot's glare does the
  *  "fills the frame" beat — so the geometric scale only needs to reach 2.4. */
@@ -197,13 +222,13 @@ const STAR_SCALE_MAX = 2.4;
 
 /** 0.25 (a distant point) → 2.4 by the start of The Pilot, then holds. */
 export function starScale(progress: number): number {
-  const t = clamp01(progress / PILOT_START);
+  const t = starClock(progress);
   return 0.25 + (STAR_SCALE_MAX - 0.25) * smooth(t);
 }
 
 /** 9.4 AU at launch → 0.0 at The Pilot ("ARRIVED"), then 0. */
 export function distanceAU(progress: number): number {
-  const t = clamp01(progress / PILOT_START);
+  const t = starClock(progress);
   if (t >= 1) return 0;
   return 9.4 * (1 - t);
 }

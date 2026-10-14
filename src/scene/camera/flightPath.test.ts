@@ -3,8 +3,8 @@ import * as THREE from "three";
 import {
   CHAPTERS, CONTENT_CHAPTERS, chapterAt, getCameraPose, distanceAU, starScale,
   fovForVelocity, FOV_MIN, FOV_MAX, STAR_POSITION, LAUNCH_LOOK_OFFSET,
-  CAMERA_WAYPOINTS, progressToCurveT, sectionHeightVh, VOYAGE_SCROLL_VH, VOYAGE_TAIL_VH,
-  progressAt, bankForProgress, BANK_MAX,
+  CAMERA_WAYPOINTS, progressToCurveT, sectionHeightVh, VOYAGE_SCROLL_VH, VOYAGE_TAIL_VH, type ChapterId,
+  progressAt, bankForProgress, BANK_MAX, starClock,
 } from "./flightPath";
 
 const STEPS = 400;
@@ -50,10 +50,10 @@ describe("chapters", () => {
     }
   });
   it("declares its spans in vh and derives every fraction from one cumulative sum", () => {
-    expect(VOYAGE_SCROLL_VH).toBe(1400);
-    // The user's pacing decision, pinned: only Orbit grew (150 → 300).
+    expect(VOYAGE_SCROLL_VH).toBe(1625);
+    // The user's pacing decisions, pinned: Orbit grew (150 → 300, slice 4) and Worlds grew (225 → 450, slice 5).
     expect(CHAPTERS.map((c) => [c.id, c.spanVh])).toEqual([
-      ["launch", 100], ["approach", 150], ["jump", 25], ["orbit", 300], ["worlds", 225],
+      ["launch", 100], ["approach", 150], ["jump", 25], ["orbit", 300], ["worlds", 450],
       ["belt", 100], ["passage", 37.5], ["constellation", 137.5], ["pilot", 125],
       ["landing", 137.5], ["surface", 62.5],
     ]);
@@ -185,6 +185,85 @@ describe("chapter alignment", () => {
   });
 });
 
+// Slice 5 (A1). Worlds grew 225 → 450vh, which would have divided every pre-Worlds position by a
+// longer "vh to The Pilot" and shrunk the star 10-21% at Approach / Orbit. starScale and distanceAU
+// are therefore keyed by (chapter, chapterProgress) through starClock, with Worlds counted as its
+// slice-4 225vh. These values were captured at 17 digits from the slice-4 tree (VOYAGE_SCROLL_VH
+// 1400), i.e. they ARE the slice-3/4 baselines the screenshots were taken against.
+const STAR_GOLDEN: readonly (readonly [ChapterId, number, number, number])[] = [
+  // [chapter, chapterProgress, starScale, distanceAU]
+  ["launch", 0, 0.25, 9.4],
+  ["launch", 0.625, 0.2709572742022715, 8.853488372093023],
+  ["approach", 1 / 3, 0.363899405083829, 8.088372093023256],
+  ["approach", 0.96, 0.5320119537047051, 7.266418604651164],
+  ["jump", 0.5, 0.571984856679286, 7.104651162790698],
+  ["orbit", 0, 0.6001081665765278, 6.995348837209303],
+  ["orbit", 0.11249999999999999, 0.6801810911303408, 6.700232558139535],
+  ["orbit", 0.25749999999999995, 0.7912548145484044, 6.319860465116279],
+  ["orbit", 0.40249999999999997, 0.9096085323418064, 5.939488372093024],
+  ["orbit", 0.5475, 1.0335327721471064, 5.559116279069768],
+  ["orbit", 0.999, 1.4364218146959438, 4.374716279069768],
+  ["worlds", 0, 1.4373174689021091, 4.372093023255814],
+  ["worlds", 0.5, 1.7633180097349916, 3.388372093023257],
+  ["worlds", 0.999, 2.0493776878977283, 2.4066186046511637],
+  ["belt", 0, 2.0498918334234717, 2.404651162790699],
+  ["belt", 0.5, 2.1568685776095187, 1.9674418604651156],
+  ["constellation", 0, 2.303474851270957, 1.20232558139535],
+  ["constellation", 0.5, 2.374743949432125, 0.6011627906976744],
+  ["pilot", 0, 2.4, 0],
+  ["pilot", 0.5, 2.4, 0],
+  ["landing", 0.5, 2.4, 0],
+  ["surface", 0.5, 2.4, 0],
+];
+
+describe("star clock (slice 5, A1)", () => {
+  it("keeps starScale and distanceAU at their slice-4 values at every capture point, whatever the table's length", () => {
+    for (const [id, t, scale, au] of STAR_GOLDEN) {
+      expect(starScale(progressAt(id, t)), `starScale ${id} ${t}`).toBeCloseTo(scale, 12);
+      expect(distanceAU(progressAt(id, t)), `distanceAU ${id} ${t}`).toBeCloseTo(au, 12);
+    }
+  });
+
+  it("counts Worlds as its old 225vh: Worlds' own growth is spread over its 450vh", () => {
+    // cumulative star-clock vh before Worlds = 575, Worlds = 225, up to The Pilot = 1075.
+    expect(starClock(progressAt("worlds", 0))).toBeCloseTo(575 / 1075, 12);
+    expect(starClock(progressAt("worlds", 0.5))).toBeCloseTo(687.5 / 1075, 12);
+    expect(starClock(progressAt("belt", 0))).toBeCloseTo(800 / 1075, 12);
+    // Star-clock units gained per scroll-vh: 1/1075 in every chapter that keeps its length (Orbit
+    // here), and half of that inside Worlds — the same star growth now takes twice the scroll.
+    const perVh = (a: number, b: number) => (starClock(b) - starClock(a)) / ((b - a) * VOYAGE_SCROLL_VH);
+    expect(perVh(progressAt("orbit", 0.25), progressAt("orbit", 0.75)) * 1075).toBeCloseTo(1, 9);
+    expect(perVh(progressAt("worlds", 0.25), progressAt("worlds", 0.75)) * 1075).toBeCloseTo(0.5, 9);
+  });
+
+  it("is 0 at the start, exactly 1 from The Pilot on, and continuous across every chapter boundary", () => {
+    const pilot = CHAPTERS.find((c) => c.id === "pilot")!;
+    expect(starClock(0)).toBe(0);
+    expect(starClock(pilot.start)).toBe(1);
+    expect(starClock(1)).toBe(1);
+    for (let i = 1; i < CHAPTERS.length; i++) {
+      const b = CHAPTERS[i].start;
+      expect(starClock(b * (1 - 1e-9))).toBeCloseTo(starClock(b), 6);
+    }
+  });
+
+  it("never decreases along the whole voyage, and starScale / distanceAU follow it", () => {
+    let prev = -Infinity;
+    let prevScale = -Infinity;
+    let prevAU = Infinity;
+    for (let k = 0; k <= 20000; k++) {
+      const p = k / 20000;
+      const c = starClock(p);
+      expect(c).toBeGreaterThanOrEqual(prev - 1e-12);
+      expect(starScale(p)).toBeGreaterThanOrEqual(prevScale - 1e-12);
+      expect(distanceAU(p)).toBeLessThanOrEqual(prevAU + 1e-12);
+      prev = c;
+      prevScale = starScale(p);
+      prevAU = distanceAU(p);
+    }
+  });
+});
+
 describe("curves", () => {
   it("distanceAU is monotonically non-increasing and 0 from pilot onward", () => {
     let prev = Infinity;
@@ -207,7 +286,7 @@ describe("curves", () => {
     }
     expect(starScale(0)).toBeCloseTo(0.25, 5);
     expect(starScale(1)).toBeCloseTo(2.4, 5);
-    // PILOT_START is derived from the table, so the growth ends exactly where The Pilot starts.
+    // The star clock is derived from the table, so the growth ends exactly where The Pilot starts.
     const pilot = CHAPTERS.find((c) => c.id === "pilot")!;
     expect(starScale(pilot.start)).toBeCloseTo(2.4, 5);
     expect(starScale(pilot.start * 0.99)).toBeLessThan(2.4);

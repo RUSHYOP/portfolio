@@ -45,6 +45,15 @@ export const PLANET_DEPTH = 18;
 // 1440x900 and the halo lapped planet 3's limb as the star grows through the chapter.
 export const PLANET_TARGET_LANDSCAPE = { x: 0.5, y: -0.05 } as const;
 export const PLANET_TARGET_PORTRAIT = { x: 0, y: -0.45 } as const;
+/** Slice-5 browser review (F2): a portrait window >= 768 px wide (768x1024, 1024x1366) still gets the
+ *  desktop layout, with the panel on the left up to ~half the width, so the phone's centred target
+ *  would sit half behind it, and the landscape target (0.5, -0.05) would overlap the star, which sits
+ *  near the screen centre at that aspect. Right of centre and low clears both. */
+export const PLANET_TARGET_PORTRAIT_WIDE = { x: 0.5, y: -0.55 } as const;
+
+/** Widest viewport (CSS px) that gets the phone layout: matches voyage.css `@media (max-width: 767px)`.
+ *  A portrait window of PHONE_MAX_WIDTH + 1 or more is a "wide portrait". */
+export const PHONE_MAX_WIDTH = 767;
 
 /** The last planet's fade-out runs from WORLDS_PRESENCE_END to here (like OrbitRing's ringFade),
  *  so a phone, whose pin holds to cp 0.858, still shows it. Clearance holds to this point. */
@@ -83,11 +92,12 @@ const MOON_PHASE_STEP = 2.1;
 /** Aspect the planets are first placed at, before the camera's real aspect is known. */
 const DEFAULT_ASPECT = 16 / 10;
 
-/** The NDC target for a viewport: portrait below aspect 1, landscape otherwise. (A portrait
- *  tablet >= 768 px wide gets the portrait target with the desktop panel layout: accepted, and
- *  outside the browser-review matrix.) */
-export function planetTarget(aspect: number): { readonly x: number; readonly y: number } {
-  return aspect < 1 ? PLANET_TARGET_PORTRAIT : PLANET_TARGET_LANDSCAPE;
+/** The NDC target for a viewport: landscape from aspect 1 up (and for NaN), the wide-portrait target
+ *  below it when the window is >= 768 px wide (desktop layout, panel on the left), the phone's
+ *  centred portrait target otherwise. */
+export function planetTarget(aspect: number, wide = false): { readonly x: number; readonly y: number } {
+  if (!(aspect < 1)) return PLANET_TARGET_LANDSCAPE;                 // aspect >= 1, and NaN as before
+  return wide ? PLANET_TARGET_PORTRAIT_WIDE : PLANET_TARGET_PORTRAIT;
 }
 
 // Scratch objects for planetPosition: it runs on an aspect change, never per frame.
@@ -98,19 +108,19 @@ const scratchRight = new THREE.Vector3();
 const scratchUp = new THREE.Vector3();
 
 /**
- * World position of planet `k` of `n` for a viewport `aspect`: the camera pose at the centre of
+ * World position of planet `k` of `n` for a viewport `aspect` (`wide`: >= 768 px, see planetTarget): the camera pose at the centre of
  * the planet's slot, plus the camera basis x (an offset derived from the NDC target and
  * PLANET_DEPTH). By construction the planet projects exactly onto the target at that scroll
  * position (at the base FOV, 60 degrees; wider FOV while the reader flicks pulls it toward the
  * centre), and real camera motion carries it across the frame either side of it.
  */
-export function planetPosition(k: number, n: number, aspect: number, out: THREE.Vector3 = new THREE.Vector3()): THREE.Vector3 {
+export function planetPosition(k: number, n: number, aspect: number, out: THREE.Vector3 = new THREE.Vector3(), wide = false): THREE.Vector3 {
   getCameraPose(progressAt("worlds", caseCentre(k, n)), scratchPose);
   // The basis Object3D.lookAt gives a camera: right = forward x up, up' = right x forward.
   scratchFwd.subVectors(scratchPose.lookAt, scratchPose.position).normalize();
   scratchRight.crossVectors(scratchFwd, UP).normalize();
   scratchUp.crossVectors(scratchRight, scratchFwd);
-  const target = planetTarget(aspect);
+  const target = planetTarget(aspect, wide);
   const halfHeight = Math.tan(THREE.MathUtils.degToRad(FOV_MIN) / 2) * PLANET_DEPTH;
   return out
     .copy(scratchPose.position)
@@ -290,6 +300,8 @@ export class Planet implements SetPiece {
   private ringMaterials: THREE.MeshBasicMaterial[] = [];
   private scene: THREE.Scene | null = null;
   private aspect = Number.NaN;
+  /** The `wide` flag the planets were last placed for (F2): a flip at a constant aspect re-places. */
+  private wide = false;
   /** The dt-eased chapter-level fade-in (0..1): eased toward planetPresenceTarget every frame. */
   private shown = 0;
   private readonly scratch = new THREE.Vector3();
@@ -374,12 +386,13 @@ export class Planet implements SetPiece {
     return { feature, group, mesh, material, ring, moon };
   }
 
-  /** Positions every planet for `aspect` and points each surface's light at the star. */
-  private place(aspect: number): void {
+  /** Positions every planet for `aspect` / `wide` and points each surface's light at the star. */
+  private place(aspect: number, wide = false): void {
     this.aspect = aspect;
+    this.wide = wide;
     const n = this.views.length;
     this.views.forEach((view, k) => {
-      planetPosition(k, n, aspect, view.group.position);
+      planetPosition(k, n, aspect, view.group.position, wide);
       const light = this.scratch.copy(STAR_POSITION).sub(view.group.position).normalize();
       (view.material.uniforms.uLightDir.value as THREE.Vector3).copy(light);
       if (view.moon) (view.moon.mesh.material.uniforms.uLightDir.value as THREE.Vector3).copy(light);
@@ -399,7 +412,9 @@ export class Planet implements SetPiece {
     this.group.visible = fade > 0.001;
     if (!this.group.visible) return;
     const aspect = ctx.camera.aspect;
-    if (Number.isFinite(aspect) && aspect > 0 && aspect !== this.aspect) this.place(aspect);
+    // F2: `wide` from the CSS-px width (undefined / NaN read as not wide); re-place on an aspect OR wide change.
+    const wide = ctx.viewportWidth !== undefined && ctx.viewportWidth > PHONE_MAX_WIDTH;
+    if (Number.isFinite(aspect) && aspect > 0 && (aspect !== this.aspect || wide !== this.wide)) this.place(aspect, wide);
     const n = this.views.length;
     const cursor = worldsCursor(chapterProgress, n);
     for (let k = 0; k < n; k++) {
@@ -432,6 +447,7 @@ export class Planet implements SetPiece {
     this.group = null;
     this.scene = null;
     this.aspect = Number.NaN;
+    this.wide = false;
     this.shown = 0;
   }
 }

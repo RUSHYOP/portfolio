@@ -130,6 +130,7 @@ export default function SceneRoot({ tier, ignite, onContextLost, stepCount, plan
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
         camera.aspect = window.innerWidth / window.innerHeight;
+        ctx.viewportWidth = window.innerWidth;                       // F2: Planet's wide-portrait flag
         camera.updateProjectionMatrix();
         // Re-apply the cap: devicePixelRatio changes when the window moves between
         // displays. Before setSize, which setPixelRatio would otherwise re-run at the
@@ -165,7 +166,7 @@ export default function SceneRoot({ tier, ignite, onContextLost, stepCount, plan
     const start = last;
     let raf = 0;
 
-    const ctx: FrameContext = { t: 0, dt: 0, voyage: voyageStore.getState(), camera, audioEnergy: 0, ignite: 0 };
+    const ctx: FrameContext = { t: 0, dt: 0, voyage: voyageStore.getState(), camera, audioEnergy: 0, ignite: 0, viewportWidth: window.innerWidth };
 
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);

@@ -3,7 +3,8 @@ import * as THREE from "three";
 import {
   Planet, planetPosition, planetTarget, planetPresenceTarget, planetFadeOut, planetWeight, planetOpacity,
   planetsKey, planetsFromKey,
-  PLANET_RADIUS, PLANET_DEPTH, PLANET_TARGET_LANDSCAPE, PLANET_TARGET_PORTRAIT, PLANET_FADE_OUT_END,
+  PLANET_RADIUS, PLANET_DEPTH, PLANET_TARGET_LANDSCAPE, PLANET_TARGET_PORTRAIT, PLANET_TARGET_PORTRAIT_WIDE, PHONE_MAX_WIDTH,
+  PLANET_FADE_OUT_END,
   PLANET_FADE_IN_RATE, PLANET_RING_OPACITY, MOON_SPEED,
 } from "./Planet";
 import {
@@ -36,6 +37,21 @@ function cameraAt(cp: number, w: number, h: number): THREE.PerspectiveCamera {
   return cam;
 }
 
+/** x of the wide-portrait NDC target, named once for the F2 tests. */
+const PLANET_TARGET_WIDE_X = PLANET_TARGET_PORTRAIT_WIDE.x;
+
+/** Pixel gap between the planet's screen disc and the star's at a Worlds chapterProgress (> 0 = clear). */
+function discGap(pos: THREE.Vector3, cp: number, w: number, h: number): number {
+  const focal = h / 2 / Math.tan(THREE.MathUtils.degToRad(30));
+  const cam = cameraAt(cp, w, h);
+  const planetNdc = pos.clone().project(cam);
+  const starNdc = STAR_POSITION.clone().project(cam);
+  const separation = Math.hypot(((planetNdc.x - starNdc.x) * w) / 2, ((planetNdc.y - starNdc.y) * h) / 2);
+  const planetR = (PLANET_RADIUS / pos.distanceTo(cam.position)) * focal;
+  const starR = (starScale(progressAt("worlds", cp)) / STAR_POSITION.distanceTo(cam.position)) * focal;
+  return separation - planetR - starR;
+}
+
 /** Runs `frames` update() calls at `dt` (default 60 fps), re-reading the store each time, so the
  *  planets' dt-eased fade-in follower can settle. The follower is a trigger: it never reads scroll
  *  for its pace, only for its target. */
@@ -57,6 +73,19 @@ describe("planetTarget", () => {
     expect(planetTarget(390 / 844)).toBe(PLANET_TARGET_PORTRAIT);
     expect(PLANET_TARGET_LANDSCAPE.x).toBeGreaterThanOrEqual(0.4);   // clear of a 4:3 star disc
     expect(PLANET_TARGET_PORTRAIT.x).toBe(0);                        // centred under the phone panel
+  });
+
+  // F2: a portrait window >= 768 px wide uses the desktop (left-panel) layout, so it gets its own target.
+  it("gives a wide portrait (aspect < 1 and wide) its own target, and ignores `wide` everywhere else", () => {
+    expect(PHONE_MAX_WIDTH).toBe(767);                               // matches CSS @media (max-width: 767px)
+    expect(planetTarget(0.75, true)).toBe(PLANET_TARGET_PORTRAIT_WIDE);
+    expect(planetTarget(0.75, false)).toBe(PLANET_TARGET_PORTRAIT);
+    expect(planetTarget(0.75)).toBe(PLANET_TARGET_PORTRAIT);         // default is the phone's
+    expect(planetTarget(1.6, true)).toBe(PLANET_TARGET_LANDSCAPE);   // landscape wins at aspect >= 1
+    expect(planetTarget(1, true)).toBe(PLANET_TARGET_LANDSCAPE);
+    expect(planetTarget(NaN, true)).toBe(PLANET_TARGET_LANDSCAPE);   // NaN stays landscape, as before
+    expect(planetTarget(NaN)).toBe(PLANET_TARGET_LANDSCAPE);
+    expect(PLANET_TARGET_PORTRAIT_WIDE).toEqual({ x: 0.5, y: -0.55 });
   });
 });
 
@@ -119,6 +148,53 @@ describe("planetPosition", () => {
     }
   });
 
+  // F2: wide portraits (768x1024 and up) keep the desktop panel on the left, so the planet goes right of
+  // centre and low; the landscape target would overlap the star there, the phone's would sit behind the panel.
+  describe("wide portrait placement", () => {
+    const WIDE: readonly (readonly [number, number])[] = [[768, 1024], [768, 941], [1024, 1366]];
+
+    it("projects onto PLANET_TARGET_PORTRAIT_WIDE at each slot centre, clear of a left panel and of the star", () => {
+      const n = 3;
+      for (const [w, h] of WIDE) {
+        const aspect = w / h;
+        const focal = h / 2 / Math.tan(THREE.MathUtils.degToRad(30));
+        for (let k = 0; k < n; k++) {
+          const cp = caseCentre(k, n);
+          const cam = cameraAt(cp, w, h);
+          const pos = planetPosition(k, n, aspect, undefined, true);
+          const ndc = pos.clone().project(cam);
+          expect(ndc.x, `${w}x${h} k${k} x`).toBeCloseTo(PLANET_TARGET_WIDE_X, 6);
+          expect(ndc.y, `${w}x${h} k${k} y`).toBeCloseTo(PLANET_TARGET_PORTRAIT_WIDE.y, 6);
+          // Left edge of the screen disc, in NDC x: clear of a panel that ends before the screen centre.
+          const radiusNdcX = (PLANET_RADIUS / pos.distanceTo(cam.position)) * focal / (w / 2);
+          expect(ndc.x - radiusNdcX, `${w}x${h} k${k} left edge`).toBeGreaterThan(0);
+          expect(discGap(pos, cp, w, h), `${w}x${h} k${k} star gap`).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it("keeps the planet and star discs apart across the whole slot, wherever the planet is shown", () => {
+      const n = 3;
+      const slot = (W1 - W0) / n;
+      for (const [w, h] of WIDE) {
+        for (let k = 0; k < n; k++) {
+          const pos = planetPosition(k, n, w / h, undefined, true);
+          for (const d of [-0.5, -0.25, 0, 0.25, 0.5]) {
+            const cp = caseCentre(k, n) + d * slot;
+            if (caseTarget(k, n, cp) !== 1) continue;
+            expect(discGap(pos, cp, w, h), `${w}x${h} k${k} d${d}`).toBeGreaterThan(0);
+          }
+        }
+      }
+    });
+
+    it("leaves the default (phone) placement and the landscape one unchanged", () => {
+      expect(planetPosition(1, 3, 390 / 844).distanceTo(planetPosition(1, 3, 390 / 844, undefined, false))).toBe(0);
+      expect(planetPosition(1, 3, 1.6, undefined, true).distanceTo(planetPosition(1, 3, 1.6))).toBe(0);   // aspect >= 1 ignores wide
+      expect(planetPosition(1, 3, 0.75, undefined, true).distanceTo(planetPosition(1, 3, 0.75))).toBeGreaterThan(1);
+    });
+  });
+
   // Landscape: real camera motion carries each planet left -> right across the frame (A5).
   it("moves right on screen through its whole slot in landscape, by a visible amount", () => {
     const [w, h] = [1440, 900];
@@ -146,10 +222,11 @@ describe("planetPosition", () => {
   // The corridor after Worlds passes within ~4 units of this spot, so a planet that stays drawn
   // there would swallow the camera: clearance is only required while it is visible (A6).
   it("keeps the camera at least 3 units off the surface for as long as each planet is visible", () => {
-    for (const aspect of [1.6, 4 / 3, 390 / 844]) {
+    // [aspect, wide]: the wide-portrait placement (F2) must clear the camera too.
+    for (const [aspect, wide] of [[1.6, false], [4 / 3, false], [390 / 844, false], [768 / 1024, true], [1024 / 1366, true]] as const) {
       for (const n of [3, 6, 8]) {
         for (let k = 0; k < n; k++) {
-          const pos = planetPosition(k, n, aspect);
+          const pos = planetPosition(k, n, aspect, undefined, wide);
           for (let i = 0; i <= 400; i++) {
             const cp = (0.9 * i) / 400;
             if (planetOpacity("worlds", cp, k, n) <= 0.001) continue;
@@ -403,6 +480,29 @@ describe("Planet update", () => {
     broken.aspect = NaN;
     planet.update(makeFrame({ camera: broken }));
     expect(planet.planets[0].group.position.equals(before)).toBe(true);
+  });
+
+  // F2: `wide` comes from ctx.viewportWidth (>= 768 CSS px); undefined keeps the phone placement.
+  it("re-places every planet when `wide` flips at a constant portrait aspect, and not otherwise", () => {
+    const { planet } = built();
+    scrollToWorlds(caseCentre(0, 3));
+    const cam = new THREE.PerspectiveCamera(60, 768 / 1024);
+    planet.update(makeFrame({ camera: cam }));                        // viewportWidth undefined: not wide
+    expect(planet.planets[0].group.position.distanceTo(planetPosition(0, 3, 768 / 1024))).toBeLessThan(1e-9);
+    planet.update(makeFrame({ camera: cam, viewportWidth: PHONE_MAX_WIDTH }));
+    expect(planet.planets[0].group.position.distanceTo(planetPosition(0, 3, 768 / 1024))).toBeLessThan(1e-9);
+    planet.update(makeFrame({ camera: cam, viewportWidth: PHONE_MAX_WIDTH + 1 }));
+    for (let k = 0; k < 3; k++) {
+      expect(planet.planets[k].group.position.distanceTo(planetPosition(k, 3, 768 / 1024, undefined, true))).toBeLessThan(1e-9);
+      // Lit toward the star from the new position.
+      const toStar = STAR_POSITION.clone().sub(planet.planets[k].group.position).normalize();
+      expect((planet.planets[k].material.uniforms.uLightDir.value as THREE.Vector3).distanceTo(toStar)).toBeLessThan(1e-9);
+    }
+    planet.update(makeFrame({ camera: cam, viewportWidth: 600 }));    // flips back
+    expect(planet.planets[0].group.position.distanceTo(planetPosition(0, 3, 768 / 1024))).toBeLessThan(1e-9);
+    // Landscape ignores `wide`: a flip there changes nothing visible, and NaN width reads as not wide.
+    planet.update(makeFrame({ camera: cam, viewportWidth: NaN }));
+    expect(planet.planets[0].group.position.distanceTo(planetPosition(0, 3, 768 / 1024))).toBeLessThan(1e-9);
   });
 
   it("orbits the moon off the scene clock, not off scroll", () => {

@@ -13,6 +13,9 @@ export interface FrameContext {
   audioEnergy: number;
   /** 0..1 ignite fade-in. */
   ignite: number;
+  /** window.innerWidth in CSS px (SceneRoot keeps it beside camera.aspect). Optional: absent in tests
+   *  and means "not wide", so the phone placement applies below aspect 1. */
+  viewportWidth?: number;
 }
 
 export interface SetPiece {

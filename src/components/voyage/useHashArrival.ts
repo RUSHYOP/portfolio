@@ -24,6 +24,11 @@ export function useHashArrival(tier: Tier | null): void {
     if (tier === null || handled.current) return;
     handled.current = true;
     const target = hashArrivalProgress(window.location.hash);
-    if (target !== null) voyageStore.scrollTo(target, { immediate: true });
+    if (target === null) return;
+    voyageStore.scrollTo(target, { immediate: true });
+    // Drop the fragment so a late browser fragment scroll (seen on a cold dev load: it landed on the
+    // section top, 0.35385, not our 0.35484) has nothing left to re-apply. history.state passes through
+    // unchanged: the Next app router keeps its own state there, and Next 16 syncs native replaceState.
+    window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
   }, [tier]);
 }

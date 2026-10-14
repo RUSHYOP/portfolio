@@ -78,6 +78,30 @@ describe("useHashArrival", () => {
     expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 
+  it("clears the fragment after an arrival (so a late browser fragment scroll has nothing to re-apply), keeping path, query and history.state", () => {
+    const sentinel = { __sentinel: "next-router-state" };
+    window.history.replaceState(sentinel, "", "/voyage?ref=back#worlds");
+    renderHook(() => useHashArrival("high"));
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(window.location.hash).toBe("");
+    expect(window.location.pathname).toBe("/voyage");
+    expect(window.location.search).toBe("?ref=back");
+    expect(window.history.state).toBe(sentinel);
+  });
+
+  it("leaves the URL and history.state untouched for an unknown or empty hash", () => {
+    for (const hash of ["", "#nope", "#jump"]) {
+      const sentinel = { __sentinel: hash };
+      window.history.replaceState(sentinel, "", `/voyage?q=1${hash}`);
+      const before = window.location.href;
+      const { unmount } = renderHook(() => useHashArrival("high"));
+      unmount();
+      expect(window.location.href).toBe(before);
+      expect(window.history.state).toBe(sentinel);
+    }
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
   it("reads the hash when the tier resolves, not when the hook mounts", () => {
     const { rerender } = renderHook(({ tier }: { tier: Tier | null }) => useHashArrival(tier), {
       initialProps: { tier: null as Tier | null },

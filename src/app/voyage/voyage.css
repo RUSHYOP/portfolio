@@ -327,7 +327,13 @@
    The layout knob is a custom property so the browser review can retune it without touching JS:
    the panel takes the left of the frame (right edge 722px at 1440, 512px at 1024), the planet and
    the star read centre-right. */
-.chapter--worlds { --worlds-panel-w: min(40rem, 44vw); }
+.chapter--worlds {
+  --worlds-panel-w: min(40rem, 44vw);
+  /* A native fragment scroll to #worlds (the browser's, or the Next router's on a cold load) lands
+     on the hash-arrival point, start + HASH_ARRIVAL_EPS (0.001 x 1625vh), not the section top where
+     chapterProgress is 0 and every panel is dark. Pinned in voyageCss.test.ts. */
+  scroll-margin-top: -1.625vh;
+}
 .worlds { display: grid; width: var(--worlds-panel-w); }
 .world-panel {
   grid-area: 1 / 1; min-width: 0; overflow: hidden;

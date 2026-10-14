@@ -9,7 +9,8 @@
  * and cannot be media-query-aware, so the schedule is sized to the smaller (desktop) hold. The
  * panels never fade out: the last case stays lit until the pin releases, so a phone dwells on it
  * for its extra 0.08 and the pin's own release is the panel's exit. The panels take a 0/1 target
- * (caseTarget) and CSS animates it; the planets' cursor is scrubbed.
+ * (caseTarget) and CSS animates it; the planets swap on the same 0/1 target with a timed, staged
+ * fade in Planet.ts (slice-5 browser review). Only their placement follows scroll.
  *
  * Layout of chapterProgress (cp); the pin is stationary for cp 0 .. 0.778 (desktop) / 0.858 (mobile):
  *   0 ......... 0.04 ........................ 0.73 ........ 0.77 .. 0.778 ........ 0.858

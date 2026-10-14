@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
+import { VOYAGE_SCROLL_VH } from "@/scene/camera/flightPath";
+import { HASH_ARRIVAL_EPS } from "@/components/voyage/chapterHash";
 
 // CSS has no other automated coverage. These pin the few declarations the Orbit behaviour depends on.
 const css = readFileSync("src/app/voyage/voyage.css", "utf8");
@@ -69,6 +71,15 @@ describe("voyage.css — Orbit", () => {
 });
 
 describe("voyage.css — Worlds", () => {
+  // Slice-5 browser review: on a cold load a native fragment scroll to #worlds (browser or Next
+  // router) could land after useHashArrival's jump, on the section top (chapterProgress 0, every
+  // panel dark). A negative scroll margin makes ANY fragment scroll land on the hash-arrival point,
+  // start + HASH_ARRIVAL_EPS of progress = HASH_ARRIVAL_EPS x VOYAGE_SCROLL_VH vh below the top.
+  it("offsets the #worlds fragment target to the hash-arrival point, so a native fragment scroll lands lit", () => {
+    const m = body(".chapter--worlds").match(/scroll-margin-top:\s*(-?[\d.]+)vh/);
+    expect(m, "scroll-margin-top in vh").not.toBeNull();
+    expect(Number(m![1])).toBeCloseTo(-HASH_ARRIVAL_EPS * VOYAGE_SCROLL_VH, 6);
+  });
   // Desktop: the panels share ONE grid cell, so the box is as tall as the tallest panel and no
   // height has to be tuned; --solo (a 0/1 target, caseTarget) is each panel's opacity.
   it("stacks the case panels in one grid cell and drives each one's opacity from --solo", () => {

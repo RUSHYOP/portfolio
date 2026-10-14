@@ -139,7 +139,7 @@ describe("voyage.css — Worlds", () => {
     expect(body('.chapter--worlds[data-static="true"] .chapter__pin')).toMatch(/position:\s*static/);
   });
   // A4: a capped phone box like .process, so the star and the planet below it stay visible.
-  it("caps the phone box at min(34vh, 18rem), clips it, clamps the excerpts to 2 lines and drops the chips and diagram", () => {
+  it("caps the phone box at min(34vh, 18rem) (the panel does the clipping), clamps the excerpts to 2 lines and drops the chips and diagram", () => {
     // Every phone rule is read from the Worlds pin rule on, so the 768-1099px media block (which
     // also indents `.world-panel__col p`) cannot be mistaken for it.
     const pin = css.indexOf("\n  .chapter--worlds .chapter__pin {");
@@ -169,7 +169,6 @@ describe("voyage.css — Worlds", () => {
     expect(cols).toMatch(/flex:\s*1 1 0/);
     expect(cols).toMatch(/min-height:\s*0/);
     expect(cols).toMatch(/overflow:\s*hidden/);
-    expect(rule(".world-panel .world-panel__link")).not.toMatch(/flex-shrink:\s*[1-9]/);
     expect(rule(".world-panel__title")).toMatch(/-webkit-line-clamp:\s*2\b/);
   });
   it("keeps every panel child at its natural height (a flex column that overflows would shrink the clipped ones to nothing)", () => {
@@ -184,6 +183,68 @@ describe("voyage.css — Worlds", () => {
     expect(rule).toMatch(/white-space:\s*nowrap/);
     expect(rule).toMatch(/overflow:\s*hidden/);
     expect(rule).toMatch(/text-overflow:\s*ellipsis/);
+  });
+  // B-I1 (final review I1): the desktop box was unbounded, so on a short window at >= 768px the pin's
+  // content (label + panel, centred) overflowed it and the case link fell off-screen.
+  describe("short desktop windows (final review I1)", () => {
+    const blockAt = (header: string) => {
+      const at = css.indexOf(header);
+      expect(at, header).toBeGreaterThan(-1);
+      return css.slice(at, css.indexOf("\n}", at));
+    };
+    it("bounds the desktop .worlds box in vh (pin minus dock clearance and label) and sizes the panel to it", () => {
+      const r = body(".worlds");
+      // 100vh - 2 x 4.5rem (dock clearance, mirrored below) - 2.652rem (label line + 1.5rem margin).
+      expect(r).toMatch(/max-height:\s*calc\(\s*100vh\s*-\s*2\s*\*\s*4\.5rem\s*-\s*2\.652rem\s*\)/);
+      expect(r).toMatch(/grid-template-rows:\s*minmax\(\s*0,\s*1fr\s*\)/);
+      expect(body(".world-panel")).toMatch(/max-height:\s*inherit/);
+    });
+    it("makes the excerpt block the only flexible desktop child: it shrinks (never grows), clipped, while the link stays last", () => {
+      const cols = body(".world-panel__cols");
+      expect(cols).toMatch(/flex:\s*0 1 auto/);
+      expect(cols).toMatch(/min-height:\s*0/);
+      expect(cols).toMatch(/overflow:\s*hidden/);
+      // It must come after `.world-panel > * { flex-shrink: 0 }` or the child rule would pin it rigid.
+      expect(css.indexOf("\n.world-panel__cols {")).toBeGreaterThan(css.indexOf("\n.world-panel > * {"));
+      // The link is the box's last row, pinned to its bottom edge.
+      expect(body(".world-panel .world-panel__link")).toMatch(/margin-top:\s*auto/);
+    });
+    // Below 561px of height the bound leaves less than the full panel needs, so the foot, title,
+    // meta and type shrink to the phone box's values (the same numbers as the phone rules).
+    it("adds a compact tier for min-width 768px and max-height 560px that hides the foot and clamps title, meta and excerpts", () => {
+      const block = blockAt("@media (min-width: 768px) and (max-height: 560px) {");
+      const rule = (sel: string) => {
+        const m = block.match(new RegExp(`${sel.replace(/[.[\]()]/g, "\\$&")}\\s*{([^}]*)}`));
+        expect(m, `compact ${sel}`).not.toBeNull();
+        return m![1];
+      };
+      const P = '.chapter--worlds:not([data-static="true"])';
+      expect(rule(`${P} .world-panel__foot`)).toMatch(/display:\s*none/);
+      expect(rule(`${P} .world-panel__title`)).toMatch(/-webkit-line-clamp:\s*2\b/);
+      const meta = rule(`${P} .world-panel__meta`);
+      expect(meta).toMatch(/white-space:\s*nowrap/);
+      expect(meta).toMatch(/text-overflow:\s*ellipsis/);
+      expect(rule(`${P} .world-panel__col p`)).toMatch(/-webkit-line-clamp:\s*2\b/);
+      expect(rule(`${P} .world-panel`)).toMatch(/padding:\s*0\.75rem 1\.1rem/);
+      expect(rule(`${P} .world-panel .world-panel__link`)).toMatch(/padding:\s*0\.45rem 0\.9rem/);
+    });
+    it("scopes every compact-tier rule to the animated tier, so the still tier is untouched by it", () => {
+      const block = blockAt("@media (min-width: 768px) and (max-height: 560px) {");
+      const selectors = [...block.matchAll(/(?:^|})\s*([^{}@]+?)\s*{/g)].map((m) => m[1]);
+      expect(selectors.length).toBeGreaterThan(5);
+      for (const sel of selectors) expect(sel, sel).toContain(':not([data-static="true"])');
+    });
+    it("lifts the bound and the flexible-cols clip in the still tier, and resets it on the phone", () => {
+      const still = body('.chapter--worlds[data-static="true"] .worlds');
+      expect(still).toMatch(/max-height:\s*none/);
+      const cols = body('.chapter--worlds[data-static="true"] .world-panel__cols');
+      expect(cols).toMatch(/min-height:\s*auto/);
+      expect(cols).toMatch(/overflow:\s*visible/);
+      const pin = css.indexOf("\n  .chapter--worlds .chapter__pin {");
+      const phone = css.indexOf("\n  .worlds {", pin);
+      expect(phone, "mobile .worlds rule").toBeGreaterThan(-1);
+      expect(css.slice(phone, css.indexOf("}", phone))).toMatch(/max-height:\s*none/);
+    });
   });
   it("stacks the three excerpt columns between 768 and 1099px, where a 44vw panel is too narrow for three", () => {
     const at = css.indexOf("@media (min-width: 768px) and (max-width: 1099px) {");

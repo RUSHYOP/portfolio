@@ -334,9 +334,21 @@
      chapterProgress is 0 and every panel is dark. Pinned in voyageCss.test.ts. */
   scroll-margin-top: -1.625vh;
 }
-.worlds { display: grid; width: var(--worlds-panel-w); }
+/* Height bound (final review I1; every width >= 768px, the phone and still tiers reset it).
+   .chapter__pin is 100vh and centres its children (the label and this box), so the label + box
+   must fit inside the pin between two equal margins. Margin = 4.5rem (72px), the dock clearance
+   the phone pins already use (dock bottom = 20px top + 36px monogram + 11.2px padding + 2px
+   border = 69.2px). Label block = 0.72rem x body line-height 1.6 + 1.5rem margin-bottom
+   = 1.152rem + 1.5rem = 2.652rem (42.4px). So box <= 100vh - 2 x 4.5rem - 2.652rem
+   = 100vh - 11.652rem (= 100vh - 186.4px; 713px at 900, 414px at 600).
+   The panel sizes to the box: the one grid row is minmax(0, 1fr) and the panel inherits the
+   same max-height, so the box is definite however the grid resolves its row. */
+.worlds {
+  display: grid; grid-template-rows: minmax(0, 1fr); width: var(--worlds-panel-w);
+  max-height: calc(100vh - 2 * 4.5rem - 2.652rem);
+}
 .world-panel {
-  grid-area: 1 / 1; min-width: 0; overflow: hidden;
+  grid-area: 1 / 1; min-width: 0; overflow: hidden; max-height: inherit;
   display: flex; flex-direction: column;
   padding: clamp(1.25rem, 2vw, 2rem);
   opacity: var(--solo);
@@ -376,8 +388,14 @@
   line-height: 1.15; margin: 0 0 0.5rem;
 }
 .world-panel__meta { margin: 0 0 1.1rem; font-size: 0.85rem; line-height: 1.4; color: var(--gray-mid); }
+/* The ONLY flexible child of the bounded box: when the box is shorter than the panel's content
+   (short windows) the excerpt block gives way at its bottom edge, never the link below it.
+   `0 1 auto`, not the phone's `1 1 0`: the desktop box has a max-height but no definite height,
+   and a zero basis would collapse the block to nothing whenever the box is not clamped; shrink
+   only, so an unclamped panel looks exactly as before. Declared after `.world-panel > *`. */
 .world-panel__cols {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 0 0 1.1rem;
+  flex: 0 1 auto; min-height: 0; overflow: hidden;
 }
 .world-panel__col span {
   display: block; margin-bottom: 0.3rem; text-transform: uppercase;
@@ -420,6 +438,32 @@
   .world-panel__col p { -webkit-line-clamp: 4; line-clamp: 4; }
 }
 
+/* Short desktop-layout window (landscape phone, 150% zoom): under 561px the bound above leaves
+   less than the full panel needs (index + title + meta + chips + link is about 300px; the bound
+   is 354px at 540, 244px at 430, 204px at 390), so the panel takes the phone box's compact form,
+   with the phone values: foot hidden, title 2 lines, meta 1 line, excerpts 2 lines, phone
+   padding and type. Compact content is about 135px plus the excerpts, so the link fits down to
+   a viewport about 320px tall. Scoped to the animated tier: the still tier is never compacted. */
+@media (min-width: 768px) and (max-height: 560px) {
+  .chapter--worlds:not([data-static="true"]) .world-panel { padding: 0.75rem 1.1rem; }
+  .chapter--worlds:not([data-static="true"]) .world-panel__index { margin-bottom: 0.2rem; line-height: 1; }
+  .chapter--worlds:not([data-static="true"]) .world-panel__title {
+    font-size: 1rem; margin-bottom: 0.15rem;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  }
+  .chapter--worlds:not([data-static="true"]) .world-panel__meta {
+    font-size: 0.74rem; margin-bottom: 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chapter--worlds:not([data-static="true"]) .world-panel__cols { margin-bottom: 0.3rem; }
+  .chapter--worlds:not([data-static="true"]) .world-panel__col { margin-bottom: 0.15rem; }
+  .chapter--worlds:not([data-static="true"]) .world-panel__col span { margin-bottom: 0.1rem; font-size: 0.56rem; line-height: 1; }
+  .chapter--worlds:not([data-static="true"]) .world-panel__col p {
+    font-size: 0.74rem; line-height: 1.38; -webkit-line-clamp: 2; line-clamp: 2;
+  }
+  .chapter--worlds:not([data-static="true"]) .world-panel__foot { display: none; }
+  .chapter--worlds:not([data-static="true"]) .world-panel .world-panel__link { padding: 0.45rem 0.9rem; font-size: 0.62rem; }
+}
+
 /* Mobile: a 64vh pin is stationary for 450 - 64 = 386vh (chapterProgress 0..0.858); the shared
    schedule's window ends at 0.73 and the last panel then holds (caseTarget stays 1), so a phone
    dwells on the last case until the pin releases.
@@ -430,7 +474,8 @@
    the meta line to one, and the stack chips and the diagram are dropped (the link stays). */
 @media (max-width: 767px) {
   .chapter--worlds .chapter__pin { height: 64vh; padding-top: 4.5rem; justify-content: flex-start; }
-  .worlds { display: block; position: relative; flex: 0 0 auto; width: 100%; height: min(34vh, 18rem); }
+  /* max-height: none resets the desktop bound (the phone box has its own fixed height). */
+  .worlds { display: block; position: relative; flex: 0 0 auto; width: 100%; height: min(34vh, 18rem); max-height: none; }
   .world-panel { position: absolute; inset: 0; padding: 0.75rem 1.1rem; }
   .world-panel__index { margin-bottom: 0.2rem; line-height: 1; }
   .world-panel__title {
@@ -459,8 +504,11 @@
   padding-top: 2rem; padding-bottom: 2rem;
 }
 .chapter--worlds[data-static="true"] .worlds {
-  display: flex; flex-direction: column; gap: 1rem; height: auto;
+  /* max-height: none lifts the short-window bound: the still tier is unbounded and unclamped. */
+  display: flex; flex-direction: column; gap: 1rem; height: auto; max-height: none;
 }
+/* The desktop cols are a shrinkable clipped block; the still tier shows every excerpt in full. */
+.chapter--worlds[data-static="true"] .world-panel__cols { flex: none; min-height: auto; overflow: visible; }
 .chapter--worlds[data-static="true"] .world-panel {
   position: static; inset: auto; opacity: 1; transform: none; overflow: visible;
   /* Reduced motion: no cross-fade animation either. */

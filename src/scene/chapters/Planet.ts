@@ -27,8 +27,9 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
 /* ---- Browser-review tunables (spec §3). Exported so the review can retune a value without
  * touching any logic below. ---- */
 
-/** World-space radius of a planet: ~108 px at 1440x900, ~24% of the viewport height. */
-export const PLANET_RADIUS = 2.5;
+/** World-space radius of a planet: ~95 px at 1440x900, ~21% of the viewport height. Slice-5
+ *  browser review: 2.5 (~110 px) out-weighed the star and pushed the ring into its halo. */
+export const PLANET_RADIUS = 2.2;
 
 /** Camera-space depth (along the view axis) at which a planet is placed at its slot centre. It
  *  sits in front of the star (25-37 units away there), so it occludes the star's halo. Smaller
@@ -40,7 +41,9 @@ export const PLANET_DEPTH = 18;
  *  right, clear of the left panel and the star disc (x >= 0.40 keeps a 4:3 window clear of it);
  *  portrait: centred below the phone panel (no horizontal offset — the planet's motion there is
  *  vertical). */
-export const PLANET_TARGET_LANDSCAPE = { x: 0.4, y: -0.05 } as const;
+// Slice-5 browser review: 0.40 → 0.50. At 0.40 case 1's ring ran into the star's halo at
+// 1440x900 and the halo lapped planet 3's limb as the star grows through the chapter.
+export const PLANET_TARGET_LANDSCAPE = { x: 0.5, y: -0.05 } as const;
 export const PLANET_TARGET_PORTRAIT = { x: 0, y: -0.45 } as const;
 
 /** The last planet's fade-out runs from WORLDS_PRESENCE_END to here (like OrbitRing's ringFade),

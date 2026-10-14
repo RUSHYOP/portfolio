@@ -83,6 +83,23 @@ describe("voyage.css — Worlds", () => {
     expect(r).toMatch(/transition:[^;]*opacity/);
     expect(r).toMatch(/transition:[^;]*transform/);
   });
+  // Slice-5 browser review: a simultaneous 0.45s cross-fade showed two three-column panels'
+  // text superimposed at ~50% each (unreadable). The swap is staged: the outgoing panel
+  // ([data-solo-off]) fades out fast with no delay; the incoming one waits that long first.
+  it("stages the swap: the outgoing panel is gone before the incoming one starts", () => {
+    const secs = (s: string) => Number(s.replace("s", ""));
+    const opacityTiming = (r: string) => {
+      const m = r.match(/opacity\s+([\d.]+s)(?:\s+cubic-bezier\([^)]*\)|\s+[a-z-]+)?(?:\s+([\d.]+s))?/);
+      expect(m, r).not.toBeNull();
+      return { duration: secs(m![1]), delay: m![2] ? secs(m![2]) : 0 };
+    };
+    const incoming = opacityTiming(body(".world-panel"));
+    const outgoing = opacityTiming(body('.world-panel[data-solo-off="true"]'));
+    expect(outgoing.delay).toBe(0);
+    expect(incoming.delay).toBeGreaterThanOrEqual(outgoing.duration);
+    expect(incoming.delay + incoming.duration).toBeLessThanOrEqual(0.5);   // the swap still reads as one beat
+    expect(body('.world-panel[data-solo-off="true"]')).toMatch(/transition:[^;]*transform/);
+  });
   it("is not a scroll container: the panel clips (the excerpts are line-clamped), so the link is its only tab stop", () => {
     expect(body(".world-panel")).toMatch(/overflow:\s*hidden/);
     expect(body(".world-panel")).not.toMatch(/overflow(-y)?:\s*(auto|scroll)/);

@@ -1,0 +1,434 @@
+/*
+ * Chapter 05's set piece: one planet per published case study, each carried across the frame
+ * while its case panel is read.
+ *
+ * Surface shader — attribution. Taken from the "julian-vance-nebula" shader in MengTo/threeui
+ * (src/shaders/neuform-isolated/sources/julian-vance-nebula.html, MIT,
+ * https://github.com/MengTo/threeui): the fBm constants (four octaves, start amplitude 0.55,
+ * gain 0.5, lacunarity 2.05) and the idea of a domain warp — offsetting the sample point by fBm
+ * of itself. The warp here is NOT the source's: that one adds two fBm calls scaled by 0.35 to a
+ * 2D point; this adds three, centred on their mean (value noise is not zero-mean) and scaled by
+ * 0.7, to a 3D point. Not taken: the noise primitive (the source is 2D, screen-space simplex;
+ * this is the 3D value noise EnergyOrb already uses, with EnergyOrb's per-octave `+ vec3(1.7)`
+ * shift, sampled on the sphere's object-space direction so there is no UV seam or pole pinch).
+ * Re-implemented against three@0.169; no source text was copied.
+ */
+import * as THREE from "three";
+import { STAR_POSITION, FOV_MIN, getCameraPose, progressAt, type CameraPose, type ChapterId } from "@/scene/camera/flightPath";
+import { TIER_SETTINGS, type Tier } from "@/scene/quality";
+import { toPlanetFeature, type PlanetFeature } from "@/lib/planetFeature";
+import { AMBER } from "./EnergyOrb";
+import { WORLDS_PRESENCE_END, caseCentre, worldsCursor } from "./worldsSchedule";
+import type { FrameContext, SetPiece } from "./types";
+
+const clamp01 = (v: number) => (Number.isNaN(v) ? 0 : Math.min(1, Math.max(0, v)));
+const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/* ---- Browser-review tunables (spec §3). Exported so the review can retune a value without
+ * touching any logic below. ---- */
+
+/** World-space radius of a planet: ~108 px at 1440x900, ~24% of the viewport height. */
+export const PLANET_RADIUS = 2.5;
+
+/** Camera-space depth (along the view axis) at which a planet is placed at its slot centre. It
+ *  sits in front of the star (25-37 units away there), so it occludes the star's halo. Smaller
+ *  depths move the planet more across the frame but bring it within 3 units of the camera later
+ *  in the voyage (the clearance test pins >= PLANET_RADIUS + 3 while visible). */
+export const PLANET_DEPTH = 18;
+
+/** Where a planet projects at the centre of its slot, in NDC (x right, y up). Landscape: centre-
+ *  right, clear of the left panel and the star disc (x >= 0.40 keeps a 4:3 window clear of it);
+ *  portrait: centred below the phone panel (no horizontal offset — the planet's motion there is
+ *  vertical). */
+export const PLANET_TARGET_LANDSCAPE = { x: 0.4, y: -0.05 } as const;
+export const PLANET_TARGET_PORTRAIT = { x: 0, y: -0.45 } as const;
+
+/** The last planet's fade-out runs from WORLDS_PRESENCE_END to here (like OrbitRing's ringFade),
+ *  so a phone, whose pin holds to cp 0.858, still shows it. Clearance holds to this point. */
+export const PLANET_FADE_OUT_END = 0.9;
+
+/** Rate (1/s) of the planets' chapter-level fade-IN, a trigger like the panels: a nav, rail or
+ *  back-link arrival at `start + 0.001` must land on a complete frame, so the planet cannot wait
+ *  for scroll to bring it in. 8 reaches 95 % in ~0.37 s at 60 fps (a test pins <= 0.5 s). */
+export const PLANET_FADE_IN_RATE = 8;
+
+/** Ring (feature `ring`): inner / outer radius in planet radii, how far its plane is inclined
+ *  toward the camera (radians) and its roll about the view axis. Additive grey. */
+export const PLANET_RING_INNER = 1.4;
+export const PLANET_RING_OUTER = 1.75;
+export const PLANET_RING_INCLINE = (24 * Math.PI) / 180;
+export const PLANET_RING_ROLL = (-16 * Math.PI) / 180;
+export const PLANET_RING_OPACITY = 0.4;
+
+/** Moon (feature `moon`): radius and orbit radius in planet radii, orbit-plane tilt and roll
+ *  (radians) and angular speed (rad/s). Ambient motion off the scene clock — not scroll, and
+ *  never in `still`. The roll stands the orbit's long axis nearly upright so the moon never
+ *  swings left across the star (the star sits ~2 planet radii to the planet's left). */
+export const MOON_RADIUS = 0.28;
+export const MOON_ORBIT = 2.1;
+export const MOON_TILT = (30 * Math.PI) / 180;
+export const MOON_ROLL = (72 * Math.PI) / 180;
+export const MOON_SPEED = 0.35;
+
+/** Floor of the surface brightness on the night side, 0..1: the star lights a planet from behind
+ *  and to the left, so most of the visible face is unlit and would otherwise be pure black. */
+export const PLANET_NIGHT_FLOOR = 0.12;
+
+/** Phase (radians) between the moons of different planets, so no two share an angle. */
+const MOON_PHASE_STEP = 2.1;
+
+/** Aspect the planets are first placed at, before the camera's real aspect is known. */
+const DEFAULT_ASPECT = 16 / 10;
+
+/** The NDC target for a viewport: portrait below aspect 1, landscape otherwise. (A portrait
+ *  tablet >= 768 px wide gets the portrait target with the desktop panel layout: accepted, and
+ *  outside the browser-review matrix.) */
+export function planetTarget(aspect: number): { readonly x: number; readonly y: number } {
+  return aspect < 1 ? PLANET_TARGET_PORTRAIT : PLANET_TARGET_LANDSCAPE;
+}
+
+// Scratch objects for planetPosition: it runs on an aspect change, never per frame.
+const UP = new THREE.Vector3(0, 1, 0);
+const scratchPose: CameraPose = { position: new THREE.Vector3(), lookAt: new THREE.Vector3() };
+const scratchFwd = new THREE.Vector3();
+const scratchRight = new THREE.Vector3();
+const scratchUp = new THREE.Vector3();
+
+/**
+ * World position of planet `k` of `n` for a viewport `aspect`: the camera pose at the centre of
+ * the planet's slot, plus the camera basis x (an offset derived from the NDC target and
+ * PLANET_DEPTH). By construction the planet projects exactly onto the target at that scroll
+ * position (at the base FOV, 60 degrees; wider FOV while the reader flicks pulls it toward the
+ * centre), and real camera motion carries it across the frame either side of it.
+ */
+export function planetPosition(k: number, n: number, aspect: number, out: THREE.Vector3 = new THREE.Vector3()): THREE.Vector3 {
+  getCameraPose(progressAt("worlds", caseCentre(k, n)), scratchPose);
+  // The basis Object3D.lookAt gives a camera: right = forward x up, up' = right x forward.
+  scratchFwd.subVectors(scratchPose.lookAt, scratchPose.position).normalize();
+  scratchRight.crossVectors(scratchFwd, UP).normalize();
+  scratchUp.crossVectors(scratchRight, scratchFwd);
+  const target = planetTarget(aspect);
+  const halfHeight = Math.tan(THREE.MathUtils.degToRad(FOV_MIN) / 2) * PLANET_DEPTH;
+  return out
+    .copy(scratchPose.position)
+    .addScaledVector(scratchFwd, PLANET_DEPTH)
+    .addScaledVector(scratchRight, target.x * halfHeight * aspect)
+    .addScaledVector(scratchUp, target.y * halfHeight);
+}
+
+/**
+ * The 0/1 TARGET of the planets' chapter-level fade-in: 1 for any chapterProgress past 0 inside
+ * Worlds, 0 at its first frame and everywhere else. Planet.update eases a private follower toward
+ * it with dt (never scroll), exactly as the panels' CSS transition eases caseTarget, so an arrival
+ * at start + 0.001 shows the planet within ~0.4 s instead of waiting for 18vh of scroll.
+ */
+export function planetPresenceTarget(chapterId: ChapterId, chapterProgress: number): number {
+  if (chapterId !== "worlds") return 0;
+  return clamp01(chapterProgress) > 0 ? 1 : 0;
+}
+
+/**
+ * 0..1 SCROLL-SCRUBBED fade-out of the planets: 0 outside Worlds, 1 through the window and its
+ * edge margin, then the LAST planet's long fade to PLANET_FADE_OUT_END (the schedule's own
+ * presence ends at 0.77, but a phone's pin holds the last case to 0.858). The camera flies through
+ * this region in the chapters that follow, so it is 0 from PLANET_FADE_OUT_END on — hiding the
+ * planet there is load-bearing (the clearance test only covers the visible interval).
+ */
+export function planetFadeOut(chapterId: ChapterId, chapterProgress: number): number {
+  if (chapterId !== "worlds") return 0;
+  const t = clamp01(chapterProgress);
+  if (t >= PLANET_FADE_OUT_END) return 0;
+  if (t <= WORLDS_PRESENCE_END) return 1;
+  return smooth(1 - (t - WORLDS_PRESENCE_END) / (PLANET_FADE_OUT_END - WORLDS_PRESENCE_END));
+}
+
+/** How much of planet `k` shows for a cursor value: 1 while its case dwells, a straight
+ *  cross-fade with its neighbour only inside the cursor's travel stretch, 0 otherwise. The
+ *  weights of all planets sum to 1, so exactly one planet is ever fully shown. */
+export function planetWeight(cursor: number, k: number): number {
+  return clamp01(1 - Math.abs(cursor - k));
+}
+
+/** STEADY-STATE opacity of planet `k` of `n` (the fade-in follower fully settled, before the
+ *  ignition curtain): presence target x scrubbed fade-out x its own weight. The pure function
+ *  tests and the clearance sweep use; Planet.update multiplies the live follower in instead. */
+export function planetOpacity(chapterId: ChapterId, chapterProgress: number, k: number, n: number): number {
+  const fade = planetPresenceTarget(chapterId, chapterProgress) * planetFadeOut(chapterId, chapterProgress);
+  if (fade <= 0) return 0;
+  return fade * planetWeight(worldsCursor(chapterProgress, n), k);
+}
+
+/** SceneRoot's GL effect depends on this string, never on the `planets` array's identity: a new
+ *  array every render would otherwise rebuild the WebGL context. `[]` is "" and `["none"]` is
+ *  "none", so an empty list and a one-planet list never collide. */
+export function planetsKey(features: readonly PlanetFeature[]): string {
+  return features.join(",");
+}
+
+/** The inverse of planetsKey; anything that is not a known feature reads as `none`. */
+export function planetsFromKey(key: string): PlanetFeature[] {
+  return key === "" ? [] : key.split(",").map(toPlanetFeature);
+}
+
+const VERT = /* glsl */ `
+  varying vec3 vObjDir;
+  varying vec3 vWorldNormal;
+  void main() {
+    // The object-space direction drives the noise: a sphere has no UV seam to hide.
+    vObjDir = normalize(position);
+    vWorldNormal = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const FRAG = /* glsl */ `
+  uniform vec3 uSeed;
+  uniform vec3 uLightDir;
+  uniform vec3 uAmber;
+  uniform float uStorm;
+  uniform float uOpacity;
+  varying vec3 vObjDir;
+  varying vec3 vWorldNormal;
+
+  // 3D value noise + fbm (the same idiom as EnergyOrb), with the nebula's constants.
+  float hash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float noise(vec3 x) {
+    vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
+                   mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+               mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
+                   mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+  }
+  float fbm(vec3 p) {
+    float v = 0.0, a = 0.55;
+    for (int i = 0; i < 4; i++) { v += a * noise(p); p = p * 2.05 + vec3(1.7); a *= 0.5; }
+    return v;
+  }
+
+  void main() {
+    vec3 p = vObjDir * 2.2 + uSeed;
+    // Domain warp: the nebula's idiom, centred because value noise is not zero-mean.
+    vec3 w = vec3(fbm(p + vec3(0.0, 3.1, 1.3)), fbm(p - vec3(2.7, 0.0, 4.2)), fbm(p + vec3(5.5, 1.9, 0.0)));
+    p += (w - 0.52) * 0.7;
+    float tone = smoothstep(0.22, 0.8, fbm(p));
+
+    // Storm: a brighter, more turbulent latitude band (a uniform, not extra geometry).
+    float lat = vObjDir.y;
+    float d = (lat - 0.22) / 0.13;
+    float band = exp(-d * d);
+    float turb = 0.0;
+    // A uniform branch: only a storm planet pays for the three extra fBm calls.
+    if (uStorm > 0.5) {
+      vec3 sp = vec3(vObjDir.x * 3.5, lat * 9.0, vObjDir.z * 3.5) + uSeed;
+      turb = fbm(sp + 1.8 * vec3(fbm(sp * 1.7), fbm(sp * 1.7 + 4.1), 0.0));
+      tone = mix(tone, clamp(tone * 0.55 + turb * 0.95 + 0.15, 0.0, 1.0), uStorm * band);
+      tone = clamp(tone + uStorm * band * 0.2, 0.0, 1.0);
+    }
+
+    // Lit by the direction to the star: a dark night side and a narrow amber terminator band.
+    float ndl = dot(normalize(vWorldNormal), normalize(uLightDir));
+    float day = smoothstep(-0.02, 0.5, ndl);
+    float e = ndl / 0.075;
+    float terminator = exp(-e * e);
+    vec3 col = vec3(tone) * (${PLANET_NIGHT_FLOOR.toFixed(3)} + (1.0 - ${PLANET_NIGHT_FLOOR.toFixed(3)}) * day) * 0.9;
+    // The storm band glows a little on its own, so it still reads on the unlit face.
+    col += vec3(uStorm * band * (0.10 + 0.22 * turb));
+    col += uAmber * terminator * (0.25 + 0.75 * tone) * 0.55;
+    gl_FragColor = vec4(col, uOpacity);
+  }
+`;
+
+/** Exposed read-only for tests and debug overlays. */
+export interface PlanetView {
+  readonly feature: PlanetFeature;
+  /** Positioned at the planet's world position; hidden while the planet's opacity is 0. */
+  readonly group: THREE.Group;
+  readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
+  readonly material: THREE.ShaderMaterial;
+  /** Present for feature `ring` only. */
+  readonly ring: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial> | null;
+  /** Present for feature `moon` only: the orbit pivot and the moon on it. */
+  readonly moon: { readonly pivot: THREE.Group; readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial> } | null;
+}
+
+/** A deterministic seed per planet: no two surfaces match, and a reload never reshuffles them. */
+const seedFor = (k: number, salt: number) =>
+  new THREE.Vector3(Math.sin((k + 1) * 12.9898 + salt) * 43.7585, Math.sin((k + 1) * 78.233 + salt) * 24.1431, Math.sin((k + 1) * 37.719 + salt) * 31.6027);
+
+function surfaceMaterial(seed: THREE.Vector3, storm: number): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    vertexShader: VERT,
+    fragmentShader: FRAG,
+    transparent: true,
+    uniforms: {
+      uSeed: { value: seed },
+      uLightDir: { value: new THREE.Vector3(1, 0, 0) },
+      uAmber: { value: new THREE.Color(AMBER) },
+      uStorm: { value: storm },
+      uOpacity: { value: 0 },
+    },
+  });
+}
+
+/**
+ * Owns every planet of chapter 05 (one Group each), the way OrbitRing owns its nodes, so
+ * SceneRoot gains ONE piece. Everything is allocated in build(); update() only writes scalars
+ * and, when the camera's aspect changes, re-places the N planets (no rebuild, no per-frame
+ * allocation). Unknown features build as `none`; no cases, or the `still` tier, build an empty
+ * hidden group with no GPU resources.
+ */
+export class Planet implements SetPiece {
+  /** Sanitised, in CMS order: one entry per planet. */
+  readonly features: readonly PlanetFeature[];
+  private group: THREE.Group | null = null;
+  private views: PlanetView[] = [];
+  private sphereGeometry: THREE.SphereGeometry | null = null;
+  private ringGeometry: THREE.RingGeometry | null = null;
+  private ringMaterials: THREE.MeshBasicMaterial[] = [];
+  private scene: THREE.Scene | null = null;
+  private aspect = Number.NaN;
+  /** The dt-eased chapter-level fade-in (0..1): eased toward planetPresenceTarget every frame. */
+  private shown = 0;
+  private readonly scratch = new THREE.Vector3();
+
+  constructor(features: readonly PlanetFeature[]) {
+    this.features = features.map(toPlanetFeature);
+  }
+
+  get count(): number {
+    return this.features.length;
+  }
+  /** The scene object, exposed read-only for tests and debug overlays. */
+  get object(): THREE.Group | null {
+    return this.group;
+  }
+  get planets(): readonly PlanetView[] {
+    return this.views;
+  }
+
+  build(scene: THREE.Scene, tier: Tier): void {
+    // An unpaired second build() would leak the previous Group into the scene.
+    if (this.group) this.dispose();
+    this.group = new THREE.Group();
+    this.group.visible = false;
+    const segments = TIER_SETTINGS[tier].planetSegments;
+    if (this.features.length > 0 && segments > 0) {
+      this.sphereGeometry = new THREE.SphereGeometry(1, segments, Math.max(8, segments >> 1));
+      if (this.features.includes("ring")) {
+        this.ringGeometry = new THREE.RingGeometry(PLANET_RING_INNER, PLANET_RING_OUTER, Math.max(32, segments));
+      }
+      this.features.forEach((feature, k) => this.views.push(this.buildPlanet(feature, k)));
+      this.place(DEFAULT_ASPECT);
+    }
+    this.scene = scene;
+    scene.add(this.group);
+  }
+
+  private buildPlanet(feature: PlanetFeature, k: number): PlanetView {
+    const group = new THREE.Group();
+    group.visible = false;
+    const material = surfaceMaterial(seedFor(k, 0), feature === "storm" ? 1 : 0);
+    const mesh = new THREE.Mesh(this.sphereGeometry!, material);
+    mesh.scale.setScalar(PLANET_RADIUS);
+    group.add(mesh);
+
+    let ring: PlanetView["ring"] = null;
+    if (feature === "ring" && this.ringGeometry) {
+      // Additive grey, depth-tested against the sphere (the planet writes depth) so the far
+      // half of the ring passes behind it. Drawn after the sphere at equal distance.
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff, transparent: true, opacity: 0, depthWrite: false,
+        blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      });
+      this.ringMaterials.push(ringMaterial);
+      ring = new THREE.Mesh(this.ringGeometry, ringMaterial);
+      ring.scale.setScalar(PLANET_RADIUS);
+      // RingGeometry lies in its local XY plane facing +z; lay it flat, then incline it toward the camera.
+      ring.rotation.x = -Math.PI / 2 + PLANET_RING_INCLINE;
+      ring.renderOrder = 1;
+      const roll = new THREE.Group();
+      roll.rotation.z = PLANET_RING_ROLL;
+      roll.add(ring);
+      group.add(roll);
+    }
+
+    let moon: PlanetView["moon"] = null;
+    if (feature === "moon") {
+      const tilt = new THREE.Group();
+      tilt.rotation.set(MOON_TILT, 0, MOON_ROLL);
+      const pivot = new THREE.Group();
+      pivot.rotation.y = k * MOON_PHASE_STEP;
+      const moonMesh = new THREE.Mesh(this.sphereGeometry!, surfaceMaterial(seedFor(k, 5.5), 0));
+      moonMesh.scale.setScalar(PLANET_RADIUS * MOON_RADIUS);
+      moonMesh.position.set(PLANET_RADIUS * MOON_ORBIT, 0, 0);
+      pivot.add(moonMesh);
+      tilt.add(pivot);
+      group.add(tilt);
+      moon = { pivot, mesh: moonMesh };
+    }
+
+    this.group!.add(group);
+    return { feature, group, mesh, material, ring, moon };
+  }
+
+  /** Positions every planet for `aspect` and points each surface's light at the star. */
+  private place(aspect: number): void {
+    this.aspect = aspect;
+    const n = this.views.length;
+    this.views.forEach((view, k) => {
+      planetPosition(k, n, aspect, view.group.position);
+      const light = this.scratch.copy(STAR_POSITION).sub(view.group.position).normalize();
+      (view.material.uniforms.uLightDir.value as THREE.Vector3).copy(light);
+      if (view.moon) (view.moon.mesh.material.uniforms.uLightDir.value as THREE.Vector3).copy(light);
+    });
+  }
+
+  update(ctx: FrameContext): void {
+    // SceneRoot may tick before the build lands; an empty set has nothing to drive.
+    if (!this.group || this.views.length === 0) return;
+    const { chapter, chapterProgress } = ctx.voyage;
+    // The follower runs BEFORE the visibility early-out so it keeps settling while hidden. A step
+    // is clamped to 1 (a resumed tab's long dt lands on the target, never past it); a non-finite
+    // or non-positive dt is a zero step, so NaN can never reach a uniform.
+    const step = ctx.dt > 0 ? Math.min(1, ctx.dt * PLANET_FADE_IN_RATE) : 0;
+    this.shown += (planetPresenceTarget(chapter.id, chapterProgress) - this.shown) * step;
+    const fade = this.shown * planetFadeOut(chapter.id, chapterProgress);
+    this.group.visible = fade > 0.001;
+    if (!this.group.visible) return;
+    const aspect = ctx.camera.aspect;
+    if (Number.isFinite(aspect) && aspect > 0 && aspect !== this.aspect) this.place(aspect);
+    const n = this.views.length;
+    const cursor = worldsCursor(chapterProgress, n);
+    for (let k = 0; k < n; k++) {
+      const view = this.views[k];
+      const opacity = fade * planetWeight(cursor, k) * ctx.ignite;
+      view.group.visible = opacity > 0.001;
+      if (!view.group.visible) continue;
+      view.material.uniforms.uOpacity.value = opacity;
+      if (view.ring) view.ring.material.opacity = PLANET_RING_OPACITY * opacity;
+      if (view.moon) {
+        view.moon.mesh.material.uniforms.uOpacity.value = opacity;
+        view.moon.pivot.rotation.y = k * MOON_PHASE_STEP + ctx.t * MOON_SPEED;
+      }
+    }
+  }
+
+  dispose(): void {
+    if (this.group && this.scene) this.scene.remove(this.group);
+    this.sphereGeometry?.dispose();
+    this.ringGeometry?.dispose();
+    for (const view of this.views) {
+      view.material.dispose();
+      view.moon?.mesh.material.dispose();
+    }
+    for (const m of this.ringMaterials) m.dispose();
+    this.sphereGeometry = null;
+    this.ringGeometry = null;
+    this.ringMaterials = [];
+    this.views = [];
+    this.group = null;
+    this.scene = null;
+    this.aspect = Number.NaN;
+    this.shown = 0;
+  }
+}

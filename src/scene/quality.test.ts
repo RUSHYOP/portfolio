@@ -97,5 +97,10 @@ describe("TIER_SETTINGS", () => {
     expect(TIER_SETTINGS.mid.ringSegments).toBe(64);
     expect(TIER_SETTINGS.mid.ringSegments).toBeLessThan(TIER_SETTINGS.high.ringSegments);
     expect(TIER_SETTINGS.still.ringSegments).toBe(0);
+    // Chapter 05's planet spheres: same shape, `still` never reaches GL.
+    expect(TIER_SETTINGS.high.planetSegments).toBe(64);
+    expect(TIER_SETTINGS.mid.planetSegments).toBe(32);
+    expect(TIER_SETTINGS.mid.planetSegments).toBeLessThan(TIER_SETTINGS.high.planetSegments);
+    expect(TIER_SETTINGS.still.planetSegments).toBe(0);
   });
 });

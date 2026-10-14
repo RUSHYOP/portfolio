@@ -17,7 +17,7 @@ Make Services, Process steps, Case studies, Testimonials and Inquiries first-cla
 | Publishing | `published` flag on **Case studies and Testimonials** only; public reads return published items; chapters hide when zero published. |
 | Inquiries | **Store + public rate-limited `POST /api/inquiries` + admin Inbox** with status workflow. |
 | Email | **Resend**, user's own API key (already set locally and in Vercel production as `RESEND_API_KEY`). Two minimal plain-text emails; no HTML templates, no react-email. Sending domain `communications.rushy.dev` (DKIM/SPF verified; inbound MX not needed). |
-| Pacing (carried over) | `VOYAGE_SCROLL_VH = 1400` (was 1250, tuned 2026-09-14, commit ea5944e; Orbit grew 150 → 300vh in slice 4 — spans are now declared in vh in `flightPath.ts`). |
+| Pacing (carried over) | `VOYAGE_SCROLL_VH = 1625` (was 1250, tuned 2026-09-14, commit ea5944e; Orbit grew 150 → 300vh in slice 4 and Worlds 225 → 450vh in slice 5 — spans are declared in vh in `flightPath.ts`). |
 
 ### Out of scope
 Scheduler embed (sub-project 3 chooses the provider via the marketplace skill), migrating Projects/Skills onto the factory, HTML email templates, inbound email, admin roles.

@@ -61,9 +61,13 @@ Without `RESEND_API_KEY` the inquiry POST still stores the submission — mail i
 # Local MongoDB (mongo:7 — mongo:latest/8.x fails on some kernels, SERVER-121912)
 docker run -d --name portfolio-mongo-local -p 27018:27017 mongo:7
 
-# Seed: projects, skills, settings, 3 services and 4 process steps.
-# Clears projects/skills/settings/services/process steps; case studies,
-# testimonials and inquiries are never touched.
+# Seed: projects, skills, settings, 3 services, 4 process steps and 3 PUBLISHED
+# placeholder case studies (ring / moon / storm planets, slugs `placeholder-*`).
+# Clears projects/skills/settings/services/process steps (always unguarded);
+# case studies, testimonials and inquiries are never wiped. The placeholders are
+# only written to a local database (localhost / 127.0.0.1 / [::1]) or with
+# `--placeholders`; against anything else the run logs a refusal to
+# logs/seed.jsonl, skips them, and still seeds the rest but exits non-zero.
 MONGODB_URI="mongodb://localhost:27018/portfolio" npm run seed
 
 npm run dev        # http://localhost:3000
@@ -73,6 +77,8 @@ npm run lint       # eslint
 ```
 
 Restart `npm run dev` after editing a Mongoose schema — the cached model is not recompiled by hot reload and new fields are silently dropped until a restart.
+
+**Worlds (chapter 05).** One planet and one panel per *published* case study, in CMS order. Replace the three `placeholder-*` cases through `/admin` (a diagram uploaded there shows as a thumbnail on desktop). Worlds is designed and tested for up to **8 published case studies**; each gets 0.69 / N of the chapter's scroll, so beyond that the slots get thin and nothing enforces a cap. With none published the chapter shows its label and "Case studies are being written up."
 
 ## Contact
 

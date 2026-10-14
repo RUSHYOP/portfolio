@@ -108,7 +108,7 @@
 @keyframes hintPulseMobile { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
 
 /* ====== Approach Vector (ch. 02) ====== */
-/* The pose arrives as four custom properties; this media query, not JS, decides which two
+/* The pose arrives as five custom properties (`--dock`, `--arc`, `--tilt`, `--solo`, `--dock-delay`); this media query, not JS, decides which two
    of them are in force. Desktop: a staggered arc. Mobile: one panel at a time. */
 .services { display: flex; align-items: stretch; gap: clamp(1rem, 2vw, 1.75rem); width: 100%; }
 .service-panel {

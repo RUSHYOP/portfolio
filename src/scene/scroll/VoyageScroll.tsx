@@ -24,7 +24,8 @@ export default function VoyageScroll({ smooth }: VoyageScrollProps) {
     const tick = setInterval(() => voyageStore.tick(TICK_MS), TICK_MS);
 
     if (smooth) {
-      const lenis = new Lenis({ autoRaf: true, lerp: 0.1, smoothWheel: true });
+      // allowNestedScroll lets a scrollable .process-panel / .service-panel take the wheel; Lenis only yields when the element can actually scroll in that direction.
+      const lenis = new Lenis({ autoRaf: true, lerp: 0.1, smoothWheel: true, allowNestedScroll: true });
       // Lenis emits nothing on construction; seed from the restored scroll position like the native branch does.
       voyageStore.setScroll(window.scrollY / maxScroll(), 0);
       // Lenis passes its own instance to the scroll callback (ScrollCallback = (lenis: Lenis) => void).

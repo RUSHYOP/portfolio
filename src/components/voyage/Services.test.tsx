@@ -89,6 +89,7 @@ describe("Services", () => {
     for (const panel of panels(container)) {
       expect(cssVar(panel, "--dock")).toBe(1);
       expect(cssVar(panel, "--solo")).toBe(1);
+      expect(cssVar(panel, "--dock-delay")).toBe(0); // no stagger without motion
     }
   });
 
@@ -124,6 +125,7 @@ describe("Services", () => {
     for (const panel of panels(container)) {
       expect(cssVar(panel, "--dock")).toBe(1);
       expect(cssVar(panel, "--solo")).toBe(1);
+      expect(cssVar(panel, "--dock-delay")).toBe(0); // no stagger without motion
     }
   });
 
@@ -150,6 +152,16 @@ describe("Services", () => {
     expect(delays[0]).toBe(0);
     expect(delays[1]).toBeGreaterThan(delays[0]);
     expect(delays[2]).toBeGreaterThan(delays[1]);
+  });
+
+  // The dock is a trigger, so a regression here would re-run the dock transition while the
+  // reader scrolls on past Approach.
+  it("stays docked after Approach", () => {
+    voyageStore.setScroll(progressAt("orbit", 0.5), 0);
+    const { container } = render(
+      <Services animated services={[svc("a"), svc("b"), svc("c")]} />,
+    );
+    for (const panel of panels(container)) expect(cssVar(panel, "--dock")).toBe(1);
   });
 
   it("keeps the panels dark before the chapter is reached", () => {

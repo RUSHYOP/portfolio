@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 // Only this file needs a DOM; the rest of the voyage suite stays on the global `node` env.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, act } from "@testing-library/react";
 import { useReducedMotion } from "framer-motion";
 import type { Item } from "@/lib/collections/defineCollection";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import { progressAt } from "@/scene/camera/flightPath";
-import { ORBIT_WINDOW, ORBIT_HOLD_MOBILE } from "@/scene/chapters/orbitSchedule";
+import { ORBIT_WINDOW, ORBIT_HOLD_MOBILE, ORBIT_HOLD_DESKTOP } from "@/scene/chapters/orbitSchedule";
 import Process from "./Process";
 
 // useReducedMotion is mocked (default: motion allowed) so one test can flip it to true.
@@ -22,6 +22,7 @@ beforeEach(() => {
 // vitest.config.mts has no `globals: true`, so RTL's auto-cleanup hook never registers.
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals(); // drops any matchMedia stub (jsdom has none by default)
   vi.mocked(useReducedMotion).mockReturnValue(false);
 });
 
@@ -41,6 +42,17 @@ const solos = (c: HTMLElement) => panels(c).map((p) => cssVar(p, "--solo"));
 const centre = (i: number, n: number) =>
   ORBIT_WINDOW[0] + ((i + 0.5) / n) * (ORBIT_WINDOW[1] - ORBIT_WINDOW[0]);
 const scrollToOrbit = (cp: number) => voyageStore.setScroll(progressAt("orbit", cp), 0);
+const tabindexes = (c: HTMLElement) => panels(c).map((p) => p.getAttribute("tabindex"));
+
+/** Stubs window.matchMedia so `(max-width: 767px)` reports `phone`; every other query is false. */
+function stubViewport(phone: boolean) {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: phone && query === "(max-width: 767px)",
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
 
 describe("Process", () => {
   it("renders a panel per step with its title and all three labelled fields", () => {
@@ -132,46 +144,95 @@ describe("Process — one panel at a time", () => {
     }
   });
 
+  // Inactive animated panels get tabindex -1, never none: Chrome 130+ makes an overflowing scroll
+  // container an implicit tab stop, and a hidden (opacity 0) one must not be reachable that way.
   it("makes only the active panel keyboard-focusable (a scroll region needs a tab stop), and none outside Orbit", () => {
     scrollToOrbit(centre(2, 4));
     const first = render(<Process animated steps={four()} />);
     panels(first.container).forEach((p, j) => {
-      expect(p.getAttribute("tabindex")).toBe(j === 2 ? "0" : null);
+      expect(p.getAttribute("tabindex")).toBe(j === 2 ? "0" : "-1");
     });
     // Just past boundary 0|1 (0.1 of a slot): the panel that is transitioning out is not a
     // second tab stop.
     scrollToOrbit(ORBIT_WINDOW[0] + (1.1 / 4) * (ORBIT_WINDOW[1] - ORBIT_WINDOW[0]));
     first.rerender(<Process animated steps={four()} />);
-    expect(panels(first.container).map((p) => p.getAttribute("tabindex"))).toEqual([null, "0", null, null]);
+    expect(panels(first.container).map((p) => p.getAttribute("tabindex"))).toEqual(["-1", "0", "-1", "-1"]);
     first.unmount();
     // Past the longest pin hold the last panel is still at full solo (it leaves with the pin),
-    // but its pin has scrolled away, so it must not stay a tab stop.
+    // but its pin has scrolled away, so it must not stay a tab stop (on any viewport).
     scrollToOrbit(ORBIT_HOLD_MOBILE + 0.05);
     const late = render(<Process animated steps={four()} />);
     expect(solos(late.container)).toEqual([0, 0, 0, 1]);
-    for (const p of panels(late.container)) expect(p.getAttribute("tabindex")).toBeNull();
+    expect(tabindexes(late.container)).toEqual(["-1", "-1", "-1", "-1"]);
     late.unmount();
     // Before and after Orbit every panel is off, so none is a tab stop (and none is left
     // behind off-screen for the browser to scroll back to).
     for (const progress of [progressAt("approach", 0.5), progressAt("worlds", 0.5)]) {
       voyageStore.setScroll(progress, 0);
       const out = render(<Process animated steps={four()} />);
-      for (const p of panels(out.container)) expect(p.getAttribute("tabindex")).toBeNull();
+      expect(tabindexes(out.container)).toEqual(["-1", "-1", "-1", "-1"]);
       out.unmount();
     }
   });
 
   // E4: the last step dwells through a phone's whole pin hold (to ORBIT_HOLD_MOBILE) — and once
-  // Orbit is over nothing shows, even though stepSolo(last) is still 1 at the chapter's end.
+  // Orbit is over nothing shows, even though stepTarget(last) is still 1 at the chapter's end.
   it("keeps the last step up through the mobile pin hold, and shows nothing once Orbit is over", () => {
+    stubViewport(true); // the tab stop follows the phone pin, which holds until ORBIT_HOLD_MOBILE
     scrollToOrbit(ORBIT_HOLD_MOBILE - 0.01);
     const { container, unmount } = render(<Process animated steps={four()} />);
     expect(solos(container)).toEqual([0, 0, 0, 1]);
-    expect(panels(container).map((p) => p.getAttribute("tabindex"))).toEqual([null, null, null, "0"]);
+    expect(panels(container).map((p) => p.getAttribute("tabindex"))).toEqual(["-1", "-1", "-1", "0"]);
     unmount();
     voyageStore.setScroll(progressAt("worlds", 0.02), 0);
     const again = render(<Process animated steps={four()} />);
     expect(solos(again.container)).toEqual([0, 0, 0, 0]);
+  });
+
+  // Final review, Important 2: the pin releases at ORBIT_HOLD_DESKTOP on desktop and at
+  // ORBIT_HOLD_MOBILE on a phone, so the last panel's tab stop must end at the matching bound.
+  it("ends the last panel's tab stop at the desktop pin release on desktop", () => {
+    stubViewport(false);
+    scrollToOrbit(ORBIT_HOLD_DESKTOP + 0.01);
+    const { container } = render(<Process animated steps={four()} />);
+    expect(solos(container)).toEqual([0, 0, 0, 1]);          // still the active panel...
+    expect(tabindexes(container)[3]).not.toBe("0");          // ...but its pin is scrolling away
+  });
+
+  it("keeps the last panel's tab stop to the mobile pin release on a phone", () => {
+    stubViewport(true);
+    scrollToOrbit(ORBIT_HOLD_DESKTOP + 0.01);
+    const { container } = render(<Process animated steps={four()} />);
+    expect(solos(container)).toEqual([0, 0, 0, 1]);
+    expect(tabindexes(container)[3]).toBe("0");
+  });
+
+  it("keeps the last panel tabbable just before the desktop release, on both viewports", () => {
+    for (const phone of [false, true]) {
+      stubViewport(phone);
+      scrollToOrbit(ORBIT_HOLD_DESKTOP - 0.01);
+      const { container, unmount } = render(<Process animated steps={four()} />);
+      expect(tabindexes(container)[3]).toBe("0");
+      unmount();
+    }
+  });
+
+  it("re-gates the tab stop when the viewport crosses the phone breakpoint", () => {
+    let phone = false;
+    const listeners = new Set<() => void>();
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      get matches() { return phone && query === "(max-width: 767px)"; },
+      media: query,
+      addEventListener: (_: string, l: () => void) => listeners.add(l),
+      removeEventListener: (_: string, l: () => void) => listeners.delete(l),
+    }));
+    scrollToOrbit(ORBIT_HOLD_DESKTOP + 0.01);
+    const { container, unmount } = render(<Process animated steps={four()} />);
+    expect(tabindexes(container)[3]).toBe("-1");
+    act(() => { phone = true; listeners.forEach((l) => l()); });
+    expect(tabindexes(container)[3]).toBe("0");
+    unmount();
+    expect(listeners.size).toBe(0); // unsubscribed on unmount
   });
 
   it("gives a lone step the whole window", () => {

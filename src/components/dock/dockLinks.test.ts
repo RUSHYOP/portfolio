@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { DOCK_LINKS, DOCK_COMPACT_PROGRESS } from "./Dock";
-import { CHAPTERS, progressAt } from "@/scene/camera/flightPath";
+import { CHAPTERS, VOYAGE_SCROLL_VH } from "@/scene/camera/flightPath";
 
 describe("DOCK_LINKS", () => {
   it("only references real, non-micro chapters", () => {
@@ -18,7 +18,8 @@ describe("DOCK_LINKS", () => {
 // moves it with Launch instead of leaving it stranded.
 describe("DOCK_COMPACT_PROGRESS", () => {
   it("is 62.5% of the way through Launch", () => {
-    expect(DOCK_COMPACT_PROGRESS).toBe(progressAt("launch", 0.625));
+    // Pins the intent (the dock compacts 62.5vh into the voyage), not the source expression.
+    expect(DOCK_COMPACT_PROGRESS * VOYAGE_SCROLL_VH).toBeCloseTo(62.5, 9);
     const launch = CHAPTERS.find((c) => c.id === "launch")!;
     expect(DOCK_COMPACT_PROGRESS).toBeGreaterThan(launch.start);
     expect(DOCK_COMPACT_PROGRESS).toBeLessThan(launch.end);

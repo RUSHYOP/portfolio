@@ -1,9 +1,11 @@
 /* Pure layout math for chapter 02's panels. No React, no DOM — the component turns these
- * four numbers into CSS custom properties and the media query decides which it uses.
+ * five numbers (dock, arc, tilt, solo, delay) into CSS custom properties and the media query
+ * decides which it uses.
  *
- * Every window is derived from the pin geometry: Approach's section is 150vh and
- * .chapter__pin is 100vh, so a sticky pin is stationary for only 50vh — chapterProgress
- * 0..1/3. Docking that ran past that would finish while the block was already leaving.
+ * The desktop dock is a trigger (see DOCK_TRIGGER), so pin arithmetic no longer bounds it.
+ * It still governs the mobile SOLO_* window: that scrub is derived from the 64vh pin, which
+ * is stationary until chapterProgress 0.573 — a window running past that would finish while
+ * the block was already leaving.
  */
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -27,7 +29,7 @@ const SOLO_END = 0.56;
 const SOLO_CROSSFADE = 0.18; // module-private: no importer outside this file
 
 export interface PanelPose {
-  /** 0..1 desktop dock progress — drives opacity and the lift. */
+  /** 0/1 desktop dock target — drives opacity and the lift (the CSS transition animates it). */
   dock: number;
   /** 0..1, 1 at the middle panel — the shallow arc's rise. */
   arc: number;

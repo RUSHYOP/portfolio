@@ -54,4 +54,16 @@ describe("voyage.css — Orbit", () => {
     expect(r).toMatch(/transition:[^;]*opacity/);
     expect(r).toMatch(/transition:[^;]*transform/);
   });
+  // Late browser-review retunes: each one fixed a measured overflow, so they must not drift back.
+  it("drops the last field's trailing margin (it alone pushed step 1 into a 5px internal scroll)", () => {
+    expect(body(".process-panel__field:last-child")).toMatch(/margin-bottom:\s*0\s*;/);
+  });
+  it("caps the panel box at 23rem tall on desktop", () => {
+    expect(body(".chapter--orbit")).toMatch(/--orbit-panel-h:\s*clamp\(\s*20rem,\s*48vh,\s*23rem\s*\)/);
+  });
+  it("caps the phone .process box at min(34vh, 18rem) so the star stays clear", () => {
+    const mobile = css.indexOf("\n  .process {");
+    expect(mobile, "mobile .process rule").toBeGreaterThan(-1);
+    expect(css.slice(mobile, css.indexOf("}", mobile))).toMatch(/height:\s*min\(\s*34vh,\s*18rem\s*\)/);
+  });
 });

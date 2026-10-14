@@ -10,7 +10,7 @@ import { Starfield } from "@/scene/chapters/Starfield";
 import { EnergyOrb } from "@/scene/chapters/EnergyOrb";
 import { WarpStreaks } from "@/scene/chapters/WarpStreaks";
 import { Topology } from "@/scene/chapters/Topology";
-// Chapter 04 ring (Task 6).
+// Chapter 04 ring.
 import { OrbitRing } from "@/scene/chapters/OrbitRing";
 import type { FrameContext, SetPiece } from "@/scene/chapters/types";
 

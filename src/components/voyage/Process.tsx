@@ -5,8 +5,9 @@ import { useReducedMotion } from "framer-motion";
 // Type-only: erased at compile time, so no mongoose reaches the client bundle.
 import type { Item } from "@/lib/collections/defineCollection";
 import { CHAPTERS, sectionHeightVh } from "@/scene/camera/flightPath";
-import { stepTarget, ORBIT_HOLD_MOBILE } from "@/scene/chapters/orbitSchedule";
+import { stepTarget, ORBIT_HOLD_DESKTOP, ORBIT_HOLD_MOBILE } from "@/scene/chapters/orbitSchedule";
 import { useVoyage } from "@/scene/scroll/useVoyage";
+import { useMediaQuery } from "./useMediaQuery";
 
 interface ProcessProps {
   steps: Item[];
@@ -51,6 +52,8 @@ function Field({ label, value }: { label: string; value: string }) {
 export default function Process({ steps, animated }: ProcessProps) {
   const s = useVoyage();
   const reduce = useReducedMotion();
+  // The same breakpoint voyage.css uses for the 64vh phone pin; false before hydration.
+  const phone = useMediaQuery("(max-width: 767px)");
   const still = !animated || reduce === true;
 
   return (
@@ -85,11 +88,14 @@ export default function Process({ steps, animated }: ProcessProps) {
                   data-solo-off={off ? "true" : undefined}
                   // The panel scrolls (`overflow-y: auto`) when a long step does not fit the
                   // pin, and a scroll region needs a tab stop. Only the ACTIVE panel gets one
-                  // (solo is a 0/1 target — never the panel transitioning out, and none once Orbit is over);
-                  // the static tier does not scroll at all. Also none once the longest pin hold
-                  // (mobile, cp 0.787) is over: on desktop the last panel stays at full solo while
-                  // its pin scrolls off-screen, and an off-screen tab stop would pull the page back.
-                  tabIndex={!still && solo >= 0.5 && s.chapterProgress < ORBIT_HOLD_MOBILE ? 0 : undefined}
+                  // (solo is a 0/1 target — never the panel transitioning out, and none once Orbit is over),
+                  // and only while its pin is on screen: the pin releases at ORBIT_HOLD_DESKTOP on desktop
+                  // and ORBIT_HOLD_MOBILE on a phone, and past that the last panel is still at full solo
+                  // while scrolling off, so an off-screen tab stop would pull the page back.
+                  // Every other animated panel is tabIndex -1: Chrome 130+ makes an overflowing scroll
+                  // container an implicit tab stop, and a hidden one must not be reachable that way.
+                  // The static tier does not scroll, so it gets no tabIndex at all.
+                  tabIndex={still ? undefined : solo >= 0.5 && s.chapterProgress < (phone ? ORBIT_HOLD_MOBILE : ORBIT_HOLD_DESKTOP) ? 0 : -1}
                 >
                   {/* Decorative ordinal: hidden so it is not read before every title. */}
                   <p className="process-panel__index" aria-hidden="true">{String(i + 1).padStart(2, "0")}</p>

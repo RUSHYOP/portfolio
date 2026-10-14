@@ -442,8 +442,11 @@
    less than the full panel needs (index + title + meta + chips + link is about 300px; the bound
    is 354px at 540, 244px at 430, 204px at 390), so the panel takes the phone box's compact form,
    with the phone values: foot hidden, title 2 lines, meta 1 line, excerpts 2 lines, phone
-   padding and type. Compact content is about 135px plus the excerpts, so the link fits down to
-   a viewport about 320px tall. Scoped to the animated tier: the still tier is never compacted. */
+   padding and type. Compact content is about 135px plus the excerpts, so the link should fit down
+   to a viewport about 320px tall (an ESTIMATE from arithmetic, not measured; 390px tall was the smallest measured, at 844x390).
+   Scoped to the animated tier: the still tier is never compacted. These rules beat the narrow-
+   desktop block above by SPECIFICITY (the .chapter--worlds:not([data-static]) scope), not by
+   source order, so they also win inside 768-1099px. */
 @media (min-width: 768px) and (max-height: 560px) {
   .chapter--worlds:not([data-static="true"]) .world-panel { padding: 0.75rem 1.1rem; }
   .chapter--worlds:not([data-static="true"]) .world-panel__index { margin-bottom: 0.2rem; line-height: 1; }

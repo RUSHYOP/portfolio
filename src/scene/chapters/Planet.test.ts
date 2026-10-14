@@ -232,8 +232,11 @@ describe("planetPosition", () => {
           const pos = planetPosition(k, n, aspect, undefined, wide);
           for (let i = 0; i <= 400; i++) {
             const cp = (0.9 * i) / 400;
+            // Minor 5: the last planet's leave follower can lag a fast flick right up to the positional cut at
+            // PLANET_FADE_OUT_END, far past the +0.05 swap tail, so its sweep is unconditional up to the cut.
+            const mustClear = k === n - 1 && cp < PLANET_FADE_OUT_END;
             const litNearby = [-SWAP_TAIL_CP, -SWAP_TAIL_CP / 2, 0, SWAP_TAIL_CP / 2, SWAP_TAIL_CP].some((d) => planetOpacity("worlds", cp + d, k, n) > 0.001);
-            if (!litNearby) continue;
+            if (!mustClear && !litNearby) continue;
             const camPos = getCameraPose(progressAt("worlds", cp)).position;
             expect(pos.distanceTo(camPos) - PLANET_RADIUS, `aspect ${aspect.toFixed(2)} n${n} k${k} cp ${cp.toFixed(3)}`).toBeGreaterThanOrEqual(3);
           }
@@ -658,12 +661,19 @@ describe("Planet update — the fade-in follower", () => {
       expect(drawnLast(planet)).toBeCloseTo(1, 4);
     });
 
-    it("snaps while hidden: arriving from below (already past PLANET_LEAVE_AT) replays no fade, and the planet stays out", () => {
-      const { planet } = built();
-      scrollToWorlds(0.85);                                            // e.g. scrolling up from the Belt with the group hidden
+    // Minor 4: the old version started from a fresh build, where `leave` is already 0, so it passed with the
+    // snap line deleted. Here the follower is parked at 1 while the group is hidden (cp 0 of Worlds has a
+    // presence target of 0 but a leave target of 1), then the reader arrives past PLANET_LEAVE_AT: only the
+    // snap keeps the planet out (without it the stale leave of 1 would ease down and show ~10% on frame one).
+    it("snaps while hidden: arriving past PLANET_LEAVE_AT with a stale leave of 1 replays no fade, and the planet stays out", () => {
+      const planet = lit();
+      scrollToWorlds(0);                                               // presence target 0, leave target 1
+      settle(planet);                                                  // `shown` -> 0 (hidden), `leave` stays 1
+      expect(planet.object!.visible).toBe(false);
+      scrollToWorlds(0.85);                                            // e.g. a jump straight to the pin release
       for (let i = 0; i < 90; i++) {
         planet.update(makeFrame({ dt: 1 / 60 }));
-        expect(planet.object!.visible, `frame ${i}`).toBe(false);
+        expect(drawnLast(planet), `frame ${i}`).toBe(0);
       }
       // ...and it still returns on the timer when the reader scrolls up past 0.80.
       scrollToWorlds(0.79);

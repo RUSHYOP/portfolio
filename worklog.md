@@ -223,6 +223,13 @@ No `BANK_MAX`, ring, limb or schedule constant was changed.
 | Spec §3 row 04 content | PASS | banked camera (item 1), star visibly a sphere (item 2, a dot at step 1 — accepted), one ring with N luminous nodes (item 3), each node front-centre as its panel takes over (items 4, 6), each panel shows what happens / what you get / how long |
 | LCP / CLS / Lighthouse a11y | Not in scope | slice 8 |
 
+### Final review and fix wave
+
+- Whole-branch review (Sonnet, `.superpowers/sdd/slice4-final-review.md`): **Ready to merge after fix wave** — 0 Critical, 2 Important, 10 Minor.
+- Fix wave `833f63a` (+ `style` comment wrap): (1) Lenis `allowNestedScroll: true` — a long CMS step panel can now take the desktop wheel (verified live: wheel over an overflowing panel leaves the page still; at the panel's end the page scrolls on; elsewhere the page scrolls); (2) the Process tab stop follows the layout — `useMediaQuery("(max-width: 767px)")` picks `ORBIT_HOLD_MOBILE` on a phone, `ORBIT_HOLD_DESKTOP` on desktop, so no off-screen tab stop pulls the page back; (7, review Minor 1) inactive animated panels are `tabIndex -1` so a hidden overflowing scroll container is never an implicit tab stop; stale comments; intent pins for `DOCK_COMPACT_PROGRESS`, Services "stays docked after Approach", still-tier `--dock-delay`, and the CSS retunes.
+- Review Minor 2 (outgoing panel's blur popping off) dropped after a browser check: the step panels share one box and the incoming panel keeps its blur, so nothing pops (checked at 0.14 / 0.86 with transitions slowed 8×).
+- Final verification: `tsc` 0; **516 passed / 41 files**; targeted eslint 0 errors (the 2 pre-existing warnings); `npm run build` green with `/voyage`.
+
 ### Next
 - **Slice 5 — Worlds + `/work/[slug]`.** Carry forward the tuned constants: `BANK_MAX` 30°, `RING_RADIUS` 20, `RING_TILT` 72°, `RING_TUBE` 0.1, `NODE_RADIUS` 0.55, `NODE_ACTIVE_BOOST` 0.9, `LIMB_POWER` 0.6, `LIMB_RIM` 0.3, `ORBIT_SOFTEN_PEAK` 0.75, `ORBIT_WINDOW` [0.04, 0.62], `--orbit-panel-w` `min(30rem, 32vw)`, `--orbit-panel-h` `clamp(20rem, 48vh, 23rem)`; plus the prefixed-first `backdrop-filter` order for any new glass.
 - **Shader precompile (slice 8).** The first entry into Orbit costs 23.7 ms median / p95 40 ms: precompile the ring and `EnergyOrb` programs at scene init (`renderer.compile`).

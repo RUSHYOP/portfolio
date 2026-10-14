@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import type { Settings } from "@/lib/data";
 // Type-only (erased at compile time) — keeps mongoose out of the client bundle.
 import type { Item } from "@/lib/collections/defineCollection";
+import type { WorldCase } from "@/lib/worldCase";
 import { CHAPTERS, VOYAGE_SCROLL_VH, VOYAGE_TAIL_VH, sectionHeightVh } from "@/scene/camera/flightPath";
 import { voyageStore } from "@/scene/scroll/voyageStore";
 import VoyageScroll from "@/scene/scroll/VoyageScroll";
@@ -39,11 +40,15 @@ interface VoyageRootProps {
   services: Item[];
   /** Chapter 04's steps. Untyped past Item's three base fields — narrowed in Process. */
   process: Item[];
+  /** Chapter 05's published case studies, already slimmed server-side (see page.tsx). */
+  worlds: WorldCase[];
 }
 
 // The prop is named `process` (the content key); it is destructured as `steps` so it never
 // shadows Node's `process` global inside this module.
-export default function VoyageRoot({ settings, services, process: steps }: VoyageRootProps) {
+export default function VoyageRoot({ settings, services, process: steps, worlds }: VoyageRootProps) {
+  // Plumbed in slice 5 task 3; chapter 05 mounts it in task 7, which deletes this line.
+  void worlds;
   const [tier, setTier] = useState<Tier | null>(null);
   const [ignited, setIgnited] = useState(false);
   const [letterbox, setLetterbox] = useState(false);

@@ -2,7 +2,7 @@
 // features plus the security allow-list (XSS-focused) behaviour it must enforce.
 import { describe, it, expect, vi } from "vitest";
 import { marked } from "marked";
-import { renderMarkdown } from "./markdown";
+import { renderMarkdown, caseExcerpt } from "./markdown";
 
 // Mock the structured logger so the error-path test doesn't touch the real filesystem
 // and so we can assert the catch block actually logs.
@@ -158,6 +158,113 @@ describe("renderMarkdown", () => {
     const [, record] = vi.mocked(appendLog).mock.calls[0] as [string, Record<string, unknown>];
     expect(JSON.stringify(record)).not.toContain("<b>hi</b>");
 
+    spy.mockRestore();
+  });
+});
+
+// Slice 5 (D3): the Worlds panels show a plain-text excerpt of each case-study section, built
+// server-side so the client never receives the full markdown.
+describe("caseExcerpt", () => {
+  it("returns an empty string for empty, whitespace-only and non-string input", () => {
+    expect(caseExcerpt("")).toBe("");
+    expect(caseExcerpt("  \n\n \t")).toBe("");
+    expect(caseExcerpt(undefined as unknown as string)).toBe("");
+    expect(caseExcerpt(42 as unknown as string)).toBe("");
+  });
+
+  it("takes the first paragraph, skipping a leading heading, and ignores the rest", () => {
+    expect(caseExcerpt("## Context\n\nFirst para.\n\nSecond para.")).toBe("First para.");
+    expect(caseExcerpt("First para.\n\n- a list\n\n> a quote")).toBe("First para.");
+  });
+
+  it("reduces emphasis, code, links and strikethrough to their text, drops images, and joins soft line breaks", () => {
+    const md = "A **bold** and _soft_ move with `code`, a [link](https://example.com) and ~~gone~~ text\nacross lines ![diagram](/a.png) end.";
+    expect(caseExcerpt(md)).toBe("A bold and soft move with code, a link and gone text across lines end.");
+  });
+
+  it("strips raw HTML tags, keeps their text, and drops script and style content", () => {
+    expect(caseExcerpt("Hello <b>big</b> <em>world</em>")).toBe("Hello big world");
+    expect(caseExcerpt("Safe <script>alert(1)</script> text <style>p{color:red}</style>here")).toBe("Safe text here");
+  });
+
+  it("decodes the entities and escapes marked leaves in the text", () => {
+    expect(caseExcerpt("Fish &amp; chips &lt;3 &quot;quoted&quot; \\*literal\\*")).toBe('Fish & chips <3 "quoted" *literal*');
+  });
+
+  it("falls back to the first list item, then to a blockquote, when there is no paragraph", () => {
+    expect(caseExcerpt("## Notes\n\n- first **item**\n- second")).toBe("first item");
+    expect(caseExcerpt("> quoted **claim**\n>\n> more")).toBe("quoted claim");
+  });
+
+  it("skips a paragraph that is only an image or markup and uses the next one with text", () => {
+    expect(caseExcerpt("![only an image](/a.png)\n\nThe real text.")).toBe("The real text.");
+  });
+
+  it("returns an empty string when there is nothing to quote (heading only, code only, rule only)", () => {
+    expect(caseExcerpt("# Just a heading")).toBe("");
+    expect(caseExcerpt("```\nconst x = 1;\n```")).toBe("");
+    expect(caseExcerpt("---")).toBe("");
+  });
+
+  it("returns short text whole, with no ellipsis, up to and including max characters", () => {
+    expect(caseExcerpt("Short and sweet.")).toBe("Short and sweet.");
+    const exact = "a".repeat(9) + " " + "b".repeat(10);          // 20 chars
+    expect(caseExcerpt(exact, 20)).toBe(exact);
+  });
+
+  it("cuts at the last word boundary within max and appends an ellipsis, never mid-word", () => {
+    const text = "alpha beta gamma delta epsilon zeta eta theta iota kappa";
+    const out = caseExcerpt(text, 24);
+    expect(out).toBe("alpha beta gamma delta…");
+    // Property: the visible part is a prefix of the source, ends on a whole word, and is <= max.
+    const head = out.slice(0, -1);
+    expect(text.startsWith(head)).toBe(true);
+    expect(text[head.length]).toBe(" ");
+    expect(head.length).toBeLessThanOrEqual(24);
+  });
+
+  it("treats a space exactly at the cut as a boundary", () => {
+    expect(caseExcerpt("12345 67890 abcde", 11)).toBe("12345 67890…");
+  });
+
+  it("drops trailing punctuation before the ellipsis", () => {
+    expect(caseExcerpt("First clause, second clause; third clause - fourth", 14)).toBe("First clause…");
+    expect(caseExcerpt("Ends here. Then more words follow on", 12)).toBe("Ends here…");
+  });
+
+  it("hard-cuts a single over-long word at max, without splitting a surrogate pair", () => {
+    expect(caseExcerpt("x".repeat(50), 10)).toBe("x".repeat(10) + "…");
+    const emoji = "😀".repeat(20);                                 // 2 UTF-16 units each
+    const out = caseExcerpt(emoji, 11);
+    expect(out.endsWith("…")).toBe(true);
+    expect(out.slice(0, -1)).toBe("😀".repeat(5));                   // 10 units: never a lone half
+  });
+
+  it("defaults to 160 characters and falls back to it for a nonsense max", () => {
+    const long = "word ".repeat(80);                               // 400 chars
+    for (const out of [caseExcerpt(long), caseExcerpt(long, NaN), caseExcerpt(long, 0), caseExcerpt(long, -5)]) {
+      expect(out.endsWith("…")).toBe(true);
+      expect(out.length).toBeGreaterThan(150);
+      expect(out.length).toBeLessThanOrEqual(161);
+    }
+  });
+
+  it("never throws: a lexer failure is logged (never the source) and gives an empty string", () => {
+    vi.mocked(appendLog).mockClear();
+    const spy = vi.spyOn(marked, "lexer").mockImplementationOnce(() => {
+      throw new Error("lexer boom");
+    });
+    let out = "x";
+    expect(() => {
+      out = caseExcerpt("secret source text");
+    }).not.toThrow();
+    expect(out).toBe("");
+    expect(appendLog).toHaveBeenCalledWith(
+      "markdown",
+      expect.objectContaining({ level: "error", message: expect.stringContaining("lexer boom") })
+    );
+    const [, record] = vi.mocked(appendLog).mock.calls[0] as [string, Record<string, unknown>];
+    expect(JSON.stringify(record)).not.toContain("secret source text");
     spy.mockRestore();
   });
 });

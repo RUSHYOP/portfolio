@@ -1,7 +1,7 @@
 // Server-only markdown renderer for CMS-authored fields (problem/architecture/outcome).
 // Not marked "server-only" package-wise (not in the brief's dependency list) — see
 // task-6-report.md for the deviation note; callers must only import this from server code.
-import { marked } from "marked";
+import { marked, type Token, type Tokens } from "marked";
 import sanitizeHtml from "sanitize-html";
 import { appendLog } from "./log";
 
@@ -56,5 +56,104 @@ export function renderMarkdown(md: string): string {
     void appendLog("markdown", { level: "error", message: String(e) }).catch(() => {});
     // Defensive fallback: escape and wrap so we still return safe, renderable output.
     return `<p>${escapeHtml(md)}</p>`;
+  }
+}
+
+/* ---- Plain-text excerpts (slice 5, D3) ---- */
+
+/** Default length of a Worlds panel excerpt: ~3 lines in a 190px column. */
+export const EXCERPT_MAX = 160;
+
+const ELLIPSIS = "\u2026";
+
+// marked leaves entities in its text tokens as written (`&amp;` stays `&amp;`), and the excerpt
+// is rendered as a plain React text node, so the handful marked users actually write are decoded.
+const NAMED_ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+function decodeEntities(s: string): string {
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, body: string) => {
+    if (body[0] === "#") {
+      const code = body[1].toLowerCase() === "x" ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+      return Number.isInteger(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+    }
+    return NAMED_ENTITIES[body.toLowerCase()] ?? whole;
+  });
+}
+
+/** Flattens inline tokens to their visible text: formatting, links and code keep their text,
+ *  images and raw HTML tags are dropped, and whatever sits between <script>/<style> is dropped
+ *  too (the tags are `html` tokens, the payload a `text` token). */
+function inlineText(tokens: Token[]): string {
+  let out = "";
+  let hidden = false;
+  for (const t of tokens) {
+    if (t.type === "html") {
+      const tag = /^<(\/?)(script|style)\b/i.exec(t.raw);
+      if (tag) hidden = tag[1] === "";
+      continue;
+    }
+    if (hidden || t.type === "image") continue;
+    if (t.type === "br") out += " ";
+    else if ("tokens" in t && Array.isArray(t.tokens) && t.tokens.length > 0) out += inlineText(t.tokens);
+    else if ("text" in t && typeof t.text === "string") out += t.text;
+  }
+  return out;
+}
+
+const squash = (s: string) => decodeEntities(s).replace(/\s+/g, " ").trim();
+
+/** The text of the first top-level paragraph that has any; else of the first list item; else of
+ *  the first paragraph inside a blockquote. Headings, code, rules and tables are never quoted. */
+function firstBlockText(tokens: Token[]): string {
+  for (const t of tokens) {
+    if (t.type !== "paragraph") continue;
+    const text = squash(inlineText((t as Tokens.Paragraph).tokens));
+    if (text) return text;
+  }
+  for (const t of tokens) {
+    if (t.type !== "list") continue;
+    for (const item of (t as Tokens.List).items) {
+      const text = squash(inlineText(item.tokens));
+      if (text) return text;
+    }
+  }
+  for (const t of tokens) {
+    if (t.type !== "blockquote") continue;
+    const text = firstBlockText((t as Tokens.Blockquote).tokens);
+    if (text) return text;
+  }
+  return "";
+}
+
+/** Cuts at the last space within `max` (a space exactly at `max` counts), drops trailing
+ *  punctuation, and appends an ellipsis; a single word longer than `max` is hard-cut. */
+function cutAtWord(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const space = text.slice(0, max + 1).lastIndexOf(" ");
+  let head = space > 0 ? text.slice(0, space).replace(/[\s.,;:!?\-\u2013\u2014]+$/, "") : "";
+  if (head === "") {
+    // Hard cut. Never leave half of a surrogate pair at the end.
+    let end = max;
+    const last = text.charCodeAt(end - 1);
+    if (last >= 0xd800 && last <= 0xdbff) end -= 1;
+    head = text.slice(0, end);
+  }
+  return head + ELLIPSIS;
+}
+
+/**
+ * Markdown -> a one-paragraph plain-text excerpt for the Worlds panels. Server-side only (like
+ * renderMarkdown): the client receives the excerpt, never the markdown. Never throws; an
+ * unquotable or failing source gives "". A `max` that is not a positive finite number is the
+ * default (160). The result is at most `max` characters plus the ellipsis.
+ */
+export function caseExcerpt(md: string, max: number = EXCERPT_MAX): string {
+  if (typeof md !== "string" || !md.trim()) return "";
+  const limit = Number.isFinite(max) && max >= 1 ? Math.floor(max) : EXCERPT_MAX;
+  try {
+    return cutAtWord(firstBlockText(marked.lexer(md)), limit);
+  } catch (e) {
+    // Same contract as renderMarkdown: log the failure (never the source), never throw.
+    void appendLog("markdown", { level: "error", message: String(e) }).catch(() => {});
+    return "";
   }
 }

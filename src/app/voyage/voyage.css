@@ -318,6 +318,155 @@
   .chapter--orbit[data-static="true"] .process { flex: 0 0 auto; }
 }
 
+/* ====== Worlds (ch. 05) ====== */
+/* Worlds' section is 450vh and .chapter__pin (100vh) is stationary for 450 - 100 = 350vh =
+   chapterProgress 0..0.778 (worldsSchedule.ts derives its window from exactly this). ONE panel is
+   up at a time on every device: --solo (caseTarget, 0/1, animated by the transition below) is each
+   panel's opacity, so the planet in frame and the panel change together. On desktop the panels
+   share ONE grid cell, so the box is as tall as the tallest panel and nothing needs a fixed height.
+   The layout knob is a custom property so the browser review can retune it without touching JS:
+   the panel takes the left of the frame (right edge 722px at 1440, 512px at 1024), the planet and
+   the star read centre-right. */
+.chapter--worlds { --worlds-panel-w: min(40rem, 44vw); }
+.worlds { display: grid; width: var(--worlds-panel-w); }
+.world-panel {
+  grid-area: 1 / 1; min-width: 0; overflow: hidden;
+  display: flex; flex-direction: column;
+  padding: clamp(1.25rem, 2vw, 2rem);
+  opacity: var(--solo);
+  transform: translateY(calc((1 - var(--solo)) * 14px));
+  /* --solo is a 0/1 target (worldsSchedule.caseTarget), so this transition IS the cross-fade:
+     no scroll position can rest on two half-faded panels (the slice-4 rule). */
+  transition:
+    opacity 0.45s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* All N panels overlap in one cell with only opacity separating them, and `opacity: 0` does NOT
+   skip a backdrop filter (Blink re-samples an 18px blur of a canvas that repaints every frame),
+   so a panel that is not showing drops its blur and stops swallowing touches.
+   `-webkit-backdrop-filter` first: lightningcss drops the standard property when the prefixed
+   one follows it. */
+/* A flex column that overflows would otherwise shrink its clipped children to nothing (the
+   phone box showed no context line until this): every child keeps its natural height. */
+.world-panel > * { flex-shrink: 0; }
+.world-panel[data-solo-off="true"] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.world-panel__index {
+  font-family: var(--font-jetbrains-mono), monospace; font-size: 0.62rem; letter-spacing: 0.2em;
+  color: var(--gray-dark); margin: 0 0 0.9rem;
+}
+.world-panel__title {
+  font-family: "Styrene A", var(--font-space-grotesk), sans-serif;
+  font-size: clamp(1.25rem, 2vw, 1.8rem); font-weight: 500; letter-spacing: -0.01em;
+  line-height: 1.15; margin: 0 0 0.5rem;
+}
+.world-panel__meta { margin: 0 0 1.1rem; font-size: 0.85rem; line-height: 1.4; color: var(--gray-mid); }
+.world-panel__cols {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 0 0 1.1rem;
+}
+.world-panel__col span {
+  display: block; margin-bottom: 0.3rem; text-transform: uppercase;
+  font-family: var(--font-jetbrains-mono), monospace; font-size: 0.62rem; letter-spacing: 0.14em;
+  color: var(--gray-dark);
+}
+/* The panel is not a scroll container (overflow hidden), so a long excerpt is clamped, never
+   scrolled: the server already cuts each one at ~160 characters, this is the backstop. */
+.world-panel__col p {
+  margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--gray-light);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 8; line-clamp: 8; overflow: hidden;
+}
+.world-panel__foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin: 0 0 1.1rem; }
+/* Bounded to two chip rows (3.6rem): the CMS allows 12 chips of 40 characters, which would wrap to
+   many rows and grow the panel past the 100vh pin. The still tier lifts the bound. */
+.world-panel__stack {
+  list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.4rem;
+  max-height: 3.6rem; overflow: hidden;
+}
+.world-panel__stack li {
+  padding: 0.25rem 0.6rem; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.14);
+  font-family: var(--font-jetbrains-mono), monospace; font-size: 0.64rem; letter-spacing: 0.08em; color: var(--gray-light);
+}
+.world-panel__diagram {
+  flex: 0 0 auto; width: 7.5rem; height: 4.7rem; object-fit: contain; border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03);
+}
+/* The link is the panel's only tab stop, so it needs a visible focus ring. The doubled class
+   out-specifies .cta (declared later in this file), whose padding and font size would win a tie. */
+.world-panel .world-panel__link {
+  align-self: flex-start; margin-top: auto; padding: 0.7rem 1.2rem; font-size: 0.68rem; text-decoration: none;
+}
+.world-panel__link:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.6); outline-offset: 3px; }
+.worlds-empty { margin: 0; font-size: 0.95rem; line-height: 1.6; color: var(--gray-mid); }
+
+/* A narrow desktop window (768-1099px): a 44vw panel is ~340-480px, too tight for three columns,
+   so the excerpts stack and each gets four lines. */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .world-panel__cols { grid-template-columns: 1fr; gap: 0.6rem; }
+  .world-panel__col p { -webkit-line-clamp: 4; line-clamp: 4; }
+}
+
+/* Mobile: a 64vh pin is stationary for 450 - 64 = 386vh (chapterProgress 0..0.858); the shared
+   schedule's window ends at 0.73 and the last panel then holds (caseTarget stays 1), so a phone
+   dwells on the last case until the pin releases.
+   padding-top, NOT top: an inner inset keeps the sticky hold at 386vh (a `top` offset would cut
+   it), and 4.5rem clears the fixed mobile dock exactly as Orbit's pin does. Top-anchored and
+   capped at min(34vh, 18rem), the same box as .process, so the star and the planet below it
+   stay visible; the box is fixed and the panels overlap in it. Excerpts clamp to two lines,
+   the meta line to one, and the stack chips and the diagram are dropped (the link stays). */
+@media (max-width: 767px) {
+  .chapter--worlds .chapter__pin { height: 64vh; padding-top: 4.5rem; justify-content: flex-start; }
+  .worlds { display: block; position: relative; flex: 0 0 auto; width: 100%; height: min(34vh, 18rem); }
+  .world-panel { position: absolute; inset: 0; padding: 0.75rem 1.1rem; }
+  .world-panel__index { margin-bottom: 0.2rem; line-height: 1; }
+  .world-panel__title {
+    font-size: 1rem; margin-bottom: 0.15rem;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  }
+  .world-panel__meta { font-size: 0.74rem; margin-bottom: 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The excerpt block is the ONLY thing that gives way: on a short viewport (the box is 34vh) it
+     loses text at its bottom edge, never the link below it (the link is the panel's only way to
+     /work/<slug>, and a clipped link also loses its focus ring). */
+  .world-panel__cols { display: block; margin-bottom: 0.3rem; flex: 1 1 0; min-height: 0; overflow: hidden; }
+  .world-panel__col { margin-bottom: 0.15rem; }
+  .world-panel__col span { margin-bottom: 0.1rem; font-size: 0.56rem; line-height: 1; }
+  .world-panel__col p { font-size: 0.74rem; line-height: 1.38; -webkit-line-clamp: 2; line-clamp: 2; }
+  .world-panel__foot { display: none; }
+  .world-panel .world-panel__link { padding: 0.45rem 0.9rem; font-size: 0.62rem; }
+}
+
+/* Reduced motion / still tier: no pin, no scroll-derived motion — the cases just flow, stacked,
+   sized to their content (nothing clamped: every excerpt, the chips and the diagram show). The
+   section height stays a fixed 450vh on every tier (VoyageScroll derives progress and drives
+   scrollTo from `scrollHeight − innerHeight`, so `height: auto` would land every dock and rail
+   link after Worlds short); three cases fit comfortably. */
+.chapter--worlds[data-static="true"] .chapter__pin {
+  position: static; height: auto; min-height: 100vh;
+  padding-top: 2rem; padding-bottom: 2rem;
+}
+.chapter--worlds[data-static="true"] .worlds {
+  display: flex; flex-direction: column; gap: 1rem; height: auto;
+}
+.chapter--worlds[data-static="true"] .world-panel {
+  position: static; inset: auto; opacity: 1; transform: none; overflow: visible;
+  /* Reduced motion: no cross-fade animation either. */
+  transition: none;
+}
+.chapter--worlds[data-static="true"] .world-panel__col p {
+  display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible;
+}
+.chapter--worlds[data-static="true"] .world-panel__stack { max-height: none; overflow: visible; }
+@media (max-width: 767px) {
+  .chapter--worlds[data-static="true"] .worlds { flex: 0 0 auto; }
+  .chapter--worlds[data-static="true"] .world-panel__cols {
+    display: grid; grid-template-columns: 1fr; gap: 0.6rem; flex: none; min-height: auto; overflow: visible;
+  }
+  .chapter--worlds[data-static="true"] .world-panel__title { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; }
+  .chapter--worlds[data-static="true"] .world-panel__foot { display: flex; flex-direction: column; align-items: flex-start; }
+}
+
 /* ====== CTA ====== */
 .cta {
   display: inline-flex; align-items: center; gap: 0.6rem;

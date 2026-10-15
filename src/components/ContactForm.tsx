@@ -66,7 +66,7 @@ export default function ContactForm() {
             name="name"
             autoComplete="name"
             maxLength={120}
-            placeholder="Alex Morgan"
+            placeholder="Enter your name"
           />
         </label>
         <label>
@@ -77,7 +77,7 @@ export default function ContactForm() {
             name="email"
             autoComplete="email"
             maxLength={200}
-            placeholder="alex@company.com"
+            placeholder="you@example.com"
           />
         </label>
       </div>

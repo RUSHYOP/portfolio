@@ -61,7 +61,7 @@ const ramcoProfile: Project = {
   id: "ramco-profile",
   title: "My work at Ramco Systems",
   description:
-    "My journey from intern to Software Engineer 1, working across AI-driven product engineering, developer tooling, and automation.",
+    "A look at my contributions to AI development tools, component workspaces, knowledge visualization, and automation at Ramco Systems.",
   icon: "",
   technologies: [
     "AI Engineering",

@@ -29,31 +29,45 @@ export const projectStories: Record<string, ProjectStory> = {
         ],
       },
       {
-        title: "AI as part of the engineering workflow",
+        title: "AI-assisted development tools",
         paragraphs: [
-          "A central part of my work is building AI agents, reusable skills, and supporting tools for product development. The focus is on helping an engineering workflow move from a requirement or design toward working software, with validation along the way.",
-          "This brings together agent orchestration, tool integration, and application development. I work on how an agent receives context, interacts with tools, and produces output that can be reviewed and tested.",
+          "I built a design-system MCP server that connects AI agents with reusable interface components and their usage rules. It helps agents work with the design system when creating designs in Figma.",
+          "I also built agents and reusable skills that help turn requirements, designs, and React interfaces into application screens. The work includes interface generation, validation, design-system checks, and automated debugging as parts of a development workflow.",
         ],
       },
       {
-        title: "Developer tooling and product interfaces",
+        title: "A component-management workspace",
         paragraphs: [
-          "My work also spans design-system tooling, interface generation, and product prototypes. These areas connect the way a product is designed with the way it is implemented and checked.",
-          "I have worked on tools that support reusable components and consistent interfaces, alongside experiments in AI-driven user experiences. Reviewing behavior, handling edge cases, and testing the result are part of that work.",
+          "I developed a workspace for managing interface components, with work across its dashboard, canvas renderer, component library, and icons. I also modernized its React frontend with Next.js and contributed to its architectural redesign, review, and testing.",
+          "This work connects design-system assets with the tools engineers use to build and inspect interfaces, making component authoring and reuse part of the same workspace.",
         ],
       },
       {
-        title: "Helping teams put the tools to use",
+        title: "Interactive knowledge visualization",
         paragraphs: [
-          "I have delivered internal training and knowledge-sharing sessions on prompting, reusable skills, and agentic workflows for engineers and functional consultants.",
-          "Supporting adoption means explaining how a tool works, helping people use it in their own context, and using their feedback to improve the workflow. That experience informs both the tools I build and how I communicate engineering decisions.",
+          "I built an interactive 3D knowledge-graph visualizer for exploring connected information. It supports different graph views, layouts, tracing, and an assistant that can navigate the graph.",
+          "I continued extending the experience with additional ways to explore relationships and journeys, alongside interface and performance improvements. The aim is to make a complex body of information easier to navigate and understand.",
         ],
       },
       {
-        title: "How I approach the work",
+        title: "AI-driven product experiences",
         paragraphs: [
-          "I aim to connect experimentation with careful implementation: understand the requirement, make the technical approach explicit, and verify the result. A useful prototype needs a clear path toward software that people can operate and maintain.",
-          "My broader practice spans full stack development, microservices, agentic operations, and networking. Working across those layers helps me consider how a change affects the product as a whole.",
+          "I worked on conversational enterprise interfaces where an AI response can include interactive widgets. I also built a prototype framework that turns a user’s intent into an interactive application screen.",
+          "For an agentic payroll-operations product, my contributions included redesigning the user experience across roles, improving workflows, handling edge cases, and working on performance and bug fixes. These contributions span both new prototypes and improvements to existing product experiences.",
+        ],
+      },
+      {
+        title: "Automation and orchestration",
+        paragraphs: [
+          "I contributed to an AI-assisted testing tool through its browser-automation interfaces and scheduling framework. I also researched and built the initial phases of an orchestration framework for multi-step AI development workflows.",
+          "Across this work, I focus on how the steps connect: what each agent or tool needs, how work moves between them, and how the result can be checked before the next step proceeds.",
+        ],
+      },
+      {
+        title: "Documentation and team enablement",
+        paragraphs: [
+          "I created reusable tools for generating product requirements, release notes, and structured documentation from planning material. Documentation is part of the engineering workflow, alongside design, implementation, and testing.",
+          "I have also delivered internal training and knowledge-sharing sessions for engineers and functional consultants on prompting, reusable skills, and agentic workflows, helping teams put these approaches into practice.",
         ],
       },
     ],

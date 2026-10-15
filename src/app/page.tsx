@@ -11,8 +11,7 @@ export const metadata = { alternates: { canonical: "/" } };
 
 export default async function Home() {
   const projects = await portfolioProjects();
-  const network = projects.find((p) => p.id === "proj_3");
-  const harvest = projects.find((p) => p.id === "proj_4");
+  const gharpay = projects.find((p) => p.id === "gharpay");
   const research = projects.find((p) => p.id === "proj_2");
   return (
     <>
@@ -95,106 +94,48 @@ export default async function Home() {
               All projects <span aria-hidden="true">↗</span>
             </Link>
           </div>
-          <div className="featured-grid">
-            {network && (
-              <article className="project-feature project-network" data-reveal>
-                <a
-                  className="project-art"
-                  href={
-                    externalUrl(network.liveLink) ||
-                    externalUrl(network.codeLink)
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Explore Network Scanner Pro"
-                >
-                  <div className="art-caption">
-                    <span>NETWORK SCANNER PRO</span>
-                    <span>WEB APPLICATION ↗</span>
-                  </div>
-                  <div className="browser-frame">
-                    <div className="browser-bar">
-                      <i />
-                      <i />
-                      <i />
-                      <span>networkscannerpro.rushy.dev</span>
-                    </div>
-                    <Image
-                      src="/work/network-scanner.webp"
-                      alt="Network Scanner Pro’s live website, featuring network reconnaissance tools"
-                      width={1440}
-                      height={1000}
-                      sizes="(max-width: 760px) 90vw, 55vw"
-                    />
-                  </div>
-                  <span className="art-arrow" aria-hidden="true">
-                    ↗
-                  </span>
-                </a>
-                <div className="project-meta">
-                  <div>
-                    <h3>Network Scanner Pro</h3>
-                    <p>Network exploration, made approachable.</p>
-                  </div>
-                  <span className="eyebrow">01 / WEB</span>
-                </div>
+          {gharpay && (
+            <article className="gharpay-feature" data-reveal>
+              <Link
+                href={`/projects/${gharpay.slug}`}
+                className="gharpay-preview"
+                aria-label="Read the GharPay project story"
+              >
+                <Image
+                  src="/work/gharpay.webp"
+                  alt="GharPay’s apartment society accounting website"
+                  width={1440}
+                  height={1000}
+                  sizes="(max-width: 760px) 90vw, 60vw"
+                />
+                <span className="art-arrow" aria-hidden="true">
+                  ↗
+                </span>
+              </Link>
+              <div className="gharpay-copy">
+                <span className="eyebrow">
+                  01 / WEB APPLICATION · COLLABORATION
+                </span>
+                <h3>
+                  <Link href={`/projects/${gharpay.slug}`}>GharPay</Link>
+                </h3>
+                <p className="gharpay-deck">
+                  A clearer picture of
+                  <br />
+                  <em>society finances.</em>
+                </p>
+                <p>{gharpay.description}</p>
                 <div className="project-tags">
-                  {network.technologies.slice(0, 3).map((t) => (
+                  {gharpay.technologies.slice(0, 3).map((t) => (
                     <span key={t}>{t}</span>
                   ))}
                 </div>
-              </article>
-            )}
-            {harvest && (
-              <article className="project-feature project-harvest" data-reveal>
-                <a
-                  className="project-art"
-                  href={
-                    externalUrl(harvest.liveLink) ||
-                    externalUrl(harvest.codeLink)
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Explore HarvestLink"
-                >
-                  <div className="art-caption">
-                    <span>HARVESTLINK</span>
-                    <span>MARKETPLACE ↗</span>
-                  </div>
-                  <div className="browser-frame">
-                    <div className="browser-bar">
-                      <i />
-                      <i />
-                      <i />
-                      <span>harvestlink.rushy.dev</span>
-                    </div>
-                    <Image
-                      src="/work/harvestlink.webp"
-                      alt="The HarvestLink marketplace connecting farmers and buyers"
-                      width={1440}
-                      height={1000}
-                      sizes="(max-width: 760px) 90vw, 40vw"
-                    />
-                  </div>
-                  <span className="art-arrow" aria-hidden="true">
-                    ↗
-                  </span>
-                </a>
-                <div className="project-meta">
-                  <div>
-                    <h3>HarvestLink</h3>
-                    <p>A more direct path from farm to buyer.</p>
-                  </div>
-                  <span className="eyebrow">02 / WEB</span>
-                </div>
-                <div className="project-tags">
-                  {harvest.technologies.map((t) => (
-                    <span key={t}>{t}</span>
-                  ))}
-                </div>
-              </article>
-            )}
-          </div>
+                <Link href={`/projects/${gharpay.slug}`} className="text-link">
+                  Read the project story ↗
+                </Link>
+              </div>
+            </article>
+          )}
           {research && (
             <article className="research-feature" data-reveal>
               <div className="research-art" aria-hidden="true">
@@ -220,7 +161,7 @@ export default async function Home() {
               </div>
               <div className="research-copy">
                 <span className="eyebrow">
-                  03 / MACHINE LEARNING & RESEARCH
+                  02 / MACHINE LEARNING & RESEARCH
                 </span>
                 <h3>
                   A closer look at
@@ -239,16 +180,12 @@ export default async function Home() {
                       Read the paper ↗
                     </a>
                   )}
-                  {research.showCodeLink && externalUrl(research.codeLink) && (
-                    <a
-                      href={research.codeLink}
-                      className="subtle-link"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View code ↗
-                    </a>
-                  )}
+                  <Link
+                    href={`/projects/${research.slug}`}
+                    className="subtle-link"
+                  >
+                    Read the project story ↗
+                  </Link>
                 </div>
               </div>
             </article>
@@ -355,8 +292,9 @@ export default async function Home() {
               something real.
             </p>
             <p>
-              From a marketplace for farmers to research in threat detection, I
-              care about the details that make software useful.
+              From collaborative society accounting software to research in
+              threat detection, I care about the details that make software
+              useful.
             </p>
             <a
               href={identity.github}

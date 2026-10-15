@@ -19,3 +19,15 @@ Verification: 297 tests in 28 files; typecheck passed; production build passed o
 Production: https://rushy.dev. First deployment READY (49-second Vercel build); public homepage 200, correct canonical, no browser page errors, zero mobile overflow. Post-deploy route review caught an unanchored logs exclusion that also excluded the client logging API. The deployment ignore entries are now root-anchored. Contact form uses POST even without hydration, preventing native fallback submission from putting message contents in a URL.
 
 Post-deployment external-service check: existing production MongoDB returns connection resets; CMS reads remain unavailable. The new site remains usable using its preserved project records. Added tested Resend fallback for database outages, with 503 if both storage and owner mail fail. Read-only Resend inspection confirmed sending enabled, DKIM and SPF verified; its unrelated receiving MX is failed. No test email sent. This does not claim the old database has been repaired.
+
+## Project stories — October 15 update
+
+Requested changes: remove Network Scanner Pro and HarvestLink from the public portfolio; remove ProcSAGE’s code link; add GharPay as collaborative work; give all projects blog-style detail pages.
+
+Implemented nine `/projects/[slug]` articles, internal links from the homepage and index, per-article metadata, a contents navigation, project resources, next-project navigation, and sitemap entries. Public curation applies to both CMS and fallback data, so old records cannot reintroduce the removed projects or code link. The original data and archive remain preserved.
+
+GharPay copy was checked against the public https://gharpay.co/ website and the sibling `Residence OS` source: README, package.json, db/index.ts, server/rbac/authorize.ts, server/apt-admin/statement-amounts.ts, payment-review.ts, and month-close.ts. Credit is collaborative; no individual feature ownership, usage figures, or business outcomes are invented. Only a public marketing screenshot is included, never authenticated records or private source. Other articles expand the existing project descriptions without invented performance results.
+
+Verification: 302 tests in 28 files; lint, typecheck, and production build passed. Browser review of homepage, index, GharPay and ProcSAGE at 320/390/768/1440 px found no overflow, removed links, or browser errors; GharPay also fits at 200% CSS zoom. Screenshots are in `screenshots/project-stories/`.
+
+Production-build checks: all nine article routes return 200 with unique canonicals and one h1; unknown slugs return 404; sitemap contains all nine stories. GharPay's table of contents navigates correctly and all four sections remain readable without JavaScript. All 375 archived originals still match their SHA-256 manifest.

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import SiteHeader from "@/components/SiteHeader";
 import Footer from "@/components/Footer";
-import { externalUrl, portfolioProjects } from "@/lib/portfolio";
+import { portfolioProjects } from "@/lib/portfolio";
 
 export const metadata: Metadata = {
   title: "Projects",
@@ -33,7 +33,14 @@ export default async function Projects() {
                 {String(index + 1).padStart(2, "0")}
               </span>
               <div>
-                <h2>{project.title}</h2>
+                <span className="eyebrow project-category">
+                  {project.story.category}
+                </span>
+                <h2>
+                  <Link href={`/projects/${project.slug}`}>
+                    {project.title}
+                  </Link>
+                </h2>
                 <p>{project.description}</p>
                 <div className="project-tags">
                   {project.technologies.map((t) => (
@@ -42,24 +49,12 @@ export default async function Projects() {
                 </div>
               </div>
               <div className="project-row-links">
-                {project.showLiveLink && externalUrl(project.liveLink) && (
-                  <a
-                    href={project.liveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {project.liveLinkLabel || "Visit project"} ↗
-                  </a>
-                )}
-                {project.showCodeLink && externalUrl(project.codeLink) && (
-                  <a
-                    href={project.codeLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Source code ↗
-                  </a>
-                )}
+                <Link
+                  href={`/projects/${project.slug}`}
+                  aria-label={`Read about ${project.title}`}
+                >
+                  Read story ↗
+                </Link>
               </div>
             </article>
           ))}

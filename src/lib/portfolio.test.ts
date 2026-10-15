@@ -12,7 +12,7 @@ describe("portfolio content", () => {
     vi.stubEnv("MONGODB_URI", "mongodb://example.invalid");
     vi.mocked(getProjects).mockRejectedValue(new Error("offline"));
     const result = await portfolioProjects();
-    expect(result).toHaveLength(9);
+    expect(result).toHaveLength(10);
     expect(result[0].title).toBe("GharPay");
     expect(result.some((p) => p.title.includes("ProcSAGE"))).toBe(true);
   });

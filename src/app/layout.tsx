@@ -16,14 +16,14 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL || "https://rushy.dev",
   ),
   title: {
-    default: "Purav S — Thoughtful code. Useful software.",
+    default: "Purav S - Portfolio",
     template: "%s — Purav S",
   },
   description:
     "AI Engineer in Bangalore working across full stack development, microservices, product development, agentic operations, and networking. Explore some of my work.",
   openGraph: {
     type: "website",
-    title: "Purav S — AI Engineer",
+    title: "Purav S - Portfolio",
     description:
       "AI engineering, full stack development, microservices, product development, agentic operations, and networking. Thoughtful code. Useful software.",
     images: [{ url: "/opengraph-image", width: 1200, height: 630 }],

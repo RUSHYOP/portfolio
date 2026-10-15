@@ -33,11 +33,35 @@ const gharpay: Project = {
   order: -1,
 };
 
+const digitalGarden: Project = {
+  id: "digital-garden",
+  title: "Digital Garden",
+  description:
+    "A reading and knowledge platform connecting book notes, a searchable knowledge graph, private Markdown vaults, and PDF exports.",
+  icon: "",
+  technologies: [
+    "Next.js",
+    "TypeScript",
+    "Node.js",
+    "PostgreSQL",
+    "Tailwind CSS",
+  ],
+  liveLink: "https://digitalgarden.rushy.dev/",
+  liveLinkLabel: "Visit Digital Garden",
+  codeLink: "",
+  showLiveLink: true,
+  showCodeLink: false,
+  order: -1,
+};
+
 function curate(projects: Project[]): PortfolioProject[] {
   // Apply editorial removals to both CMS and fallback records. Keep the originals archived.
   return [
     gharpay,
-    ...projects.filter((p) => !["gharpay", "proj_3", "proj_4"].includes(p.id)),
+    digitalGarden,
+    ...projects.filter(
+      (p) => !["gharpay", "digital-garden", "proj_3", "proj_4"].includes(p.id),
+    ),
   ].map((project) => {
     const story = projectStories[project.id] ?? {
       slug: `project-${encodeURIComponent(project.id)}`,

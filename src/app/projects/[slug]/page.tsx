@@ -77,7 +77,7 @@ export default async function ProjectArticle({ params }: Props) {
                 priority
               />
               <figcaption>
-                GharPay / Public website · Collaborative project
+                {story.imageCaption || `${project.title} / Public website`}
               </figcaption>
             </figure>
           )}

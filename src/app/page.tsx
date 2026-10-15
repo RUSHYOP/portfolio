@@ -11,7 +11,9 @@ export const metadata = { alternates: { canonical: "/" } };
 
 export default async function Home() {
   const projects = await portfolioProjects();
-  const gharpay = projects.find((p) => p.id === "gharpay");
+  const featuredProjects = projects.filter((p) =>
+    ["gharpay", "digital-garden"].includes(p.id),
+  );
   const research = projects.find((p) => p.id === "proj_2");
   return (
     <>
@@ -100,16 +102,20 @@ export default async function Home() {
               All projects <span aria-hidden="true">↗</span>
             </Link>
           </div>
-          {gharpay && (
-            <article className="gharpay-feature" data-reveal>
+          {featuredProjects.map((project, index) => (
+            <article
+              className="web-project-feature"
+              key={project.id}
+              data-reveal
+            >
               <Link
-                href={`/projects/${gharpay.slug}`}
-                className="gharpay-preview"
-                aria-label="Read the GharPay project story"
+                href={`/projects/${project.slug}`}
+                className="web-project-preview"
+                aria-label={`Read the ${project.title} project story`}
               >
                 <Image
-                  src="/work/gharpay.webp"
-                  alt="GharPay’s apartment society accounting website"
+                  src={project.story.image!}
+                  alt={project.story.imageAlt || project.title}
                   width={1440}
                   height={1000}
                   sizes="(max-width: 760px) 90vw, 60vw"
@@ -118,30 +124,43 @@ export default async function Home() {
                   ↗
                 </span>
               </Link>
-              <div className="gharpay-copy">
+              <div className="web-project-copy">
                 <span className="eyebrow">
-                  01 / WEB APPLICATION · COLLABORATION
+                  {String(index + 1).padStart(2, "0")} /{" "}
+                  {project.story.category.toUpperCase()}
                 </span>
                 <h3>
-                  <Link href={`/projects/${gharpay.slug}`}>GharPay</Link>
+                  <Link href={`/projects/${project.slug}`}>
+                    {project.title}
+                  </Link>
                 </h3>
-                <p className="gharpay-deck">
-                  A clearer picture of
-                  <br />
-                  <em>society finances.</em>
+                <p className="web-project-deck">
+                  {project.id === "gharpay" ? (
+                    <>
+                      A clearer picture of
+                      <br />
+                      <em>society finances.</em>
+                    </>
+                  ) : (
+                    <>
+                      A place for ideas
+                      <br />
+                      <em>to connect.</em>
+                    </>
+                  )}
                 </p>
-                <p>{gharpay.description}</p>
+                <p>{project.description}</p>
                 <div className="project-tags">
-                  {gharpay.technologies.slice(0, 3).map((t) => (
+                  {project.technologies.slice(0, 3).map((t) => (
                     <span key={t}>{t}</span>
                   ))}
                 </div>
-                <Link href={`/projects/${gharpay.slug}`} className="text-link">
+                <Link href={`/projects/${project.slug}`} className="text-link">
                   Read the project story ↗
                 </Link>
               </div>
             </article>
-          )}
+          ))}
           {research && (
             <article className="research-feature" data-reveal>
               <div className="research-art" aria-hidden="true">
@@ -167,7 +186,7 @@ export default async function Home() {
               </div>
               <div className="research-copy">
                 <span className="eyebrow">
-                  02 / MACHINE LEARNING & RESEARCH
+                  03 / MACHINE LEARNING & RESEARCH
                 </span>
                 <h3>
                   A closer look at

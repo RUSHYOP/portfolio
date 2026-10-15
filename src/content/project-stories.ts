@@ -6,10 +6,54 @@ export interface ProjectStory {
   context: string;
   image?: string;
   imageAlt?: string;
+  imageCaption?: string;
   sections: { title: string; paragraphs: string[] }[];
 }
 
 export const projectStories: Record<string, ProjectStory> = {
+  "digital-garden": {
+    slug: "digital-garden",
+    category: "Full stack · Knowledge platform",
+    context: "Reading library & private notes",
+    headline: "A place for ideas to connect.",
+    intro:
+      "Digital Garden turns an Obsidian-based collection into a web reading experience, pairing a public library of book notes with connected reading paths, private Markdown vaults, and PDF exports.",
+    image: "/work/digital-garden.webp",
+    imageAlt:
+      "Digital Garden’s public homepage with a featured reading note and book library",
+    imageCaption: "Digital Garden / Public reading library",
+    sections: [
+      {
+        title: "From a vault to a reading experience",
+        paragraphs: [
+          "Notes become more useful when their connections are easy to follow. Digital Garden takes an Obsidian vault and presents it as linked notes, book breakdowns, and ordered reading paths, while keeping Markdown as the source format.",
+          "The public library gives readers a starting point through collection overviews and published sample notes. Signed-in readers can explore the wider garden, with access determined by the collection and their account.",
+        ],
+      },
+      {
+        title: "Reading through connections",
+        paragraphs: [
+          "The reading interface supports Obsidian wikilinks and callouts, mathematical notation, highlighted code, and Mermaid diagrams. Backlinks and outgoing links make it possible to move between related ideas instead of treating each note as a standalone page.",
+          "Maps of Content organize notes into reading sequences. A searchable graph shows connections between collections, while a typo-tolerant command palette helps readers find note titles. Collection-level read status provides a way to keep track of explored material.",
+        ],
+      },
+      {
+        title: "A space for your own notes",
+        paragraphs: [
+          "Members can import Markdown files or Markdown-only ZIP archives into a private vault. The implementation separates personal notes from public library content, with ownership and access checks around reads, uploads, and exports.",
+          "PDF export extends the experience beyond the browser. A reader can export an individual note or an ordered collection, with the collection workflow assembling its overview, contents, and notes. Full-book exports use a queued job flow so preparation and rendering can continue outside a single page request.",
+        ],
+      },
+      {
+        title: "The systems behind the garden",
+        paragraphs: [
+          "The application uses Next.js, React, TypeScript, and Tailwind CSS. A Node.js internal API connects the frontend to PostgreSQL for accounts, subscriptions, and member operations. Content storage supports Cloudflare R2 and a home-server backend.",
+          "The vault sync pipeline builds metadata, backlinks, reading sequences, and search indexes ahead of time. Content hashes identify changed files, allowing an incremental sync rather than uploading the entire vault after every edit.",
+          "Google sign-in provides account access, while Razorpay handles subscription billing. Signed webhook events feed subscription state into the application; a browser checkout callback alone does not grant access. Server-side content checks also apply to PDF exports.",
+        ],
+      },
+    ],
+  },
   gharpay: {
     slug: "gharpay",
     category: "Web application · Collaboration",
@@ -20,6 +64,7 @@ export const projectStories: Record<string, ProjectStory> = {
     image: "/work/gharpay.webp",
     imageAlt:
       "GharPay’s public homepage introducing its apartment society accounting product",
+    imageCaption: "GharPay / Public website · Collaborative project",
     sections: [
       {
         title: "One month, many moving parts",

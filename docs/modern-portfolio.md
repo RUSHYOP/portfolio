@@ -31,3 +31,9 @@ GharPay copy was checked against the public https://gharpay.co/ website and the 
 Verification: 302 tests in 28 files; lint, typecheck, and production build passed. Browser review of homepage, index, GharPay and ProcSAGE at 320/390/768/1440 px found no overflow, removed links, or browser errors; GharPay also fits at 200% CSS zoom. Screenshots are in `screenshots/project-stories/`.
 
 Production-build checks: all nine article routes return 200 with unique canonicals and one h1; unknown slugs return 404; sitemap contains all nine stories. GharPay's table of contents navigates correctly and all four sections remain readable without JavaScript. All 375 archived originals still match their SHA-256 manifest.
+
+## Digital Garden addition
+
+Added Digital Garden to the homepage, curated project index, and `/projects/digital-garden` article. Its overview covers the public library, Obsidian-compatible note rendering, linked reading paths, private Markdown imports, PDF exports, and the content/account architecture. Evidence: live public homepage plus `obsidian-vault-website` README, frontend/internal API package manifests, current landing route, catalogue reader, content storage, private-vault graph and storage, PDF job orchestration, webhook route, incremental sync script, and subscriber-platform documentation. No authenticated notes, credentials, or private source are published.
+
+Generalized the feature styles and image captions to support both GharPay and Digital Garden. The sitemap automatically includes the tenth article. Preserved the requested `Purav S - Portfolio` page title. Targeted content tests (5), lint, production build, and browser checks of home/index/article at 320/390/768/1440 passed with no overflow or page errors. The local dev server remains on port 3005.

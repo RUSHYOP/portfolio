@@ -473,11 +473,77 @@
 }
 
 @media (max-width: 760px) {
+  html {
+    scroll-padding-top: 96px;
+  }
+  .site-header {
+    min-height: 76px;
+    padding-block: 12px;
+    gap: 8px;
+  }
+  .wordmark {
+    min-height: 44px;
+    align-items: center;
+    font-size: 24px;
+  }
+  .main-nav {
+    gap: 8px;
+  }
+  .main-nav a {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 12px 4px;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+  .main-nav .nav-contact {
+    gap: 6px;
+  }
+  .hero h1 {
+    /* Both headline lines fit the actual content column, including small phones. */
+    font-size: clamp(26px, 11.6cqw, 67px);
+    margin-top: 40px;
+  }
   .hero-line > span {
     animation-duration: 800ms;
   }
+  .hero-bottom {
+    margin-block: 28px 36px;
+    gap: 20px;
+  }
+  .hero-intro p {
+    font-size: 15px;
+  }
+  .hero-intro .text-link {
+    font-size: 13px;
+    min-height: 44px;
+  }
+  .hero-foot {
+    font-size: 9px;
+    line-height: 1.8;
+  }
+  .hero-expertise {
+    gap: 8px 12px;
+  }
+  .hero-expertise > span:not(:last-child)::after {
+    margin-left: 12px;
+  }
+  .eyebrow,
+  .hero-location {
+    font-size: 9px;
+  }
+  .text-link {
+    min-height: 44px;
+  }
   .ramco-feature {
     padding-inline: 20px;
+  }
+  .ramco-feature-copy > p,
+  .web-project-copy > p,
+  .project-row p,
+  .contact-intro > p {
+    font-size: 15px;
   }
   .career-path {
     gap: 12px;
@@ -486,17 +552,98 @@
     width: 32px;
   }
   .career-path > span {
-    font-size: 10px;
+    font-size: 11px;
+  }
+  .career-path time {
+    font-size: 9px;
   }
   .preview-label {
     padding-inline: 12px;
-    font-size: 7px;
+    font-size: 9px;
+    gap: 12px;
+  }
+  .web-project-feature + .web-project-feature {
+    margin-top: 56px;
   }
   .article-facts {
     padding-inline: 18px;
   }
+  .article-contents ol {
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-top: 16px;
+  }
+  .article-contents a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding-block: 10px;
+    font-size: 13px;
+  }
+  .article-contents a::before {
+    top: 50%;
+  }
+  .article-prose section {
+    scroll-margin-top: 16px;
+  }
+  .article-prose p {
+    font-size: 16px;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .contact-form label {
+    font-size: 13px;
+  }
+  .contact-form textarea {
+    min-height: 140px;
+  }
+  .form-bottom {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
+  .form-bottom > span {
+    font-size: 12px;
+    max-width: none;
+  }
+  .form-bottom .button {
+    width: 100%;
+    min-height: 56px;
+    justify-content: space-between;
+    font-size: 15px;
+  }
+  .contact-social a,
+  .project-row-links a,
+  .article-back,
+  .site-footer > div > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
   .project-row::before {
     inset-inline: -10px;
+  }
+}
+/* Touch previews stay still: tapping opens the story without a sticky hover zoom. */
+@media (hover: none) {
+  .web-project-preview img,
+  .web-project-preview:hover img {
+    transform: none;
+  }
+  .web-project-preview:hover .art-arrow,
+  .hero-profile:hover img,
+  .about-portrait:hover > img {
+    transform: none;
+  }
+}
+@media (max-width: 760px) and (max-height: 480px) {
+  .site-header {
+    position: relative;
+  }
+  html {
+    scroll-padding-top: 20px;
   }
 }
 @container (max-width: 280px) {

@@ -230,11 +230,12 @@ export default async function Home() {
                 <em>the beginning.</em>
               </h2>
               <p className="muted capability-intro">
-                I like working across the layers of a product — connecting the
-                experience people see with the systems that make it work.
+                Good software starts with clear decisions. I help shape ideas,
+                review technical approaches, and turn a direction into something
+                that works.
               </p>
               <a href="#contact" className="text-link">
-                Let’s build something ↗
+                Let’s work it through ↗
               </a>
             </div>
             <div className="capability-list">
@@ -351,8 +352,8 @@ export default async function Home() {
             <div className="contact-layout">
               <div className="contact-intro">
                 <p>
-                  Have an idea to explore, a project in mind, or just something
-                  interesting to share?
+                  Have an idea taking shape, a technical decision to work
+                  through, or a project that could use a fresh perspective?
                 </p>
                 <a href={`mailto:${identity.email}`} className="email-link">
                   {identity.email} <span aria-hidden="true">↗</span>

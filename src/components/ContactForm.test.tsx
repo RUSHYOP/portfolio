@@ -20,7 +20,7 @@ function fill() {
   fireEvent.change(screen.getByLabelText("Email address"), {
     target: { value: "alex@example.com" },
   });
-  fireEvent.change(screen.getByLabelText("A little about your idea"), {
+  fireEvent.change(screen.getByLabelText("What’s on your mind?"), {
     target: { value: "A new product" },
   });
 }

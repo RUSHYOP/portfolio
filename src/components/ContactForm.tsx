@@ -82,13 +82,13 @@ export default function ContactForm() {
         </label>
       </div>
       <label>
-        A little about your idea
+        What’s on your mind?
         <textarea
           required
           name="building"
           rows={3}
           maxLength={2000}
-          placeholder="What are you working on, and where can I help?"
+          placeholder="Tell me about the idea, question, or challenge you’re working through."
         />
       </label>
       <div className="form-row">

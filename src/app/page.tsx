@@ -307,19 +307,19 @@ export default async function Home() {
               <em>Always building.</em>
             </h2>
             <p className="about-lead">
-              I’m Purav, an AI Engineer based in Bangalore. I enjoy figuring out
-              how things work — then finding a way to make them work better.
+              I’m Purav, an AI Engineer based in Bangalore and currently a
+              Software Engineer 1 at Ramco Systems.
             </p>
             <p>
-              My work spans full stack development, microservices, product
-              development, agentic operations, and networking. The common thread
-              is a practical problem, a willingness to learn, and the
-              satisfaction of turning an idea into something real.
+              I joined Ramco as an intern in February 2026 and moved into a
+              full-time role in June 2026. My work focuses on AI-driven product
+              engineering, developer tooling, and automation — connecting
+              product requirements with working software.
             </p>
             <p>
-              From collaborative society accounting software to research in
-              threat detection, I care about the details that make software
-              useful.
+              I work across full stack development, microservices, agentic
+              operations, and networking, with an emphasis on reliable systems,
+              thoughtful architecture, and practical outcomes.
             </p>
             <a
               href={identity.github}

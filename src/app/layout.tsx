@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s — Purav S",
   },
   description:
-    "AI Engineer in Bangalore working across full stack development, microservices, product development, agentic operations, and networking. Explore some of my work.",
+    "Purav S, AI Engineer and Software Engineer 1 at Ramco Systems in Bangalore. Full stack development, microservices, product engineering, agentic operations, and networking.",
   openGraph: {
     type: "website",
     title: "Purav S - Portfolio",

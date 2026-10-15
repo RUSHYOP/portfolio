@@ -1,7 +1,7 @@
-archive/
-screenshots/
-docs/
-.superpowers/
-.playwright-mcp/
-.worktrees/
-logs/
+/archive/
+/screenshots/
+/docs/
+/.superpowers/
+/.playwright-mcp/
+/.worktrees/
+/logs/

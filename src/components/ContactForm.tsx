@@ -53,6 +53,8 @@ export default function ContactForm() {
   return (
     <form
       className="contact-form"
+      action="/api/inquiries"
+      method="post"
       onSubmit={submit}
       aria-label="Project inquiry"
     >

@@ -5,7 +5,7 @@ export default function Footer() {
   return (
     <footer className="site-footer shell">
       <Link className="wordmark" href="/" aria-label="Purav S — home">
-        purav<span className="accent">✳</span>
+        purav
       </Link>
       <p>© {new Date().getFullYear()} Purav S</p>
       <div>

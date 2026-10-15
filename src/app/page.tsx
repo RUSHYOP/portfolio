@@ -322,9 +322,6 @@ export default async function Home() {
                 Good things start
                 <br />
                 with a <em>conversation.</em>
-                <span className="contact-star" aria-hidden="true">
-                  ✳
-                </span>
               </h2>
             </div>
             <div className="contact-layout">

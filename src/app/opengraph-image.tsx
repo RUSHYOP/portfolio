@@ -18,7 +18,7 @@ export default function Image() {
       }}
     >
       <div style={{ display: "flex", fontSize: 32 }}>
-        purav<span style={{ color: "#ff835f" }}>✳</span>
+        purav
       </div>
       <div
         style={{

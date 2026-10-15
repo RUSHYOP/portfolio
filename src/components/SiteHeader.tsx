@@ -8,7 +8,7 @@ export default function SiteHeader() {
   return (
     <header className="site-header shell">
       <Link href="/" className="wordmark" aria-label="Purav S — home">
-        purav<span className="accent">✳</span>
+        purav
       </Link>
       <button
         className="menu-toggle"

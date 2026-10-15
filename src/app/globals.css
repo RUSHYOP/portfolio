@@ -311,10 +311,24 @@ summary:focus-visible {
   color: var(--muted);
   font-size: 9px;
   letter-spacing: 0.09em;
+  gap: 32px;
+  align-items: flex-start;
+}
+.hero-expertise {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-width: 0;
+}
+.hero-expertise > span:not(:last-child)::after {
+  content: "/";
+  margin-left: 16px;
+  opacity: 0.5;
 }
 .scroll-note {
   display: flex;
   gap: 24px;
+  flex-shrink: 0;
 }
 .scroll-note span {
   color: var(--accent);

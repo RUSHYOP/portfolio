@@ -17,9 +17,7 @@ export default function Image() {
         padding: "65px",
       }}
     >
-      <div style={{ display: "flex", fontSize: 32 }}>
-        purav
-      </div>
+      <div style={{ display: "flex", fontSize: 32 }}>purav</div>
       <div
         style={{
           display: "flex",
@@ -40,7 +38,7 @@ export default function Image() {
           color: "#b5b5b2",
         }}
       >
-        <span>SOFTWARE DEVELOPER</span>
+        <span>AI ENGINEER</span>
         <span>BANGALORE, INDIA</span>
       </div>
     </div>,

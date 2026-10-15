@@ -20,7 +20,7 @@ export default async function Home() {
         <section className="hero shell" id="top" aria-labelledby="hero-title">
           <div className="hero-top">
             <span className="eyebrow">
-              <span className="status-dot" /> SOFTWARE DEVELOPER
+              <span className="status-dot" /> AI ENGINEER
             </span>
             <span className="eyebrow hero-location">BANGALORE, INDIA ↗</span>
           </div>
@@ -33,11 +33,12 @@ export default async function Home() {
           <div className="hero-bottom">
             <div className="hero-intro">
               <p>
-                I’m Purav. I bring ideas to life through web applications,
-                backend systems, and a healthy curiosity for what’s next.
+                I’m Purav, an AI Engineer. I turn ideas into products, working
+                across the stack — from interfaces and microservices to AI
+                agents and the networks that connect them.
               </p>
               <a href="#work" className="text-link">
-                Explore selected work <span aria-hidden="true">↓</span>
+                Explore some of my work <span aria-hidden="true">↓</span>
               </a>
             </div>
             <a
@@ -64,7 +65,17 @@ export default async function Home() {
             </a>
           </div>
           <div className="hero-foot eyebrow">
-            <span>WEB DEVELOPMENT / BACKEND / MACHINE LEARNING</span>
+            <span className="hero-expertise">
+              {[
+                "FULL STACK DEVELOPMENT",
+                "MICROSERVICES",
+                "PRODUCT DEVELOPMENT",
+                "AGENTIC OPERATIONS",
+                "NETWORKING",
+              ].map((area) => (
+                <span key={area}>{area}</span>
+              ))}
+            </span>
             <span className="scroll-note">
               SCROLL TO EXPLORE <span aria-hidden="true">↓</span>
             </span>
@@ -77,18 +88,13 @@ export default async function Home() {
           aria-labelledby="work-title"
         >
           <div className="section-heading" data-reveal>
-            <span className="eyebrow section-number">01 / SELECTED WORK</span>
+            <span className="eyebrow section-number">01 / SOME OF MY WORK</span>
             <div>
               <h2 id="work-title">
                 Built to do
                 <br />
                 <em>something useful.</em>
               </h2>
-              <p>
-                A selection of ideas taken from a question
-                <br className="desktop-break" /> to something you can actually
-                use.
-              </p>
             </div>
             <Link href="/projects" className="text-link">
               All projects <span aria-hidden="true">↗</span>
@@ -216,10 +222,10 @@ export default async function Home() {
               <article data-reveal>
                 <span className="eyebrow">01</span>
                 <div>
-                  <h3>Web applications</h3>
+                  <h3>Full stack & product development</h3>
                   <p>
-                    Responsive interfaces, thoughtful interactions, and
-                    full-stack applications built around a clear purpose.
+                    From an early idea to a working product: responsive
+                    interfaces, application logic, APIs, and data.
                   </p>
                   <small>React · Next.js · TypeScript</small>
                 </div>
@@ -228,10 +234,10 @@ export default async function Home() {
               <article data-reveal>
                 <span className="eyebrow">02</span>
                 <div>
-                  <h3>Backend & systems</h3>
+                  <h3>Microservices & networking</h3>
                   <p>
-                    APIs, data models, and the behind-the-scenes logic that
-                    turns an interface into a working product.
+                    Building services, connecting systems, and working through
+                    the infrastructure and networking behind an application.
                   </p>
                   <small>Python · Flask · Node.js · MongoDB</small>
                 </div>
@@ -240,12 +246,12 @@ export default async function Home() {
               <article data-reveal>
                 <span className="eyebrow">03</span>
                 <div>
-                  <h3>Machine learning</h3>
+                  <h3>AI & agentic operations</h3>
                   <p>
-                    Exploring useful applications of data, from anomaly
-                    detection to language and health-focused prototypes.
+                    AI agents, automated workflows, and machine learning
+                    applications that connect models with tools and systems.
                   </p>
-                  <small>Python · ML · NLP</small>
+                  <small>AI agents · Automation · Python · ML</small>
                 </div>
                 <span aria-hidden="true">↗</span>
               </article>
@@ -281,15 +287,14 @@ export default async function Home() {
               <em>Always building.</em>
             </h2>
             <p className="about-lead">
-              I’m Purav, a software developer based in Bangalore. I enjoy
-              figuring out how things work — then finding a way to make them
-              work better.
+              I’m Purav, an AI Engineer based in Bangalore. I enjoy figuring out
+              how things work — then finding a way to make them work better.
             </p>
             <p>
-              My projects move between web development, backend engineering, and
-              machine learning. The common thread is a practical problem, a
-              willingness to learn, and the satisfaction of turning an idea into
-              something real.
+              My work spans full stack development, microservices, product
+              development, agentic operations, and networking. The common thread
+              is a practical problem, a willingness to learn, and the
+              satisfaction of turning an idea into something real.
             </p>
             <p>
               From collaborative society accounting software to research in

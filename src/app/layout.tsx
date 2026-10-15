@@ -20,12 +20,12 @@ export const metadata: Metadata = {
     template: "%s — Purav S",
   },
   description:
-    "Software developer in Bangalore building thoughtful web applications, backend systems, and machine learning projects. Explore selected work and get in touch.",
+    "AI Engineer in Bangalore working across full stack development, microservices, product development, agentic operations, and networking. Explore some of my work.",
   openGraph: {
     type: "website",
-    title: "Purav S — Software developer",
+    title: "Purav S — AI Engineer",
     description:
-      "Thoughtful code. Useful software. Selected projects in web development, backend systems and machine learning.",
+      "AI engineering, full stack development, microservices, product development, agentic operations, and networking. Thoughtful code. Useful software.",
     images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
   },
   twitter: { card: "summary_large_image" },

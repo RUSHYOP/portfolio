@@ -1865,3 +1865,102 @@ h3 {
     transform: none;
   }
 }
+
+/* A work profile leads the portfolio with the same editorial restraint. */
+.ramco-feature {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 64px;
+  align-items: center;
+  border-block: 1px solid var(--line);
+  padding-block: 44px;
+  margin-bottom: 85px;
+}
+.ramco-feature-copy > .eyebrow {
+  color: var(--accent);
+  font-size: 9px;
+}
+.ramco-feature h3 {
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.15;
+  letter-spacing: -0.05em;
+  margin-top: 24px;
+}
+.ramco-feature-copy > p {
+  max-width: 560px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 24px;
+}
+.ramco-feature-copy > .text-link {
+  margin-top: 28px;
+}
+.ramco-tenure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.ramco-tenure > .eyebrow {
+  color: var(--muted);
+  font-size: 9px;
+}
+.ramco-tenure-value {
+  font-size: clamp(36px, 4vw, 56px);
+  line-height: 1.15;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+.ramco-tenure time {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.ramco-feature > .ramco-tenure {
+  border-left: 1px solid var(--line);
+  padding: 32px 0 32px 48px;
+}
+.article-profile-facts {
+  grid-template-columns: 1fr 1.4fr 1fr;
+}
+.article-profile-facts .ramco-tenure {
+  gap: 9px;
+}
+.article-profile-facts .ramco-tenure-value {
+  font-size: 30px;
+  margin-top: 2px;
+}
+@media (max-width: 760px) {
+  .ramco-feature {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    margin-bottom: 56px;
+    padding-block: 32px;
+  }
+  .ramco-feature > .ramco-tenure {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 28px 0 0;
+  }
+  .article-profile-facts {
+    grid-template-columns: 1fr;
+  }
+}
+@container (max-width: 280px) {
+  .ramco-feature {
+    grid-template-columns: 1fr;
+  }
+  .ramco-feature > .ramco-tenure {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .article-profile-facts {
+    grid-template-columns: 1fr;
+  }
+  .ramco-feature h3,
+  .ramco-tenure-value {
+    font-size: 30px;
+    overflow-wrap: anywhere;
+  }
+}

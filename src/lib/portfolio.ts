@@ -12,6 +12,9 @@ export const identity = {
 
 export type PortfolioProject = Project & { slug: string; story: ProjectStory };
 
+// Read with server content and serialize it for a matching hydration snapshot.
+export const portfolioTimestamp = cache(async () => Date.now());
+
 const gharpay: Project = {
   id: "gharpay",
   title: "GharPay",
@@ -54,13 +57,41 @@ const digitalGarden: Project = {
   order: -1,
 };
 
+const ramcoProfile: Project = {
+  id: "ramco-profile",
+  title: "My work at Ramco Systems",
+  description:
+    "My journey from intern to Software Engineer 1, working across AI-driven product engineering, developer tooling, and automation.",
+  icon: "",
+  technologies: [
+    "AI Engineering",
+    "Agentic Workflows",
+    "Developer Tooling",
+    "Product Development",
+  ],
+  liveLink: "",
+  liveLinkLabel: "",
+  codeLink: "",
+  showLiveLink: false,
+  showCodeLink: false,
+  order: -2,
+};
+
 function curate(projects: Project[]): PortfolioProject[] {
   // Apply editorial removals to both CMS and fallback records. Keep the originals archived.
   return [
+    ramcoProfile,
     gharpay,
     digitalGarden,
     ...projects.filter(
-      (p) => !["gharpay", "digital-garden", "proj_3", "proj_4"].includes(p.id),
+      (p) =>
+        ![
+          "ramco-profile",
+          "gharpay",
+          "digital-garden",
+          "proj_3",
+          "proj_4",
+        ].includes(p.id),
     ),
   ].map((project) => {
     const story = projectStories[project.id] ?? {

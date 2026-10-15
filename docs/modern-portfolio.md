@@ -41,3 +41,11 @@ Generalized the feature styles and image captions to support both GharPay and Di
 ## Subtle advisory positioning
 
 Capabilities now invite shaping ideas and reviewing technical approaches; the CTA reads “Let’s work it through.” Contact copy welcomes technical decisions and a fresh perspective, and the message field asks “What’s on your mind?” This expresses availability for advisory conversations alongside delivery through the existing inquiry flow. Contact form tests (2), lint, production build, and mobile contact rendering passed; no emails were sent during verification.
+
+## Ramco work profile and live tenure
+
+Added `/projects/ramco-work-profile` as the lead work-section feature and first entry in the work index, with article metadata and automatic sitemap inclusion. It covers the internship-to-full-time progression and broad AI engineering, developer tooling, product interface, and team enablement work. It includes no proprietary project names, customer details, private documents, or internal performance figures.
+
+User confirmed the start date as 2 February 2026, including the internship. The reusable live counter refreshes every minute and when a tab becomes visible. It uses Asia/Kolkata calendar dates, displays completed months in the first year, then decimal years rounded to one decimal (14 months → 1.2 years). The server timestamp provides a matching hydration snapshot; the browser catches up to the current time.
+
+Verification: 14 targeted content/date/component tests pass, including the anniversary boundary at midnight in India, year formatting, a running clock crossing the anniversary, and timer cleanup. Lint and production build pass. Home and profile article fit 320/390/768/1440 px and 200% zoom with no browser page errors.

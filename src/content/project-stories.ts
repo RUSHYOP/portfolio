@@ -4,6 +4,7 @@ export interface ProjectStory {
   headline: string;
   intro: string;
   context: string;
+  factsLabel?: string;
   image?: string;
   imageAlt?: string;
   imageCaption?: string;
@@ -11,6 +12,52 @@ export interface ProjectStory {
 }
 
 export const projectStories: Record<string, ProjectStory> = {
+  "ramco-profile": {
+    slug: "ramco-work-profile",
+    category: "Work profile · AI engineering",
+    context: "Software Engineer 1 · Ramco Systems",
+    factsLabel: "AREAS OF WORK",
+    headline: "My work at Ramco Systems.",
+    intro:
+      "I’m a Software Engineer 1 at Ramco Systems in Bangalore, working across AI-driven product engineering, developer tooling, and automation. I joined as an intern on 2 February 2026 and moved into a full-time role in June 2026.",
+    sections: [
+      {
+        title: "From internship to product engineering",
+        paragraphs: [
+          "My time at Ramco began with an internship in February 2026. In June, I moved into a full-time Software Engineer 1 role, continuing to work at the intersection of AI and enterprise software development.",
+          "That progression has involved more than building individual features. My work connects product requirements, developer tools, interfaces, and the engineering workflows that bring them together.",
+        ],
+      },
+      {
+        title: "AI as part of the engineering workflow",
+        paragraphs: [
+          "A central part of my work is building AI agents, reusable skills, and supporting tools for product development. The focus is on helping an engineering workflow move from a requirement or design toward working software, with validation along the way.",
+          "This brings together agent orchestration, tool integration, and application development. I work on how an agent receives context, interacts with tools, and produces output that can be reviewed and tested.",
+        ],
+      },
+      {
+        title: "Developer tooling and product interfaces",
+        paragraphs: [
+          "My work also spans design-system tooling, interface generation, and product prototypes. These areas connect the way a product is designed with the way it is implemented and checked.",
+          "I have worked on tools that support reusable components and consistent interfaces, alongside experiments in AI-driven user experiences. Reviewing behavior, handling edge cases, and testing the result are part of that work.",
+        ],
+      },
+      {
+        title: "Helping teams put the tools to use",
+        paragraphs: [
+          "I have delivered internal training and knowledge-sharing sessions on prompting, reusable skills, and agentic workflows for engineers and functional consultants.",
+          "Supporting adoption means explaining how a tool works, helping people use it in their own context, and using their feedback to improve the workflow. That experience informs both the tools I build and how I communicate engineering decisions.",
+        ],
+      },
+      {
+        title: "How I approach the work",
+        paragraphs: [
+          "I aim to connect experimentation with careful implementation: understand the requirement, make the technical approach explicit, and verify the result. A useful prototype needs a clear path toward software that people can operate and maintain.",
+          "My broader practice spans full stack development, microservices, agentic operations, and networking. Working across those layers helps me consider how a change affects the product as a whole.",
+        ],
+      },
+    ],
+  },
   "digital-garden": {
     slug: "digital-garden",
     category: "Full stack · Knowledge platform",

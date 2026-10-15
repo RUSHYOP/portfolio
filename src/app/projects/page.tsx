@@ -5,10 +5,10 @@ import Footer from "@/components/Footer";
 import { portfolioProjects } from "@/lib/portfolio";
 
 export const metadata: Metadata = {
-  title: "Projects",
+  title: "Work",
   alternates: { canonical: "/projects" },
   description:
-    "Web applications, backend experiments and machine learning research by Purav S.",
+    "Engineering experience, web applications, and machine learning research by Purav S.",
 };
 export const revalidate = 300;
 export default async function Projects() {
@@ -18,7 +18,7 @@ export default async function Projects() {
       <SiteHeader />
       <main id="main" className="shell project-index">
         <div id="top" className="index-heading">
-          <span className="eyebrow">THE PROJECT INDEX</span>
+          <span className="eyebrow">THE WORK INDEX</span>
           <h1>
             Ideas, made <em>real.</em>
           </h1>

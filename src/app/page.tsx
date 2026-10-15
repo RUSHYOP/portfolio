@@ -4,17 +4,25 @@ import SiteHeader from "@/components/SiteHeader";
 import Footer from "@/components/Footer";
 import Motion from "@/components/Motion";
 import ContactForm from "@/components/ContactForm";
-import { externalUrl, identity, portfolioProjects } from "@/lib/portfolio";
+import RamcoTenure from "@/components/RamcoTenure";
+import {
+  externalUrl,
+  identity,
+  portfolioProjects,
+  portfolioTimestamp,
+} from "@/lib/portfolio";
 
 export const revalidate = 300;
 export const metadata = { alternates: { canonical: "/" } };
 
 export default async function Home() {
   const projects = await portfolioProjects();
+  const initialNow = await portfolioTimestamp();
   const featuredProjects = projects.filter((p) =>
     ["gharpay", "digital-garden"].includes(p.id),
   );
   const research = projects.find((p) => p.id === "proj_2");
+  const ramco = projects.find((p) => p.id === "ramco-profile");
   return (
     <>
       <SiteHeader />
@@ -99,9 +107,28 @@ export default async function Home() {
               </h2>
             </div>
             <Link href="/projects" className="text-link">
-              All projects <span aria-hidden="true">↗</span>
+              All work <span aria-hidden="true">↗</span>
             </Link>
           </div>
+          {ramco && (
+            <article className="ramco-feature" data-reveal>
+              <div className="ramco-feature-copy">
+                <span className="eyebrow">01 / WORK PROFILE</span>
+                <h3>
+                  <Link href={`/projects/${ramco.slug}`}>
+                    My work at
+                    <br />
+                    <em>Ramco Systems.</em>
+                  </Link>
+                </h3>
+                <p>{ramco.description}</p>
+                <Link href={`/projects/${ramco.slug}`} className="text-link">
+                  Read my work profile ↗
+                </Link>
+              </div>
+              <RamcoTenure initialNow={initialNow} />
+            </article>
+          )}
           {featuredProjects.map((project, index) => (
             <article
               className="web-project-feature"
@@ -126,7 +153,7 @@ export default async function Home() {
               </Link>
               <div className="web-project-copy">
                 <span className="eyebrow">
-                  {String(index + 1).padStart(2, "0")} /{" "}
+                  {String(index + 2).padStart(2, "0")} /{" "}
                   {project.story.category.toUpperCase()}
                 </span>
                 <h3>
@@ -186,7 +213,7 @@ export default async function Home() {
               </div>
               <div className="research-copy">
                 <span className="eyebrow">
-                  03 / MACHINE LEARNING & RESEARCH
+                  04 / MACHINE LEARNING & RESEARCH
                 </span>
                 <h3>
                   A closer look at

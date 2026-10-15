@@ -4,7 +4,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import SiteHeader from "@/components/SiteHeader";
 import Footer from "@/components/Footer";
-import { externalUrl, portfolioProjects } from "@/lib/portfolio";
+import RamcoTenure from "@/components/RamcoTenure";
+import {
+  externalUrl,
+  portfolioProjects,
+  portfolioTimestamp,
+} from "@/lib/portfolio";
 
 export const revalidate = 300;
 type Props = { params: Promise<{ slug: string }> };
@@ -33,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProjectArticle({ params }: Props) {
   const { slug } = await params;
   const projects = await portfolioProjects();
+  const initialNow = await portfolioTimestamp();
   const index = projects.findIndex((p) => p.slug === slug);
   if (index === -1) notFound();
   const project = projects[index];
@@ -47,7 +53,7 @@ export default async function ProjectArticle({ params }: Props) {
         <article>
           <header className="article-header" id="top">
             <Link className="text-link article-back" href="/projects">
-              ← All projects
+              ← All work
             </Link>
             <div className="article-kicker eyebrow">
               <span>{project.title}</span>
@@ -55,15 +61,22 @@ export default async function ProjectArticle({ params }: Props) {
             </div>
             <h1>{story.headline}</h1>
             <p className="article-intro">{story.intro}</p>
-            <div className="article-facts">
+            <div
+              className={`article-facts${project.id === "ramco-profile" ? " article-profile-facts" : ""}`}
+            >
               <div>
                 <span className="eyebrow">CONTEXT</span>
                 <p>{story.context}</p>
               </div>
               <div>
-                <span className="eyebrow">BUILT WITH</span>
+                <span className="eyebrow">
+                  {story.factsLabel || "BUILT WITH"}
+                </span>
                 <p>{project.technologies.join(" · ")}</p>
               </div>
+              {project.id === "ramco-profile" && (
+                <RamcoTenure initialNow={initialNow} />
+              )}
             </div>
           </header>
           {story.image && (
@@ -142,7 +155,7 @@ export default async function ProjectArticle({ params }: Props) {
         </article>
         {next.id !== project.id && (
           <Link className="next-story" href={`/projects/${next.slug}`}>
-            <span className="eyebrow">NEXT PROJECT</span>
+            <span className="eyebrow">NEXT STORY</span>
             <span>
               {next.title}
               <span aria-hidden="true">↗</span>

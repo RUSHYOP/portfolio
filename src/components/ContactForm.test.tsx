@@ -33,7 +33,7 @@ describe("ContactForm", () => {
     fireEvent.submit(screen.getByRole("form"));
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toContain(
-        "Your message is saved",
+        "Your message has been received",
       ),
     );
     expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({

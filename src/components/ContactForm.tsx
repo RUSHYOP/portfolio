@@ -32,7 +32,7 @@ export default function ContactForm() {
         throw new Error(
           response.status === 429
             ? "Too many messages. Please try again later, or email me directly."
-            : "Your message couldn’t be saved. Please try again or email me directly.",
+            : "Your message couldn’t be received. Please try again or email me directly.",
         );
       setState("success");
       form.reset();
@@ -142,7 +142,7 @@ export default function ContactForm() {
         className={`form-status ${state === "error" ? "form-error" : ""}`}
       >
         {state === "success"
-          ? "Thanks for reaching out. Your message is saved, and I’ll get back to you by email."
+          ? "Thanks for reaching out. Your message has been received, and I’ll get back to you by email."
           : state === "error"
             ? error
             : ""}

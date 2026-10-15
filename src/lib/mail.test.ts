@@ -22,10 +22,15 @@ describe("buildInquiryEmails", () => {
     const [, reply] = buildInquiryEmails(inq, env);
     expect(reply.to).toEqual(["ada@example.com"]);
     expect(reply.replyTo).toBe("me@example.com");
-    expect(reply.subject).toBe("Got it — I'll reply within 24 hours");
+    expect(reply.subject).toBe("Thanks for reaching out");
     expect(reply.text.startsWith("Hi Ada,")).toBe(true);
-    expect(reply.text).toContain("reply within 24 hours");
+    expect(reply.text).toContain("Your message has been received");
     expect(reply.text.trimEnd().endsWith("— Purav")).toBe(true);
+  });
+  it("does not direct an email-only inquiry to the unavailable admin inbox", () => {
+    const [owner] = buildInquiryEmails({ ...inq, persisted: false }, env);
+    expect(owner.text).toContain("delivered by email only");
+    expect(owner.text).not.toContain("/admin");
   });
 });
 

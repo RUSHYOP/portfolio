@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { inquiries } from "@/lib/collections";
 import { listAndCreate, logApiError } from "@/lib/collections/routeHandlers";
@@ -73,13 +73,31 @@ export async function POST(request: NextRequest) {
   }
 
   // 7. Persist with server-set internal fields (status/ipHash/notifyFailed) — never client-settable.
-  // Only the store itself may fail the submission: its try/catch is scoped to `create` alone.
+  // A database outage must not prevent delivery through the existing Resend service.
   let created: Awaited<ReturnType<typeof inquiries.create>>;
   try {
     created = await inquiries.create(v.value, { status: "new", ipHash: hash, notifyFailed: false });
   } catch (e) {
     logApiError("inquiries", "create", e);
-    return NextResponse.json({ error: "Failed to submit inquiry" }, { status: 500 });
+    const id = `email_${randomUUID()}`;
+    try {
+      const { sent } = await sendInquiryEmails({
+        id,
+        name: String(v.value.name),
+        email: String(v.value.email),
+        building: String(v.value.building),
+        budget: String(v.value.budget),
+        timeline: String(v.value.timeline),
+        persisted: false,
+      });
+      if (sent) {
+        void Promise.resolve(appendLog("inquiries", { event: "notify.email_only", id })).catch(() => {});
+        return NextResponse.json({ ok: true }, { status: 201 });
+      }
+    } catch (mailError) {
+      logApiError("inquiries", "email_fallback", mailError);
+    }
+    return NextResponse.json({ error: "Could not receive your inquiry. Please email puravshrinavalan@gmail.com directly." }, { status: 503 });
   }
 
   // 8. Post-create tail: best-effort notification and its bookkeeping. Once the inquiry is stored

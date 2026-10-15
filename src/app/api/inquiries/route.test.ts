@@ -105,9 +105,21 @@ describe("POST /api/inquiries", () => {
     expect(logCalls("notify.tail_failed").length).toBe(before + 1);
     expect(appendLog).toHaveBeenCalledWith("inquiries", expect.objectContaining({ level: "error", event: "notify.tail_failed", id: "inq_1" }));
   });
-  it("500 only when the store itself fails", async () => {
+  it("delivers through Resend when the database is unavailable", async () => {
     vi.mocked(inquiries.create).mockRejectedValue(new Error("db down"));
-    expect((await post(good)).status).toBe(500);
+    expect((await post(good)).status).toBe(201);
+    expect(sendInquiryEmails).toHaveBeenCalledWith(expect.objectContaining({ ...good, persisted: false, id: expect.stringMatching(/^email_/) }));
+    expect(inquiries.update).not.toHaveBeenCalled();
+  });
+  it("reports failure if neither the database nor owner email accepts the message", async () => {
+    vi.mocked(inquiries.create).mockRejectedValue(new Error("db down"));
+    vi.mocked(sendInquiryEmails).mockResolvedValue({ sent: false });
+    expect((await post(good)).status).toBe(503);
+  });
+  it("reports failure when the fallback email service throws", async () => {
+    vi.mocked(inquiries.create).mockRejectedValue(new Error("db down"));
+    vi.mocked(sendInquiryEmails).mockRejectedValue(new Error("mail down"));
+    expect((await post(good)).status).toBe(503);
   });
   // Keep this case last: it resets the module registry, so any dynamic import in a later
   // test would get a fresh, unconfigured set of mocks.

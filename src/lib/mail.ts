@@ -12,6 +12,7 @@ export interface InquiryForMail {
   building: string;
   budget: string;
   timeline: string;
+  persisted?: boolean;
 }
 
 // `replyTo` matches the installed resend@6.28.0 typings (CreateEmailBaseOptions.replyTo?: string | string[])
@@ -48,7 +49,9 @@ export function buildInquiryEmails(inq: InquiryForMail, env: { from: string; not
       ``,
       inq.building,
       ``,
-      `Reply directly to this email, or open /admin → Inbox.`,
+      inq.persisted === false
+        ? `Reply directly to this email. The database was unavailable, so this inquiry is delivered by email only.`
+        : `Reply directly to this email, or open /admin → Inbox.`,
     ].join("\n"),
   };
 
@@ -56,11 +59,11 @@ export function buildInquiryEmails(inq: InquiryForMail, env: { from: string; not
     from: env.from,
     to: [inq.email],
     replyTo: env.notifyTo,
-    subject: `Got it — I'll reply within 24 hours`,
+    subject: `Thanks for reaching out`,
     text: [
       `Hi ${firstName},`,
       ``,
-      `Thanks for reaching out about what you're building. I read every inquiry personally and reply within 24 hours.`,
+      `Thanks for reaching out about what you're building. Your message has been received, and I'll get back to you by email.`,
       ``,
       `— Purav`,
     ].join("\n"),

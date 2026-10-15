@@ -52,9 +52,9 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
   const title = String(cs.title ?? "");
 
   return (
-    <main className="work">
-      <Link href="/voyage#worlds" className="work__back">
-        ← Back to the voyage
+    <main className="work" id="main">
+      <Link href="/#work" className="work__back">
+        ← Back to selected work
       </Link>
       <header className="work__header">
         <p className="work__eyebrow">Case study{cs.client ? ` · ${String(cs.client)}` : ""}</p>
@@ -108,8 +108,8 @@ export default async function CaseStudyPage({ params }: { params: Promise<{ slug
         );
       })}
       {/* The header link is a long scroll away by the end of a study. */}
-      <Link href="/voyage#worlds" className="work__back work__back--end">
-        ← Back to the voyage
+      <Link href="/#work" className="work__back work__back--end">
+        ← Back to selected work
       </Link>
     </main>
   );

@@ -7,7 +7,7 @@ const config = [
   ...nextVitals,
   ...nextTs,
   {
-    ignores: [".next/**", "node_modules/**", "screenshots/**", "docs/**", "logs/**", "audio/**", "images/**", "public/**"],
+    ignores: ["archive/**", ".superpowers/**", ".next/**", "node_modules/**", "screenshots/**", "docs/**", "logs/**", "audio/**", "images/**", "public/**"],
   },
   {
     rules: {

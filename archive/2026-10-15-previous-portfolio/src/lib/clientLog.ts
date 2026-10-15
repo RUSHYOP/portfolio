@@ -1,0 +1,43 @@
+/** Single source of truth for the client event names the /api/logs route accepts. */
+// Task 10: admin.* events let the CMS admin report upload/mutation failures through the
+// structured log pipeline instead of console.*.
+export const LOG_EVENTS = [
+  "quality.tier",
+  "quality.probe",
+  "scene.context_lost",
+  "admin.upload_failed",
+  "admin.save_failed",
+  // A failed *read* is not a failed save: the dashboard reports them separately so a
+  // stale tab can be told apart from a rejected mutation.
+  "admin.load_failed",
+  // Slice 3: one line per Jump beat that actually fired, so the browser review can tell a
+  // missed beat apart from a suppressed one.
+  "voyage.jump",
+  // Slice 5: the shader precompile in SceneRoot threw; the scene still runs (programs compile
+  // lazily on first draw), so this is a record, not a fallback.
+  "scene.compile_failed",
+] as const;
+
+export type LogEvent = (typeof LOG_EVENTS)[number];
+
+/**
+ * Logs to the console as one JSON line and fire-and-forgets to /api/logs.
+ * Every step — including the JSON.stringify — is inside the try, so unserializable
+ * data (circular refs, BigInt) can never break the caller.
+ */
+export function logClient(event: LogEvent, data: Record<string, unknown> = {}): void {
+  try {
+    // Stringify once and reuse for both sinks so console and server see the same line.
+    const line = JSON.stringify({ event, ...data });
+    console.info(line);
+    if (typeof fetch !== "function") return;
+    void fetch("/api/logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: line,
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    /* never throw from logging */
+  }
+}

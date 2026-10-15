@@ -1,0 +1,22 @@
+/* Kept for the existing administration tools; public pages use the editorial tokens. */
+:root {
+  --color-bg: #181818;
+  --color-text: #f0eee9;
+  --color-text-muted: #a5a4a0;
+  --color-accent: #ff835f;
+  --font-space-grotesk: var(--font-styrene);
+  --font-jetbrains-mono: Consolas, monospace;
+  --border-color: #393938;
+}
+
+:root {
+  --background: #181818;
+  --text: #f0eee9;
+  --primary: #ff835f;
+  --secondary: #c2bcb4;
+  --white: #f0eee9;
+  --border: #393938;
+  --gray-dark: #252525;
+  --gray-mid: #9c9c96;
+  --gray-light: #ccccca;
+}

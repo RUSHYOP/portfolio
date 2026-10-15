@@ -66,9 +66,9 @@ export function validateCredentials(email: string, password: string): boolean {
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) {
     // Still iterate to prevent length-based timing leaks
-    let result = 1;
+    let _result = 1;
     for (let i = 0; i < a.length; i++) {
-      result |= a.charCodeAt(i) ^ (b.charCodeAt(i % b.length) || 0);
+      _result |= a.charCodeAt(i) ^ (b.charCodeAt(i % b.length) || 0);
     }
     return false;
   }

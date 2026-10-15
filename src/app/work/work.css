@@ -4,7 +4,7 @@
    Colours are pinned locally (not taken from globals.css tokens) for the same reason
    voyage.css pins them: a light-theme toggle must not bleed into the flight. */
 .work {
-  --amber: #f2b35c;
+  --amber: #ff835f;
   max-width: 72rem;
   margin: 0 auto;
   padding: 6rem clamp(1.5rem, 6vw, 4rem) 8rem;
@@ -14,7 +14,7 @@
 
 /* .work is a centred 72rem column, so its own background would leave a visible seam
    against the body either side of it. Paint the page instead. */
-body:has(.work) { background: #0a0a0a; }
+body:has(.work) { background: #181818; }
 
 /* GlobalOverlays renders grain/vignette outside .work, so reach them via body:has()
    — mirrors the voyage guard so a carried-over light theme can't wash the page out. */

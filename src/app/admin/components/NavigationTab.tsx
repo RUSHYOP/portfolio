@@ -42,6 +42,8 @@ export default function NavigationTab({
   const [footerForm, setFooterForm] = useState<FooterSection[]>([]);
 
   useEffect(() => {
+    // A server settings refresh deliberately resets this retained editor draft.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNavForm({
       showNavbar: settings.showNavbar ?? true,
       navLinks: settings.navLinks || [],

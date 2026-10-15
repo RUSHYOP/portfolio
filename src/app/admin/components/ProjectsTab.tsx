@@ -217,7 +217,7 @@ export default function ProjectsTab({ projects, uploading, toast, loadData, uplo
 
       {/* Project list */}
       <div className="admin-projects-grid">
-        {filtered.map((project, idx) => {
+        {filtered.map((project) => {
           const sortedIndex = sorted.findIndex((p) => p.id === project.id);
           const isFirst = sortedIndex === 0;
           const isLast = sortedIndex === sorted.length - 1;
@@ -467,8 +467,8 @@ function TechChipsInput({
 function ProjectForm({
   project,
   onChange,
-  onUploadIcon,
-  uploading,
+  onUploadIcon: _onUploadIcon,
+  uploading: _uploading,
 }: {
   project: Omit<Project, "id" | "order"> | Project;
   onChange: (p: Omit<Project, "id" | "order">) => void;

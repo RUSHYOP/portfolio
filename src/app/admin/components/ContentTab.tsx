@@ -121,6 +121,8 @@ export default function ContentTab({ settings, onSave, onDirtyChange }: ContentT
   useEffect(() => {
     const next = formFromSettings(settings);
     cleanRef.current = next;
+    // A server settings refresh deliberately resets this retained editor draft.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setContentForm(next);
     setDirty(false);
     onDirtyChange?.(false);

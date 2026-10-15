@@ -1,0 +1,434 @@
+"use client";
+
+import { useState, useEffect, useCallback, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import type { Settings, Project, Skill, Tab, CollectionItem, UploadType } from "./components/types";
+import { DEFAULT_SETTINGS } from "./components/types";
+// Client-safe defs barrel — "@/lib/collections" would pull Mongoose into the browser bundle.
+import { ALL_DEFS } from "@/lib/collections/defs";
+import { logClient } from "@/lib/clientLog";
+import ContentTab from "./components/ContentTab";
+import ProjectsTab from "./components/ProjectsTab";
+import SkillsTab from "./components/SkillsTab";
+import NavigationTab from "./components/NavigationTab";
+import MediaTab from "./components/MediaTab";
+import CollectionTab from "./components/CollectionTab";
+import ConsultingTab from "./components/ConsultingTab";
+import InboxTab from "./components/InboxTab";
+
+const TABS: Tab[] = ["content", "projects", "skills", "navigation", "media", "consulting", "caseStudies", "testimonials", "inbox"];
+
+/** Display names: several tab ids are camelCase and do not title-case mechanically. */
+const TAB_LABELS: Record<Tab, string> = {
+  content: "Content", projects: "Projects", skills: "Skills", navigation: "Navigation", media: "Media",
+  consulting: "Consulting", caseStudies: "Case studies", testimonials: "Testimonials", inbox: "Inbox",
+};
+
+export default function AdminPage() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  const [tab, setTab] = useState<Tab>("content");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  // Schema-driven collections (Task 11). `processSteps`, not `process`: the latter shadows
+  // the Node global inside this module.
+  const [services, setServices] = useState<CollectionItem[]>([]);
+  const [processSteps, setProcessSteps] = useState<CollectionItem[]>([]);
+  const [caseStudiesItems, setCaseStudiesItems] = useState<CollectionItem[]>([]);
+  const [testimonialsItems, setTestimonialsItems] = useState<CollectionItem[]>([]);
+  const [inquiriesItems, setInquiriesItems] = useState<CollectionItem[]>([]);
+  // First-load flag only: later loadData() calls after a mutation must not flash "Loading...".
+  const [loaded, setLoaded] = useState(false);
+  // True only once /api/settings has actually answered; guards the whole-form PUT below.
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  const [uploading, setUploading] = useState(false);
+  const [toasts, setToasts] = useState<{ id: number; msg: string; error?: boolean; undo?: () => void }[]>([]);
+  const toastId = useRef(0);
+  const dirtyTabs = useRef(new Set<Tab>());
+  const [dirtyVersion, setDirtyVersion] = useState(0); // re-renders pulse indicators
+
+  const toast = useCallback((msg: string, error = false, undo?: () => void) => {
+    const id = ++toastId.current;
+    setToasts((prev) => [...prev, { id, msg, error, undo }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), undo ? 6000 : 3500);
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const setDirty = useCallback((tabName: Tab, dirty: boolean) => {
+    const before = dirtyTabs.current.has(tabName);
+    if (dirty) dirtyTabs.current.add(tabName);
+    else dirtyTabs.current.delete(tabName);
+    if (before !== dirty) setDirtyVersion((v) => v + 1);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyTabs.current.size > 0) { e.preventDefault(); }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
+  const switchTab = useCallback((next: Tab) => {
+    if (dirtyTabs.current.size > 0 && !dirtyTabs.current.has(next)) {
+      const names = Array.from(dirtyTabs.current).join(", ");
+      if (!window.confirm(`You have unsaved changes in: ${names}. Switch tab anyway?`)) return;
+      dirtyTabs.current.clear();
+      setDirtyVersion((v) => v + 1);
+    }
+    setTab(next);
+  }, []);
+
+  // With nine tabs the strip scrolls on a phone (~3 fit at 390px), so a tab reached by
+  // ⌘1–9 could land entirely off-screen. Keep the active tab visible by scrolling the
+  // strip itself — never scrollIntoView, which would also move the page.
+  const tabsRef = useRef<HTMLElement | null>(null);
+  const activeTabRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const nav = tabsRef.current;
+    const el = activeTabRef.current;
+    if (!nav || !el || typeof nav.scrollTo !== "function") return;
+    const left = el.offsetLeft - (nav.clientWidth - el.offsetWidth) / 2;
+    nav.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+  }, [tab, authenticated]);
+
+  useEffect(() => {
+    fetch("/api/auth/verify").then((r) => { if (r.ok) setAuthenticated(true); }).finally(() => setChecking(false));
+  }, []);
+
+  // Keyboard shortcuts: Cmd/Ctrl + 1..5 → switch tabs, Esc → dismiss newest toast
+  useEffect(() => {
+    if (!authenticated) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key >= "1" && e.key <= String(TABS.length)) {
+        const idx = parseInt(e.key, 10) - 1;
+        const target = TABS[idx];
+        if (target) {
+          e.preventDefault();
+          switchTab(target);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        setToasts((prev) => (prev.length > 0 ? prev.slice(0, -1) : prev));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [authenticated, switchTab]);
+
+  const loadData = useCallback(async () => {
+    if (!authenticated) return;
+    /**
+     * One rejected fetch (or one unparseable body) must not take the whole dashboard down:
+     * `Promise.allSettled` plus a per-list apply means a failed list keeps whatever it last
+     * had (empty on first load), is logged, and every other tab still renders.
+     * `setLoaded(true)` lives in `finally` so no tab can be pinned on "Loading…" by a failure.
+     * Failures are collected and surfaced once, after the batch: silence here is what let a
+     * failed settings load arm a full-form overwrite with defaults.
+     */
+    let sawUnauthorized = false;
+    const failed: string[] = [];
+    const load = async <T,>(
+      url: string,
+      collection: string,
+      apply: (data: T) => void,
+    ): Promise<void> => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          // 401 means the session died mid-session: re-auth, don't nag with a toast.
+          if (res.status === 401) sawUnauthorized = true;
+          else failed.push(collection);
+          logClient("admin.load_failed", { collection, verb: "load", status: res.status });
+          return;
+        }
+        apply((await res.json()) as T);
+      } catch (e) {
+        failed.push(collection);
+        logClient("admin.load_failed", { collection, verb: "load", message: String(e) });
+      }
+    };
+    try {
+      // ?all=1 on every collection: the admin needs drafts and internal fields, and the
+      // authed branch returns published *and* unpublished items.
+      await Promise.allSettled([
+        load<Project[]>("/api/projects", "projects", setProjects),
+        load<Skill[]>("/api/skills", "skills", setSkills),
+        // settingsLoaded gates Save All: the form must never PUT defaults it never loaded.
+        load<Settings>("/api/settings", "settings", (s) => { setSettings(s); setSettingsLoaded(true); }),
+        load<CollectionItem[]>("/api/services?all=1", "services", setServices),
+        load<CollectionItem[]>("/api/process?all=1", "process", setProcessSteps),
+        load<CollectionItem[]>("/api/case-studies?all=1", "case-studies", setCaseStudiesItems),
+        load<CollectionItem[]>("/api/testimonials?all=1", "testimonials", setTestimonialsItems),
+        load<CollectionItem[]>("/api/inquiries?all=1", "inquiries", setInquiriesItems),
+      ]);
+      // One aggregated report per batch, not one toast per list.
+      if (sawUnauthorized) setAuthenticated(false);
+      else if (failed.length) toast(`Could not load: ${failed.join(", ")}. Some tabs may be incomplete.`, true);
+    } finally {
+      setLoaded(true);
+    }
+  }, [authenticated, toast]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError("");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.ok) setAuthenticated(true);
+      else {
+        const d = await res.json();
+        setLoginError(d.error || "Login failed");
+      }
+    } catch {
+      setLoginError("Network error");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setAuthenticated(false);
+  };
+
+  // UploadType (not the old 4-member literal union) — case-study diagrams are an upload kind too.
+  const uploadFile = async (file: File, type: UploadType): Promise<string | null> => {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("type", type);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        toast(`Upload failed: ${e.error}`, true);
+        return null;
+      }
+      const d = await res.json();
+      return d.path;
+    } catch {
+      toast("Upload failed", true);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const saveSettings = async (updates: Partial<Settings>) => {
+    // ContentTab/NavigationTab PUT their entire form, so saving from a form seeded with
+    // DEFAULT_SETTINGS would overwrite the live copy with defaults.
+    if (!settingsLoaded) {
+      toast("Settings never loaded — reload before saving.", true);
+      return;
+    }
+    const res = await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (res.ok) {
+      toast("Saved");
+      dirtyTabs.current.delete(tab);
+      setDirtyVersion((v) => v + 1);
+      loadData();
+    } else {
+      const d = await res.json().catch(() => null);
+      toast(d?.error || "Failed to save", true);
+    }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────
+
+  if (checking) {
+    return (
+      <div className="admin-loading">
+        <div className="admin-progress">
+          <motion.div
+            className="admin-progress-bar"
+            initial={{ x: "-100%" }}
+            animate={{ x: "100%" }}
+            transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="admin-login-wrapper">
+        <motion.form
+          className="admin-login-form"
+          onSubmit={handleLogin}
+          initial={{ opacity: 0, y: 18, filter: "blur(6px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={{ duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}
+        >
+          <h1 className="admin-login-title">Admin Login</h1>
+          <AnimatePresence>
+            {loginError && (
+              <motion.div
+                key="login-error"
+                className="admin-error"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: [0, -6, 6, -4, 4, 0] }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.45 }}
+              >
+                {loginError}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="admin-field">
+            <label htmlFor="admin-email">Email</label>
+            <input id="admin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" autoFocus />
+          </div>
+          <div className="admin-field">
+            <label htmlFor="admin-password">Password</label>
+            <input id="admin-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+          </div>
+          <motion.button
+            type="submit"
+            className="admin-btn admin-btn-primary"
+            disabled={loginLoading}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 400, damping: 22 }}
+          >
+            {loginLoading ? "Logging in..." : "Login"}
+          </motion.button>
+        </motion.form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-wrapper">
+      <div className="admin-toast-container">
+        <AnimatePresence initial={false}>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              className={`admin-toast ${t.error ? "error" : ""}`}
+              initial={{ opacity: 0, x: 40, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 40, scale: 0.9, transition: { duration: 0.2 } }}
+              transition={{ type: "spring", stiffness: 320, damping: 26 }}
+              layout
+            >
+              <span>{t.msg}</span>
+              {t.undo && (
+                <button
+                  className="admin-toast-undo"
+                  onClick={() => {
+                    t.undo!();
+                    dismissToast(t.id);
+                  }}
+                >
+                  Undo
+                </button>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      <header className="admin-header">
+        <h1>
+          Portfolio Admin
+          <span className="admin-header-mark">// CONTROL</span>
+        </h1>
+        <motion.button
+          onClick={handleLogout}
+          className="admin-btn admin-btn-outline"
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.96 }}
+          transition={{ type: "spring", stiffness: 380, damping: 22 }}
+        >
+          Logout
+        </motion.button>
+      </header>
+
+      <nav className="admin-tabs" aria-label="Admin sections" ref={tabsRef}>
+        {TABS.map((t) => {
+          const isActive = tab === t;
+          const isDirty = dirtyTabs.current.has(t);
+          return (
+            <button
+              key={t}
+              // Only the active tab is tracked; the effect above scrolls it into view.
+              ref={isActive ? activeTabRef : null}
+              className={`admin-tab ${isActive ? "active" : ""}`}
+              onClick={() => switchTab(t)}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <span className="admin-tab-label">
+                {TAB_LABELS[t]}
+                {isDirty && (
+                  <motion.span
+                    className="admin-dirty-pulse"
+                    aria-label="unsaved changes"
+                    title="Unsaved changes"
+                    animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.15, 1] }}
+                    transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                    // dirtyVersion used to ensure visibility refresh
+                    key={`${t}-${dirtyVersion}`}
+                  />
+                )}
+              </span>
+              {isActive && (
+                <motion.span
+                  layoutId="admin-tab-indicator"
+                  className="admin-tab-indicator"
+                  transition={{ type: "spring", stiffness: 360, damping: 30 }}
+                />
+              )}
+            </button>
+          );
+        })}
+        <span className="admin-shortcut-hint" aria-hidden="true">⌘1–9 to switch</span>
+      </nav>
+
+      <main className="admin-main">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="admin-tab-panel"
+          >
+            {tab === "content" && <ContentTab settings={settings} onSave={saveSettings} onDirtyChange={(d) => setDirty("content", d)} />}
+            {tab === "projects" && <ProjectsTab projects={projects} uploading={uploading} toast={toast} loadData={loadData} uploadFile={uploadFile} onDirtyChange={(d) => setDirty("projects", d)} />}
+            {tab === "skills" && <SkillsTab skills={skills} uploading={uploading} toast={toast} loadData={loadData} uploadFile={uploadFile} onDirtyChange={(d) => setDirty("skills", d)} />}
+            {tab === "navigation" && <NavigationTab settings={settings} onSave={saveSettings} onDirtyChange={(d) => setDirty("navigation", d)} />}
+            {tab === "media" && <MediaTab settings={settings} uploading={uploading} toast={toast} uploadFile={uploadFile} onSave={saveSettings} />}
+            {tab === "consulting" && <ConsultingTab services={services} process={processSteps} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("consulting", d)} />}
+            {tab === "caseStudies" && <CollectionTab def={ALL_DEFS["case-studies"]} apiBase="/api/case-studies" title="Case studies" singular="case study" items={caseStudiesItems} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("caseStudies", d)} />}
+            {tab === "testimonials" && <CollectionTab def={ALL_DEFS.testimonials} apiBase="/api/testimonials" title="Testimonials" singular="testimonial" items={testimonialsItems} toast={toast} loadData={loadData} uploadFile={uploadFile} uploading={uploading} loading={!loaded} onDirtyChange={(d) => setDirty("testimonials", d)} />}
+            {tab === "inbox" && <InboxTab inquiries={inquiriesItems} toast={toast} loadData={loadData} loading={!loaded} />}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+    </div>
+  );
+}

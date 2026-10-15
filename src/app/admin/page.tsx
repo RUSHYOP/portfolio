@@ -52,6 +52,7 @@ export default function AdminPage() {
   const [toasts, setToasts] = useState<{ id: number; msg: string; error?: boolean; undo?: () => void }[]>([]);
   const toastId = useRef(0);
   const dirtyTabs = useRef(new Set<Tab>());
+  const [dirtyTabSnapshot, setDirtyTabSnapshot] = useState<Set<Tab>>(new Set());
   const [dirtyVersion, setDirtyVersion] = useState(0); // re-renders pulse indicators
 
   const toast = useCallback((msg: string, error = false, undo?: () => void) => {
@@ -69,6 +70,7 @@ export default function AdminPage() {
     if (dirty) dirtyTabs.current.add(tabName);
     else dirtyTabs.current.delete(tabName);
     if (before !== dirty) setDirtyVersion((v) => v + 1);
+    setDirtyTabSnapshot(new Set(dirtyTabs.current));
   }, []);
 
   useEffect(() => {
@@ -85,6 +87,7 @@ export default function AdminPage() {
       if (!window.confirm(`You have unsaved changes in: ${names}. Switch tab anyway?`)) return;
       dirtyTabs.current.clear();
       setDirtyVersion((v) => v + 1);
+    setDirtyTabSnapshot(new Set(dirtyTabs.current));
     }
     setTab(next);
   }, []);
@@ -249,6 +252,7 @@ export default function AdminPage() {
       toast("Saved");
       dirtyTabs.current.delete(tab);
       setDirtyVersion((v) => v + 1);
+    setDirtyTabSnapshot(new Set(dirtyTabs.current));
       loadData();
     } else {
       const d = await res.json().catch(() => null);
@@ -354,7 +358,7 @@ export default function AdminPage() {
       <header className="admin-header">
         <h1>
           Portfolio Admin
-          <span className="admin-header-mark">// CONTROL</span>
+          <span className="admin-header-mark">{"// CONTROL"}</span>
         </h1>
         <motion.button
           onClick={handleLogout}
@@ -370,7 +374,7 @@ export default function AdminPage() {
       <nav className="admin-tabs" aria-label="Admin sections" ref={tabsRef}>
         {TABS.map((t) => {
           const isActive = tab === t;
-          const isDirty = dirtyTabs.current.has(t);
+          const isDirty = dirtyTabSnapshot.has(t);
           return (
             <button
               key={t}

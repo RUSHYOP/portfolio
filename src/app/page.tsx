@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import Footer from "@/components/Footer";
-import Motion from "@/components/Motion";
 import ContactForm from "@/components/ContactForm";
 import RamcoTenure from "@/components/RamcoTenure";
 import {
@@ -35,9 +34,13 @@ export default async function Home() {
             <span className="eyebrow hero-location">BANGALORE, INDIA ↗</span>
           </div>
           <h1 id="hero-title">
-            <span>Thoughtful code.</span>
-            <span className="hero-second">
-              Useful <em>software.</em>
+            <span className="hero-line">
+              <span>Thoughtful code.</span>
+            </span>
+            <span className="hero-line hero-second">
+              <span>
+                Useful <em>software.</em>
+              </span>
             </span>
           </h1>
           <div className="hero-bottom">
@@ -122,6 +125,18 @@ export default async function Home() {
                   </Link>
                 </h3>
                 <p>{ramco.description}</p>
+                <div
+                  className="career-path"
+                  aria-label="Career progression at Ramco"
+                >
+                  <span>
+                    <time dateTime="2026-02-02">FEB 2026</time>Intern
+                  </span>
+                  <i aria-hidden="true" />
+                  <span>
+                    <time dateTime="2026-06">JUN 2026</time>Software Engineer 1
+                  </span>
+                </div>
                 <Link href={`/projects/${ramco.slug}`} className="text-link">
                   Read my work profile ↗
                 </Link>
@@ -138,8 +153,13 @@ export default async function Home() {
               <Link
                 href={`/projects/${project.slug}`}
                 className="web-project-preview"
+                data-parallax
                 aria-label={`Read the ${project.title} project story`}
               >
+                <span className="preview-label" aria-hidden="true">
+                  <span>{project.title}</span>
+                  <span>VIEW STORY ↗</span>
+                </span>
                 <Image
                   src={project.story.image!}
                   alt={project.story.imageAlt || project.title}
@@ -411,7 +431,6 @@ export default async function Home() {
         </section>
       </main>
       <Footer />
-      <Motion />
     </>
   );
 }

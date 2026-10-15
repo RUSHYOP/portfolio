@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import Motion from "./Motion";
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -43,6 +44,14 @@ export default function SiteHeader() {
           Let’s talk <span aria-hidden="true">↗</span>
         </Link>
       </nav>
+      <div
+        className="reading-progress"
+        data-reading-progress
+        aria-hidden="true"
+      >
+        <i />
+      </div>
+      <Motion />
     </header>
   );
 }

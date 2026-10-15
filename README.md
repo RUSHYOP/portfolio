@@ -16,7 +16,7 @@ npm run build
 ## Content and services
 
 - Homepage composition and copy: `src/app/page.tsx`.
-- Styles and responsive layouts: `src/app/globals.css`.
+- Styles and responsive layouts: `src/app/globals.css`; editorial motion and visual refinements: `src/app/refinements.css`. Shared public-page motion lives in `src/components/Motion.tsx` and respects reduced motion.
 - Project records: the existing MongoDB CMS, falling back to `src/content/projects.json` if unavailable. Public curation in `src/lib/portfolio.ts` excludes Network Scanner Pro and HarvestLink, hides ProcSAGE’s code link, and adds GharPay as collaborative work and Digital Garden as a knowledge platform. `/admin` retains project editing and the inquiry inbox. The old CMS hero and navigation fields are preserved but the new landing-page composition is code-owned.
 - Contact: existing `/api/inquiries` endpoint; MongoDB persistence and Resend notifications. If the existing database is unavailable, a validated inquiry is delivered through Resend directly and acknowledged only after the owner notification is accepted. Email-only inquiries are not stored in the CMS inbox. Existing production credentials are reused. Browser and unit tests mock submission and do not send email.
 - Article content: `src/content/project-stories.ts`; all eleven work entries have `/projects/[slug]` pages, canonical metadata, article navigation, and sitemap entries. GharPay’s description is based on the Residence OS source and its public website; its screenshot is a public homepage capture, converted to WebP. No private project source or resident data is published. The portrait and other project records come from the previous portfolio.

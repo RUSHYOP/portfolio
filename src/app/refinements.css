@@ -1,0 +1,552 @@
+:root {
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-quick: 180ms;
+  --motion-reveal: 850ms;
+}
+
+/* A quiet, persistent navigation surface and article reading indicator. */
+.site-header {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  transition:
+    border-color 220ms ease,
+    background 220ms ease;
+}
+.site-header.has-scrolled {
+  border-color: #55534c;
+  background: var(--bg);
+}
+.main-nav a {
+  position: relative;
+}
+.main-nav a::after {
+  content: "";
+  position: absolute;
+  height: 1px;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 320ms var(--motion-ease);
+}
+.main-nav a:hover::after,
+.main-nav a:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+.main-nav .nav-contact {
+  border-bottom-color: transparent;
+}
+.wordmark {
+  transition: color var(--motion-quick) ease;
+}
+.wordmark:hover {
+  color: var(--accent);
+}
+.reading-progress {
+  position: absolute;
+  height: 2px;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.site-header.is-reading .reading-progress {
+  opacity: 1;
+}
+.reading-progress i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+/* The hero is choreographed by CSS, including when JavaScript is unavailable. */
+.hero h1,
+.hero-bottom {
+  animation: none;
+}
+.hero-line {
+  overflow: hidden;
+  padding-bottom: 0.13em;
+  margin-bottom: -0.13em;
+}
+.hero-line > span {
+  display: block;
+  animation: headline-enter 1050ms var(--motion-ease) both;
+}
+.hero-second > span {
+  animation-delay: 120ms;
+}
+.hero-top {
+  animation: detail-enter 700ms var(--motion-ease) both;
+}
+.hero-intro {
+  animation: detail-enter 850ms 260ms var(--motion-ease) both;
+}
+.hero-profile {
+  animation: detail-enter 850ms 360ms var(--motion-ease) both;
+}
+.hero-foot {
+  position: relative;
+  animation: detail-enter 900ms 440ms var(--motion-ease) both;
+}
+.hero-foot::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 85px;
+  height: 1px;
+  background: var(--accent);
+  transform-origin: left;
+  animation: rule-enter 1000ms 500ms var(--motion-ease) both;
+}
+@keyframes headline-enter {
+  from {
+    transform: translateY(115%);
+    opacity: 0.3;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes detail-enter {
+  from {
+    transform: translateY(18px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes rule-enter {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Common entrance language and stagger, with no perpetual animations. */
+[data-reveal] {
+  transition:
+    opacity var(--motion-reveal) ease,
+    transform var(--motion-reveal) var(--motion-ease);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal-waiting {
+  transform: translateY(32px);
+}
+.capability-list > article:nth-child(2) {
+  --reveal-delay: 70ms;
+}
+.capability-list > article:nth-child(3) {
+  --reveal-delay: 140ms;
+}
+.project-row:nth-child(2n) {
+  --reveal-delay: 60ms;
+}
+.section-number::after {
+  content: "";
+  display: block;
+  height: 1px;
+  width: 38px;
+  margin-top: 18px;
+  background: var(--accent);
+  transform-origin: left;
+}
+.is-revealed .section-number::after,
+.section-number.is-revealed::after {
+  animation: rule-enter 750ms 100ms var(--motion-ease) both;
+}
+.text-link {
+  position: relative;
+  border-bottom-color: var(--line);
+}
+.text-link::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--ink);
+  transform: scaleX(0.25);
+  transform-origin: left;
+  transition:
+    transform 380ms var(--motion-ease),
+    background var(--motion-quick) ease;
+}
+.text-link:hover::after,
+.text-link:focus-visible::after {
+  transform: scaleX(1);
+  background: var(--accent);
+}
+.button {
+  transition:
+    background var(--motion-quick) ease,
+    transform 300ms var(--motion-ease);
+}
+.button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* A factual career rail gives the lead feature a more deliberate composition. */
+.ramco-feature {
+  position: relative;
+  padding-inline: 34px;
+  background: linear-gradient(115deg, #20211e 0%, #1b1b1a 65%, #181818 100%);
+}
+.ramco-feature::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 120px;
+  height: 1px;
+  background: var(--accent);
+  transform-origin: left;
+}
+.ramco-feature.is-revealed::before {
+  animation: rule-enter 900ms 120ms var(--motion-ease) both;
+}
+.ramco-feature h3 a {
+  transition: color 250ms ease;
+}
+.ramco-feature h3 a:hover {
+  color: #ffbba4;
+}
+.career-path {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 28px;
+}
+.career-path > span {
+  font-size: 11px;
+  line-height: 1.6;
+}
+.career-path time {
+  display: block;
+  font: 8px/1.6 var(--font-mono);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.career-path i {
+  position: relative;
+  height: 1px;
+  width: 54px;
+  flex-shrink: 0;
+  background: var(--line);
+}
+.career-path i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform-origin: left;
+}
+.ramco-feature.is-revealed .career-path i::after {
+  animation: rule-enter 1000ms 300ms var(--motion-ease) both;
+}
+.ramco-feature .ramco-tenure-value {
+  color: #f1eadf;
+}
+.ramco-feature .ramco-tenure time {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+/* Project previews behave like carefully mounted images, with a one-time wipe. */
+.web-project-preview {
+  border: 1px solid #42423b;
+  background: #242521;
+  isolation: isolate;
+}
+.preview-label {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  height: 42px;
+  padding: 0 18px;
+  background: #242521;
+  color: #c8c7bd;
+  font: 8px/1.5 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+.preview-label > span:last-child {
+  color: var(--accent);
+  white-space: nowrap;
+}
+.web-project-preview img {
+  transform: translateY(var(--parallax-y, 0px)) scale(1.055);
+  transition: transform 850ms var(--motion-ease);
+}
+.web-project-preview:hover img {
+  transform: translateY(var(--parallax-y, 0px)) scale(1.085);
+}
+.web-project-preview::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 42px 0 0;
+  background: #292a25;
+  transform: scaleX(0);
+  transform-origin: right;
+  pointer-events: none;
+}
+.web-project-feature.motion-ready.is-revealed .web-project-preview::after {
+  animation: image-unveil 1100ms var(--motion-ease) both;
+}
+@keyframes image-unveil {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+.web-project-preview .art-arrow {
+  z-index: 3;
+  transition:
+    transform 350ms var(--motion-ease),
+    background 200ms ease;
+}
+.web-project-preview:hover .art-arrow {
+  transform: translate(3px, -3px);
+  background: var(--accent);
+}
+.web-project-copy h3 a {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-size: 0 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size 400ms var(--motion-ease);
+}
+.web-project-copy h3 a:hover {
+  background-size: 100% 1px;
+}
+.research-feature.is-revealed .signal-bars i {
+  animation: signal-enter 850ms 80ms var(--motion-ease) both;
+  transform-origin: center;
+}
+.research-feature.is-revealed .signal-bars i:nth-child(3n) {
+  animation-delay: 150ms;
+}
+.research-feature.is-revealed .signal-bars i:nth-child(4n) {
+  animation-delay: 220ms;
+}
+.research-feature.is-revealed .signal-bars i:nth-child(5n) {
+  animation-delay: 290ms;
+}
+@keyframes signal-enter {
+  from {
+    transform: scaleY(0.15);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.about-portrait {
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.about-portrait > img {
+  transition:
+    filter 700ms ease,
+    transform 1000ms var(--motion-ease);
+}
+.about-portrait:hover > img {
+  transform: scale(1.025);
+}
+
+/* Articles gain reading cues while the text remains a calm, continuous column. */
+.article-header h1,
+.index-heading h1 {
+  animation: detail-enter 850ms var(--motion-ease) both;
+}
+.article-intro,
+.index-heading > p {
+  animation: detail-enter 850ms 90ms var(--motion-ease) both;
+}
+.article-facts {
+  background: #1c1d1a;
+  padding-inline: 24px;
+  border-top-color: #626253;
+}
+.article-contents nav {
+  top: 140px;
+  border-left: 1px solid var(--line);
+  padding-left: 20px;
+}
+.article-contents a {
+  position: relative;
+  transition:
+    color 200ms ease,
+    transform 300ms var(--motion-ease);
+}
+.article-contents a::before {
+  content: "";
+  width: 12px;
+  height: 1px;
+  position: absolute;
+  left: -21px;
+  top: 0.8em;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 300ms var(--motion-ease);
+}
+.article-contents a[aria-current="location"] {
+  color: var(--ink);
+  transform: translateX(5px);
+}
+.article-contents a[aria-current="location"]::before {
+  transform: scaleX(1);
+}
+.article-prose h2 {
+  text-wrap: balance;
+}
+.article-prose section {
+  padding-bottom: 12px;
+}
+.project-row {
+  position: relative;
+  isolation: isolate;
+}
+.project-row::before {
+  content: "";
+  position: absolute;
+  inset: 0 -20px;
+  z-index: -1;
+  background: #22231f;
+  opacity: 0;
+  transition: opacity 250ms ease;
+  pointer-events: none;
+}
+.project-row:hover::before,
+.project-row:focus-within::before {
+  opacity: 1;
+}
+.project-row-links a {
+  transition:
+    transform 300ms var(--motion-ease),
+    color 180ms ease;
+}
+.project-row:hover .project-row-links a {
+  transform: translateX(4px);
+}
+.next-story > span:nth-child(2) > span {
+  display: inline-block;
+  transition: transform 400ms var(--motion-ease);
+}
+.next-story:hover > span:nth-child(2) > span {
+  transform: translate(4px, -4px);
+}
+.contact-form input,
+.contact-form textarea,
+.contact-form select {
+  transition:
+    border-color 250ms ease,
+    background 250ms ease;
+}
+.contact-form input:focus,
+.contact-form textarea:focus,
+.contact-form select:focus {
+  border-color: var(--accent);
+  background: #ffffff03;
+}
+
+@media (max-width: 760px) {
+  .hero-line > span {
+    animation-duration: 800ms;
+  }
+  .ramco-feature {
+    padding-inline: 20px;
+  }
+  .career-path {
+    gap: 12px;
+  }
+  .career-path i {
+    width: 32px;
+  }
+  .career-path > span {
+    font-size: 10px;
+  }
+  .preview-label {
+    padding-inline: 12px;
+    font-size: 7px;
+  }
+  .article-facts {
+    padding-inline: 18px;
+  }
+  .project-row::before {
+    inset-inline: -10px;
+  }
+}
+@container (max-width: 280px) {
+  .ramco-feature {
+    padding-inline: 14px;
+  }
+  .career-path {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .career-path i {
+    width: 1px;
+    height: 18px;
+    margin-left: 2px;
+  }
+  .preview-label > span:last-child {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .hero-line > span,
+  .reveal-waiting {
+    opacity: 1;
+    transform: none;
+  }
+  .web-project-preview img,
+  .web-project-preview:hover img,
+  .about-portrait:hover > img {
+    transform: none;
+  }
+  .web-project-preview::after {
+    transform: scaleX(0);
+  }
+  .article-contents a[aria-current="location"] {
+    transform: none;
+  }
+  .hero-profile:hover img,
+  .button:hover,
+  .button:active,
+  .text-link:hover span,
+  .web-project-preview:hover .art-arrow,
+  .project-row:hover .project-row-links a,
+  .next-story:hover > span:nth-child(2) > span {
+    transform: none;
+  }
+}

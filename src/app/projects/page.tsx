@@ -28,7 +28,7 @@ export default async function Projects() {
         </div>
         <div className="project-rows">
           {projects.map((project, index) => (
-            <article key={project.id} className="project-row">
+            <article key={project.id} className="project-row" data-reveal>
               <span className="eyebrow">
                 {String(index + 1).padStart(2, "0")}
               </span>

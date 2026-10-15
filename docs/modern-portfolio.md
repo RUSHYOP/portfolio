@@ -49,3 +49,9 @@ Added `/projects/ramco-work-profile` as the lead work-section feature and first 
 User confirmed the start date as 2 February 2026, including the internship. The reusable live counter refreshes every minute and when a tab becomes visible. It uses Asia/Kolkata calendar dates, displays completed months in the first year, then decimal years rounded to one decimal (14 months → 1.2 years). The server timestamp provides a matching hydration snapshot; the browser catches up to the current time.
 
 Verification: 14 targeted content/date/component tests pass, including the anniversary boundary at midnight in India, year formatting, a running clock crossing the anniversary, and timer cleanup. Lint and production build pass. Home and profile article fit 320/390/768/1440 px and 200% zoom with no browser page errors.
+
+## Editorial motion refinement
+
+Added staged masked hero typography, sticky navigation, animated keylines and link feedback, project image frames with one-time wipes and small desktop-only parallax, and a factual Ramco career rail. Article pages gain reading progress, current-section contents tracking, and progressive section entrances; work-index rows also reveal on scroll. Motion is shared through the public SiteHeader and resets on route changes. The global backend/admin layout is not enhanced by the public Motion component.
+
+Verification: lint and production build passed; 311 tests across 30 files passed. Browser checks passed at 320/390/768/1440 px and 200% CSS zoom. Reduced-motion views have no hidden pending content and no image transforms; no-JavaScript views retain the hero and all seven Ramco sections. Keyboard skip navigation, homepage → profile → index → GharPay navigation, article progress/current-section tracking, and intercepted contact success passed. No page errors occurred in these checks. All test browser contexts are closed after review.

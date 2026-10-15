@@ -113,6 +113,7 @@ export default async function ProjectArticle({ params }: Props) {
                   key={section.title}
                   id={`section-${i + 1}`}
                   aria-labelledby={`heading-${i + 1}`}
+                  data-reveal
                 >
                   <span className="eyebrow article-section-number">
                     {String(i + 1).padStart(2, "0")}
